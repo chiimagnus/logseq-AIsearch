@@ -1,6 +1,6 @@
 {
-  "name": "logseq-plugin-template-react",
-  "version": "0.0.0",
+  "name": "logseq-aisearch",
+  "version": "0.1.0",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,9 @@
   "dependencies": {
     "@logseq/libs": "^0.0.14",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "compromise": "^13.11.1"
+
   },
   "devDependencies": {
     "@semantic-release/changelog": "6.0.3",
@@ -37,7 +39,7 @@
     "vite-plugin-logseq": "1.1.2"
   },
   "logseq": {
-    "id": "_pengx17-logseq-template-react",
-    "icon": "./logo.svg"
+    "id": "chii-ai-search",
+    "icon": "./logo.png"
   }
 }
