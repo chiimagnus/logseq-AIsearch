@@ -39,7 +39,7 @@
     "vite-plugin-logseq": "1.1.2"
   },
   "logseq": {
-    "id": "chii-ai-search",
+    "id": "chii-aisearch",
     "icon": "./logo.png"
   }
 }
