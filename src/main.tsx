@@ -4,6 +4,32 @@ import * as ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
+// 调用 Ollama API 的函数
+async function callOllamaAPI(content: string): Promise<string> {
+  try {
+    const response = await fetch("http://localhost:11434/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "qwen2.5:latest",  // 使用你已经安装的模型名称
+        prompt: content,   // block 中的内容作为 prompt 发送
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API 请求失败: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.text;  // 假设 API 返回的数据中包含生成的文本字段
+  } catch (error) {
+    console.error("调用 Ollama API 失败: ", error);
+    return "生成文本失败";
+  }
+}
+
 function main() {
   console.info("AI-Search Plugin Loaded");
 
@@ -17,16 +43,16 @@ function main() {
         // 获取当前 block 的内容
         const blockContent = await logseq.Editor.getEditingBlockContent();
 
-        // 输出当前 block 内容到控制台
-        console.log(`当前 block 内容: ${blockContent}`);
+        // 调用 Ollama API，生成文本
+        const generatedText = await callOllamaAPI(blockContent);
 
-        // 在当前 block 的下一个兄弟 block 中插入 "收到"
-        await logseq.Editor.insertBlock(currentBlock.uuid, "收到", {
+        // 在当前 block 的下一个兄弟 block 中插入生成的文本
+        await logseq.Editor.insertBlock(currentBlock.uuid, generatedText, {
           sibling: true, // 插入在当前 block 之后
         });
 
         // 提示操作成功
-        console.log("已在下一个兄弟 block 中插入 '收到'");
+        console.log("已在下一个兄弟 block 中插入生成的文本");
       }
     } catch (error) {
       console.error("AI-Search 命令执行失败：", error);
