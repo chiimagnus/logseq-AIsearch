@@ -2,33 +2,8 @@ import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import App from "./App";
-import "./index.css";
-
-// 调用 Ollama API 的函数
-async function callOllamaAPI(content: string): Promise<string> {
-  try {
-    const response = await fetch("http://localhost:11434/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "qwen2.5:latest",  // 使用你已经安装的模型名称
-        prompt: content,   // block 中的内容作为 prompt 发送
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Ollama API 请求失败: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.text;  // 假设 API 返回的数据中包含生成的文本字段
-  } catch (error) {
-    console.error("调用 Ollama API 失败: ", error);
-    return "生成文本失败";
-  }
-}
+// import "./index.css";
+import { ollamaGenerate } from './ollama';  // 新增：导入 Ollama API 调用函数
 
 function main() {
   console.info("AI-Search Plugin Loaded");
@@ -44,7 +19,7 @@ function main() {
         const blockContent = await logseq.Editor.getEditingBlockContent();
 
         // 调用 Ollama API，生成文本
-        const generatedText = await callOllamaAPI(blockContent);
+        const generatedText = await ollamaGenerate(blockContent);
 
         // 在当前 block 的下一个兄弟 block 中插入生成的文本
         await logseq.Editor.insertBlock(currentBlock.uuid, generatedText, {
