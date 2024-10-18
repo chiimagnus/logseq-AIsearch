@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@logseq/libs':
-        specifier: ^0.0.14
-        version: 0.0.14
+        specifier: ^0.0.17
+        version: 0.0.17
       compromise:
         specifier: ^13.11.1
         version: 13.11.4
@@ -398,8 +398,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.14':
     resolution: {integrity: sha512-bJWEfQ9lPTvm3SneWwRFVLzrh6nhjwqw7TUFFBEMzwvg7t7PCDenf2lDwqo4NQXzdpgBXyFgDWnQA+2vkruksQ==}
 
-  '@logseq/libs@0.0.14':
-    resolution: {integrity: sha512-QcNeVxb4LIvV4Tid0ABZXV7fxYdZHynzLlukSk6Ydkuus+hBzLcjfK15nzybIRbiV7ANqSgTooDZkV/E4WP57Q==}
+  '@logseq/libs@0.0.17':
+    resolution: {integrity: sha512-SkzzAaocmrgeHYrCOaRyEqzPOxw3d0qVEZSrt9qVvXE4tuEgbvEHR8tzI1N5RjgAv+PDWuGPiP7/mhcXHpINEw==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -977,6 +977,10 @@ packages:
 
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
+
+  deepmerge@4.3.1:
+    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+    engines: {node: '>=0.10.0'}
 
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==}
@@ -3215,10 +3219,11 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
 
-  '@logseq/libs@0.0.14':
+  '@logseq/libs@0.0.17':
     dependencies:
       csstype: 3.1.0
       debug: 4.3.4
+      deepmerge: 4.3.1
       dompurify: 2.3.8
       eventemitter3: 4.0.7
       fast-deep-equal: 3.1.3
@@ -3960,6 +3965,8 @@ snapshots:
   deep-extend@0.6.0: {}
 
   deep-is@0.1.4: {}
+
+  deepmerge@4.3.1: {}
 
   define-data-property@1.1.4:
     dependencies:
