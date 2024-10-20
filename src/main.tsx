@@ -3,7 +3,7 @@ import React from "react";
 import * as ReactDOM from "react-dom/client";
 import App from "./App";
 // import "./index.css";
-import { ollamaGenerate } from './ollama';  // 新增：导入 Ollama API 调用函数
+import { aiSearch } from './ollama';  // 新增：导入 Ollama API 调用函数
 
 function main() {
   console.info("AI-Search Plugin Loaded");
@@ -19,7 +19,7 @@ function main() {
         const blockContent = await logseq.Editor.getEditingBlockContent();
 
         // 调用 Ollama API，生成文本
-        const generatedText = await ollamaGenerate(blockContent);
+        const generatedText = await aiSearch(blockContent);
 
         // 在当前 block 的下一个兄弟 block 中插入生成的文本
         await logseq.Editor.insertBlock(currentBlock.uuid, generatedText, {

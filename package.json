@@ -10,10 +10,10 @@
   "license": "MIT",
   "dependencies": {
     "@logseq/libs": "^0.0.17",
+    "compromise": "^13.11.1",
+    "lunr": "^2.3.9",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "compromise": "^13.11.1"
-
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@semantic-release/changelog": "6.0.3",
