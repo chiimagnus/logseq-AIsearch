@@ -21,8 +21,15 @@ function main() {
         // 调用 Ollama API，生成文本
         const generatedText = await aiSearch(blockContent);
 
-        // 在当前 block 的下一个兄弟 block 中插入生成的文本
-        await logseq.Editor.insertBlock(currentBlock.uuid, generatedText, {
+        // 构造带有代码块格式的文本
+        const formattedText = `\`\`\`markdown
+以下内容为AI搜索的结果：
+
+${generatedText}
+\`\`\``;
+
+        // 插入格式化后的文本
+        await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
           sibling: true, // 插入在当前 block 之后
         });
 
