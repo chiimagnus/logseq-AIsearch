@@ -1,12 +1,35 @@
 # 🎉🎉🎉 logseq-plugin-AISearch💫💫💫
-
-# 使用介绍
 使用`/`调出AISearch功能，基于该block内容 进行logseq文档内的全局搜索 并输出相关内容。
 
-# 如何工作的？
+
+## 如何部署？
+1. 下载源码。
+2. 还需要部署ollama，并且配置好模型。ollama部署方式很简单，首先打开[ollama官网](https://ollama.com/)，然后下载ollama软件，然后就可以下载到qwen2.5模型啦！`ollama run qwen2.5`。
+3. 目前还不支持用户自定义，只支持qwen2.5模型，不过可以在源码中修改。
+4. 在项目文件夹终端运行`pnpm install && pnpm run build`。
 
 
-# 感谢🙏
+## 如何工作的？
+1. 用户触发搜索：通过`/AI-Search`命令调用。
+2. 插件处理：
+   - 获取当前block内容
+   - 调用AI模型进行内容分析
+   - 在文档中搜索相关内容
+   - 生成格式化的搜索结果
+3. 结果展示：在当前block下方（兄弟block）自动插入搜索结果
+4. 在调用之前你还需要打开ollama app，不然会报错：）
+
+## 效果展示
+![demo.png](public/demo1.png)
+![demo.png](public/demo2.png)
+
+
+## TODO
+1. 还有些地方需要改进，搜索的内容尽可能简洁点，因为关键词拆分的时候有些毛病。这个也是我需要完善的
+2. 增加用户自定义UI界面，比如自定义ollama模型。
+
+
+## 感谢🙏
 1. [logseq插件API文档](https://plugins-doc.logseq.com/)
 2. [logseq插件开发实战](https://correctroad.gitbook.io/logseq-plugins-in-action/chapter-1/make-logseq-plugins-support-settings)
 3. [logseq开发模版：logseq-plugin-template-react](https://github.com/pengx17/logseq-plugin-template-react)
