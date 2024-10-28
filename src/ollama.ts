@@ -7,7 +7,9 @@ export async function ollamaGenerate(prompt: string): Promise<string> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': 'lsp://logseq.io'
       },
+      mode: 'cors',
       body: JSON.stringify({
         model: "qwen2.5",
         prompt: prompt,
