@@ -3,11 +3,12 @@ import { semanticSearch, type SearchResult } from './utils';
 
 export async function ollamaGenerate(prompt: string): Promise<string> {
   try {
-    const response = await fetch("/api/generate", {
+    const response = await fetch("http://localhost:11434/api/generate", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      mode: 'no-cors',  // 添加这个配置
       body: JSON.stringify({
         model: "qwen2.5",
         prompt: prompt,
