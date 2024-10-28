@@ -3,18 +3,16 @@ import { semanticSearch, type SearchResult } from './utils';
 
 export async function ollamaGenerate(prompt: string): Promise<string> {
   try {
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const response = await fetch("/api/generate", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      // 移除 mode: 'cors' 和 Access-Control-Allow-Origin 头
       body: JSON.stringify({
         model: "qwen2.5",
         prompt: prompt,
         stream: false,
-      }),
-      credentials: 'omit' // 添加这个配置
+      })
     });
 
     if (!response.ok) {

@@ -10,4 +10,17 @@ export default defineConfig({
     target: "esnext",
     minify: "esbuild",
   },
+  server: {
+    proxy: {
+      '/api/generate': {
+        target: 'http://localhost:11434',
+        changeOrigin: true,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        }
+      }
+    }
+  }
 });
