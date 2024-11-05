@@ -5,8 +5,10 @@
 
 ## How to deploy?
 1. 下载源码[repo](https://github.com/chiimagnus/logseq-AIsearch)。
-2. 还需要部署ollama，并且配置好模型。ollama部署方式很简单，首先打开[ollama官网](https://ollama.com/)，下载ollama软件，然后就可以下载到qwen2.5模型啦！`ollama run qwen2.5`。
-3. 目前还不支持用户自定义，只支持qwen2.5模型，不过可以在源码中修改。
+2. 还需要部署[ollama](https://ollama.com/)，下载ollama软件，然后就可以下载到qwen2.5模型啦！`ollama run qwen2.5`。
+3. 在 Logseq 插件设置中配置：
+   - Ollama 主机地址（默认为 localhost:11434）
+   - AI 模型（默认为 qwen2.5）
 4. 在项目文件夹终端运行`pnpm install && pnpm run build`。
 
 

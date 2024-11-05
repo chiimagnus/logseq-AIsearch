@@ -1,6 +1,6 @@
 {
   "name": "logseq-aisearch",
-  "version": "v0.4.5",
+  "version": "v0.4.7",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
@@ -40,6 +40,7 @@
   },
   "logseq": {
     "id": "chii-aisearch",
-    "icon": "./logo.png"
+    "icon": "./logo.png",
+    "permissions": ["http://localhost:11434", "http://127.0.0.1:11434"]
   }
 }

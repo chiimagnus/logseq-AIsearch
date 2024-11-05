@@ -4,9 +4,30 @@ import * as ReactDOM from "react-dom/client";
 import App from "./App";
 // import "./index.css";
 import { aiSearch } from './ollama';  // 新增：导入 Ollama API 调用函数
+import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
+
+const settings: SettingSchemaDesc[] = [
+  {
+    key: "host",
+    type: "string",
+    title: "Ollama 主机",
+    description: "设置 Ollama 服务的主机地址和端口",
+    default: "localhost:11434"
+  },
+  {
+    key: "model",
+    type: "string",
+    title: "AI 模型",
+    description: "设置要使用的 Ollama 模型",
+    default: "qwen2.5"
+  }
+];
 
 function main() {
   console.info("AI-Search Plugin Loaded");
+
+  // 注册设置
+  logseq.useSettingsSchema(settings);
 
   // 注册一个反斜杠命令，名为 AI-Search
   logseq.Editor.registerSlashCommand("AI-Search", async () => {

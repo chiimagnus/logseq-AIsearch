@@ -3,27 +3,36 @@ import { semanticSearch, type SearchResult } from './utils';
 
 export async function ollamaGenerate(prompt: string): Promise<string> {
   try {
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const host = logseq.settings?.host || 'localhost:11434';
+    const model = logseq.settings?.model || 'qwen2.5';
+
+    const response = await fetch(`http://${host}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',  // 添加这个配置
       body: JSON.stringify({
-        model: "qwen2.5",
+        model: model,
         prompt: prompt,
         stream: false,
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API 请求失败: ${response.statusText}`);
+      const errorMessage = `Ollama API 请求失败: ${response.status} ${response.statusText}`;
+      logseq.UI.showMsg(errorMessage, 'error');
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    return data.response || "";
+    if (!data.response) {
+      throw new Error('Ollama API 返回数据格式错误');
+    }
+
+    return data.response;
   } catch (error) {
-    console.error("调用 Ollama API 失败:", error);
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
+    logseq.UI.showMsg(`调用 Ollama API 失败: ${errorMessage}`, 'error');
     throw error;
   }
 }
@@ -57,7 +66,7 @@ ${formattedResults}
 1. 保持客观准确
 2. 条理清晰
 3. 突出重点
-4. 语言流畅
+4. 语言流利
 `;
 
     const summary = await ollamaGenerate(summaryPrompt);
