@@ -44,5 +44,11 @@
 3. [search_with_ai](https://github.com/yokingma/search_with_ai)
 
 
-## Be my partner 🧑‍🤝
+## Some problems
+1. CORS 的限制解决方案：（DOING）
+ - [How to Solve CORS Issues When Calling Ollama API from a Chrome Extension](https://blog.mellowtel.com/how-to-solve-cors-issues-when-calling-ollama-api-from-a-chrome-extension)
+ - [feat: api allow chrome-extension origin #6010](https://github.com/ollama/ollama/pull/6010)
+
+
+## Buy me a coffee☕️
 ![buymeacoffee](public/buymeacoffee.jpg)
