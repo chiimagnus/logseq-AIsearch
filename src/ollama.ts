@@ -44,12 +44,8 @@ export async function aiSearch(query: string): Promise<string> {
 
     // 3. 格式化搜索结果
     const formattedResults = searchResults
-      .map((result: SearchResult) => {
-        const block = result.block;
-        const pageName = block.page?.name || "未命名页面";
-        return `- ${block.content}\n  来源: ${pageName}`;
-      })
-      .join('\n\n');
+      .map((result: SearchResult) => result.block.content)
+      .join('\n');
 
     // 4. 生成总结
     const summaryPrompt = `
@@ -65,7 +61,9 @@ ${formattedResults}
 `;
 
     const summary = await ollamaGenerate(summaryPrompt);
-    return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;
+    // return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;
+    return `搜索结果总结:\n${summary}\n`;
+
   } catch (error) {
     console.error("AI搜索失败:", error);
     return "搜索过程中出现错误,请稍后重试";
