@@ -16,24 +16,23 @@ export async function ollamaGenerate(prompt: string): Promise<string> {
         prompt: prompt,
         stream: false,
       })
+    }).catch(error => {
+      logseq.UI.showMsg("请确保 Ollama 服务正在运行，并检查主机地址和模型名称是否正确", 'warning');
+      return null;
     });
 
-    if (!response.ok) {
-      const errorMessage = `Ollama API 请求失败: ${response.status} ${response.statusText}`;
-      logseq.UI.showMsg(errorMessage, 'error');
-      throw new Error(errorMessage);
+    if (!response || !response.ok) {
+      logseq.UI.showMsg("请求失败，请检查 Ollama 服务状态", 'warning');
+      return "请求失败，请稍后重试";
     }
 
     const data = await response.json();
-    if (!data.response) {
-      throw new Error('Ollama API 返回数据格式错误');
-    }
-
-    return data.response;
+    return data.response || '';
+    
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '未知错误';
-    logseq.UI.showMsg(`调用 Ollama API 失败: ${errorMessage}`, 'error');
-    throw error;
+    console.error("Ollama API Error:", error);
+    logseq.UI.showMsg("调用 Ollama API 失败，请检查服务状态", 'error');
+    return "请求失败，请稍后重试";
   }
 }
 
