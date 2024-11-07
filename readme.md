@@ -40,8 +40,9 @@
 1. [logseq插件API文档](https://plugins-doc.logseq.com/)
 2. [logseq插件开发实战](https://correctroad.gitbook.io/logseq-plugins-in-action/chapter-1/make-logseq-plugins-support-settings)
 3. [logseq-plugins-smartsearch](https://github.com/sethyuan/logseq-plugin-smartsearch)
-4. [非常感谢ollama-logseq的开发者提供的帮助！](https://github.com/omagdy7/ollama-logseq)
+4. [ollama-logseq](https://github.com/omagdy7/ollama-logseq)
 5. [logseq-plugin-link-preview](https://github.com/pengx17/logseq-plugin-link-preview)
+6. 非常感谢ollama-logseq的开发者@omagdy7提供的帮助！
 
 <!-- 1. [farfalle](https://github.com/rashadphz/farfalle)
 2. [FreeAskInternet](https://github.com/nashsu/FreeAskInternet)
@@ -49,7 +50,7 @@
 
 
 ## Some problems
-- [x] CORS 的限制解决方案: https://github.com/omagdy7/ollama-logseq/issues/32
+- [x] ~~CORS 的限制解决方案: https://github.com/omagdy7/ollama-logseq/issues/32~~
 
 
 ## Buy me a coffee☕️
