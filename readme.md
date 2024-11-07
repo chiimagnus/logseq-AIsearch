@@ -25,15 +25,15 @@
 
 ## Demo
 ![demo.png](public/demo1.png)
-<!-- ![functions](public/logseq设计草图.png) -->
 
 
 ## TODO
 - [ ] 关键词拆分改进，增加类似词语的联想。
-- [ ] 用户自定义prompt
-- [ ] 大功能：UI界面升级，类似biji.com AI助手那样
-- [x] ~~用户自定义ollama模型~~
-- [x] ~~用户自定义ollama API端口~~
+- [ ] 允许用户自定义prompt
+- [ ] 大功能：UI界面升级，~~类似biji.com AI助手那样~~不了，我想着还是深度结合logseq的block吧。效果这样：
+   <img src="public/v0.5AIsearch插件设计.png" style="width: 50%;">
+- [x] ~~允许用户自定义ollama模型~~
+- [x] ~~允许用户自定义ollama API端口~~
 
 
 ## Thanks🙏
@@ -42,6 +42,7 @@
 3. [logseq-plugins-smartsearch](https://github.com/sethyuan/logseq-plugin-smartsearch)
 4. [非常感谢ollama-logseq的开发者提供的帮助！](https://github.com/omagdy7/ollama-logseq)
 5. [logseq-plugin-link-preview](https://github.com/pengx17/logseq-plugin-link-preview)
+6. 非常感谢ollama-logseq的开发者@omagdy7提供的帮助！
 
 <!-- 1. [farfalle](https://github.com/rashadphz/farfalle)
 2. [FreeAskInternet](https://github.com/nashsu/FreeAskInternet)
@@ -53,4 +54,4 @@
 
 
 ## Buy me a coffee☕️
-![buymeacoffee](public/buymeacoffee.jpg)
+<img src="public/buymeacoffee.jpg" style="width: 50%;">
