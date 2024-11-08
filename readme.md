@@ -3,24 +3,13 @@
 使用`/`调出AISearch功能，基于该block内容 进行logseq文档内的全局搜索 并输出相关内容。
 
 
-## How to deploy?
-1. 下载源码[repo](https://github.com/chiimagnus/logseq-AIsearch)。
-2. 还需要部署[ollama](https://ollama.com/)，下载ollama软件，然后就可以下载到qwen2.5模型啦！`ollama run qwen2.5`。
-3. 在 Logseq 插件设置中配置：
+## What you need?
+1. 你在开始使用该插件之前需要部署[ollama](https://ollama.com/)大模型。
+2. 你需要注意，该插件默认配置（可以更改）：
    - Ollama 主机地址（默认为 localhost:11434）
    - AI 模型（默认为 qwen2.5）
-4. 在项目文件夹终端运行`pnpm install && pnpm run build`。
-
-
-## How it works?
-1. 用户触发搜索：通过`/AI-Search`命令调用。
-2. 插件处理：
-   - 获取当前block内容
-   - 调用AI模型进行内容分析
-   - 在文档中搜索相关内容
-   - 生成格式化的搜索结果
-3. 结果展示：在当前block下方（兄弟block）自动插入搜索结果
-4. 在调用之前你还需要打开ollama app，不然会报错：）
+3. 然后，你就可以通过`/AI-Search`命令调用该插件啦！
+4. 祝你使用愉快！对了，记得打开ollama app哦！
 
 
 ## Demo
