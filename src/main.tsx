@@ -20,6 +20,13 @@ const settings: SettingSchemaDesc[] = [
     title: "AI 模型",
     description: "设置要使用的 Ollama 模型",
     default: "qwen2.5"
+  },
+  {
+    key: "customPrompt",
+    type: "string",
+    title: "自定义 Prompt",
+    description: "设置自定义的 Prompt",
+    default: "请根据以下内容,总结要点: 要求:保持客观准确;条理清晰;突出重点;语言流利"
   }
 ];
 
@@ -44,10 +51,7 @@ function main() {
 
         // 构造带有代码块格式的文本
         const formattedText = `\`\`\`markdown
-以下内容为AI搜索的结果：
-
-${generatedText}
-\`\`\``;
+以下内容为AI搜索的结果:${generatedText}\`\`\``;
 
         // 插入格式化后的文本
         await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
