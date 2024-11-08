@@ -44,8 +44,8 @@ export async function aiSearch(query: string): Promise<string> {
       return "未能提取到有效关键词";
     }
 
-    // 显示正在搜索的关键词
-    logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info');
+    // 显示正在搜索的关键词，设置timeout为3秒
+    logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info', { timeout: 5000 });
 
     // 2. 执行语义搜索
     const searchResults = await semanticSearch(keywords);
@@ -58,16 +58,19 @@ export async function aiSearch(query: string): Promise<string> {
       .map((result: SearchResult) => result.block.content)
       .join('\n');
 
-    // 显示正在总结的状态
-    logseq.UI.showMsg("正在总结...", 'info');
+    // 在“正在搜索”消息结束后显示“正在总结”消息，持续10秒
+    setTimeout(() => {
+      logseq.UI.showMsg("正在总结...", 'info', { timeout: 10000 });
+    }, 6000);
 
     // 4. 生成总结
     const customPrompt = logseq.settings?.customPrompt || "请根据以下内容,总结要点: 要求:保持客观准确;条理清晰;突出重点;语言流利";
     const summaryPrompt = `${customPrompt} "${query}":${formattedResults}`;
     const summary = await ollamaGenerate(summaryPrompt);
-    // return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;这个别删除！
 
     return `\n${summary}\n`;
+    // return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;这个别删除！
+
 
   } catch (error) {
     console.error("AI搜索失败:", error);
