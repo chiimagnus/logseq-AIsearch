@@ -56,21 +56,11 @@ export async function aiSearch(query: string): Promise<string> {
       .join('\n');
 
     // 4. 生成总结
-    const summaryPrompt = `
-请根据以下内容,总结关于"${query}"的要点:
-
-${formattedResults}
-
-要求:
-1. 保持客观准确
-2. 条理清晰
-3. 突出重点
-4. 语言流利
-`;
-
+    const customPrompt = logseq.settings?.customPrompt || "请根据以下内容,总结要点: 要求:保持客观准确;条理清晰;突出重点;语言流利";
+    const summaryPrompt = `${customPrompt} "${query}":${formattedResults}`;
     const summary = await ollamaGenerate(summaryPrompt);
     // return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;
-    return `搜索结果总结:\n${summary}\n`;
+    return `\n${summary}\n`;
 
   } catch (error) {
     console.error("AI搜索失败:", error);
