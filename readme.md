@@ -29,7 +29,7 @@
 
 ## TODO
 - [ ] 关键词拆分改进，增加类似词语的联想。
-- [x] 允许用户自定义prompt
+- [x] ~~允许用户自定义prompt~~
 - [ ] 大功能：UI界面升级，~~类似biji.com AI助手那样~~不了，我想着还是深度结合logseq的block吧。效果这样：
    <img src="public/v0.5AIsearch插件设计.png" style="width: 50%;">
 - [x] ~~允许用户自定义ollama模型~~
