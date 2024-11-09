@@ -4,9 +4,12 @@ import { ollamaGenerate } from './ollama';
 export async function extractKeywords(input: string): Promise<string[]> {
   try {
     const prompt = `
-请你明确我问问题的意图之后，再给出相关的关键词用于后续的检索。以JSON数组格式返回(只返回数组,不要其他内容):
-"${input}"
-示例输出: ["关键词1", "关键词2", "相关词1"]
+请在清楚了解用户输入的问题意图之后，提取问题中的关键词用于检索。要求：
+1. 将复杂短语拆分为独立的词元
+2. 只保留有实际搜索意义的词
+3. 去掉语气词、虚词等
+4. 以JSON数组格式返回(只返回数组,不要其他内容)
+输入: "${input}"
 `;
     
     const response = await ollamaGenerate(prompt);
