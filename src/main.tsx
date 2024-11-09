@@ -47,16 +47,37 @@ function main() {
         const blockContent = await logseq.Editor.getEditingBlockContent();
 
         // 调用 Ollama API，生成文本
-        const generatedText = await aiSearch(blockContent);
+        const { summary, results } = await aiSearch(blockContent);
 
         // 构造带有代码块格式的文本
         const formattedText = `\`\`\`markdown
-以下内容为AI搜索的结果:${generatedText}\`\`\``;
+以下内容为AI搜索的结果:${summary}\`\`\``;
 
-        // 插入格式化后的文本
-        await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
-          sibling: true, // 插入在当前 block 之后
+        // 插入AI生成的内容作为子块
+        const aiSummaryBlock = await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
+          sibling: false, // 插入为子块
         });
+
+        if (aiSummaryBlock) {  // 添加空值检查
+          // 插入笔记来源作为第二个子块
+          const notesBlock = await logseq.Editor.insertBlock(aiSummaryBlock.uuid, "笔记来源", {
+            sibling: true, // 改为 true，使其成为 AI 总结的兄弟块
+          });
+
+          if (notesBlock) {  // 添加空值检查
+            // 插入每个引用的笔记作为笔记来源的子块
+            for (const result of results) {
+              const noteContent = result.block.content;
+              await logseq.Editor.insertBlock(notesBlock.uuid, noteContent, {
+                sibling: false, // 插入为子子块
+              });
+            }
+          } else {
+            console.error("插入笔记来源块失败");
+          }
+        } else {
+          console.error("插入AI总结块失败");
+        }
 
         // 提示操作成功
         console.log("已在下一个兄弟 block 中插入生成的文本");

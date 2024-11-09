@@ -36,12 +36,15 @@ export async function ollamaGenerate(prompt: string): Promise<string> {
   }
 }
 
-export async function aiSearch(query: string): Promise<string> {
+export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
   try {
     // 1. 提取关键词
     const keywords = await extractKeywords(query);
     if (keywords.length === 0) {
-      return "未能提取到有效关键词";
+      return {
+        summary: "未能提取到有效关键词",
+        results: []
+      };
     }
 
     // 显示正在搜索的关键词，设置timeout为3秒
@@ -50,7 +53,10 @@ export async function aiSearch(query: string): Promise<string> {
     // 2. 执行语义搜索
     const searchResults = await semanticSearch(keywords);
     if (searchResults.length === 0) {
-      return "未找到相关内容";
+      return {
+        summary: "未找到相关内容",
+        results: []
+      };
     }
 
     // 3. 格式化搜索结果
@@ -68,12 +74,15 @@ export async function aiSearch(query: string): Promise<string> {
     const summaryPrompt = `${customPrompt} "${query}":${formattedResults}`;
     const summary = await ollamaGenerate(summaryPrompt);
 
-    return `\n${summary}\n`;
-    // return `搜索结果总结:\n${summary}\n\n原始笔记:\n${formattedResults}`;这个别删除！
-
-
+    return {
+      summary: `\n${summary}\n`,
+      results: searchResults
+    };
   } catch (error) {
     console.error("AI搜索失败:", error);
-    return "搜索过程中出现错误,请稍后重试";
+    return {
+      summary: "搜索过程中出现错误,请稍后重试",
+      results: []
+    };
   }
 }
