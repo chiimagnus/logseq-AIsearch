@@ -13,7 +13,8 @@
 
 
 ## Demo
-![demo.png](public/demo.png)
+![demo1.png](public/demo1.png)
+![demo2.png](public/demo2.png)
 
 
 ## TODO
