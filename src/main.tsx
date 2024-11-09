@@ -60,15 +60,16 @@ function main() {
 
         if (aiSummaryBlock) {  // 添加空值检查
           // 插入笔记来源作为第二个子块
-          const notesBlock = await logseq.Editor.insertBlock(aiSummaryBlock.uuid, "笔记来源", {
+          const notesBlock = await logseq.Editor.insertBlock(aiSummaryBlock.uuid, `笔记来源 (${results.length}条相关笔记)`, {
             sibling: true, // 改为 true，使其成为 AI 总结的兄弟块
           });
 
           if (notesBlock) {  // 添加空值检查
             // 插入每个引用的笔记作为笔记来源的子块
             for (const result of results) {
-              const noteContent = result.block.content;
-              await logseq.Editor.insertBlock(notesBlock.uuid, noteContent, {
+              // 创建块引用链接
+              const blockRef = `((${result.block.uuid}))`;
+              await logseq.Editor.insertBlock(notesBlock.uuid, blockRef, {
                 sibling: false, // 插入为子子块
               });
             }
