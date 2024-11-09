@@ -12,7 +12,7 @@ export async function extractKeywords(input: string): Promise<string[]> {
 
     // 2. 使用 Ollama 扩展关键词
     const prompt = `
-请分析以下文本,提取关键词和相关词,以JSON数组格式返回(只返回数组,不要其他内容):
+请你明确我问问题的意图之后，再给出相关的关键词用于后续的检索。以JSON数组格式返回(只返回数组,不要其他内容):
 "${input}"
 示例输出: ["关键词1", "关键词2", "相关词1"]
 `;
