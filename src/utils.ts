@@ -49,10 +49,13 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       if (searchResults) {
         searchResults.forEach((result: any) => {
           const block = result[0];
-          results.push({
-            block,
-            score: calculateRelevanceScore(block, keywords)
-          });
+          const score = calculateRelevanceScore(block, keywords);
+          if (score > 0.5) {
+            results.push({
+              block,
+              score
+            });
+          }
         });
       }
     }
