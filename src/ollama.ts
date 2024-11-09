@@ -70,8 +70,16 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     }, 6000);
 
     // 4. 生成总结
-    const customPrompt = logseq.settings?.customPrompt || "请根据以下内容,总结要点: 要求:保持客观准确;条理清晰;突出重点;语言流利";
-    const summaryPrompt = `${customPrompt} "${query}":${formattedResults}`;
+    const summaryPrompt = `
+请针对用户问题"${query}"，基于以下内容进行重点总结：
+1. 需要总结与问题直接相关的信息
+2. 并且进行适当延伸，不要遗漏重要信息
+3. 按信息的相关程度排序
+4. 确保回答切中问题要点
+5. 如果内容与问题关联不大，请明确指出
+
+相关内容：${formattedResults}
+`;
     const summary = await ollamaGenerate(summaryPrompt);
 
     return {

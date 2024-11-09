@@ -66,7 +66,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
         .sort((a, b) => b.score - a.score)
         .map(item => [item.block.uuid, item])
     ).values())
-    .slice(0, 10); // 限制返回数量
+    // .slice(0, 10); // 限制返回数量
   } catch (error) {
     console.error("语义搜索失败:", error);
     return [];
