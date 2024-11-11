@@ -1,4 +1,3 @@
-// 新增 keywordExtraction.ts
 import { ollamaGenerate } from './ollama';
 
 export async function extractKeywords(input: string): Promise<string[]> {
