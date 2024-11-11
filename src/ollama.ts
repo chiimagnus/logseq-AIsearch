@@ -61,6 +61,9 @@ ${content}
 async function batchEvaluateRelevance(query: string, results: SearchResult[], batchSize: number = 5): Promise<SearchResult[]> {
   const refinedResults: SearchResult[] = [];
   const totalBatches = Math.ceil(results.length / batchSize);
+  const minScore: number = typeof logseq.settings?.minScore === 'number' 
+    ? logseq.settings.minScore 
+    : 5.0;
 
   for (let i = 0; i < results.length; i += batchSize) {
     const batch = results.slice(i, i + batchSize);
@@ -72,7 +75,7 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[], ba
     // 并行处理每个批次
     const batchPromises = batch.map(async (result) => {
       const relevanceScore = await evaluateRelevance(query, result.block.content);
-      if (relevanceScore > 5.0) {
+      if (relevanceScore > minScore) {
         return {
           ...result,
           score: relevanceScore
