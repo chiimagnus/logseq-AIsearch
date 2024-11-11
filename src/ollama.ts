@@ -36,6 +36,70 @@ export async function ollamaGenerate(prompt: string): Promise<string> {
   }
 }
 
+export async function evaluateRelevance(query: string, content: string): Promise<number> {
+  const prompt = `
+分析以下内容与用户问题的相关性。
+
+用户问题："${query}"
+
+待评估内容：
+${content}
+
+评分标准：
+1. 内容是否回答了问题
+2. 内容是否提供了有价值的背景信息
+3. 内容是否有助于理解问题
+4. 内容是否是问题的延伸
+
+请只返回0-10的分数，不要其他任何解释。`;
+
+  const response = await ollamaGenerate(prompt);
+  return parseFloat(response) || 0;
+}
+
+async function batchEvaluateRelevance(query: string, results: SearchResult[], batchSize: number = 5): Promise<SearchResult[]> {
+  const refinedResults: SearchResult[] = [];
+  const totalBatches = Math.ceil(results.length / batchSize);
+
+  for (let i = 0; i < results.length; i += batchSize) {
+    const batch = results.slice(i, i + batchSize);
+    const currentBatch = i / batchSize + 1;
+    
+    // 更新进度提示
+    await logseq.UI.showMsg(`正在分析第 ${currentBatch}/${totalBatches} 批内容...`, 'info');
+    
+    // 并行处理每个批次
+    const batchPromises = batch.map(async (result) => {
+      const relevanceScore = await evaluateRelevance(query, result.block.content);
+      if (relevanceScore > 5.0) {
+        return {
+          ...result,
+          score: relevanceScore
+        };
+      }
+      return null;
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    refinedResults.push(...batchResults.filter((r): r is SearchResult => r !== null));
+  }
+
+  return refinedResults.sort((a, b) => b.score - a.score);
+}
+
+// 添加 getSummaryPrompt 函数定义
+function getSummaryPrompt(query: string, content: string): string {
+  return `
+请针对用户问题"${query}"，基于以下内容进行重点总结：
+1. 需要总结与问题直接相关的信息
+2. 并且进行适当延伸，不要遗漏重要信息
+3. 按信息的相关程度排序
+4. 确保回答切中问题要点
+5. 如果内容与问题关联不大，请明确指出
+相关内容：${content}
+`;
+}
+
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
   try {
     // 1. 提取关键词
@@ -47,42 +111,32 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       };
     }
 
-    // 显示正在搜索的消息
-    await logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info');
+    // await logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info');
 
-    // 2. 执行语义搜索
-    const searchResults = await semanticSearch(keywords);
-    if (searchResults.length === 0) {
+    // 2. 第一轮：基于关键词的粗筛
+    const initialResults = await semanticSearch(keywords);
+    if (initialResults.length === 0) {
       return {
         summary: "未找到相关内容",
         results: []
       };
     }
 
-    // 3. 格式化搜索结果
-    const formattedResults = searchResults
+    // 3. 第二轮：批量AI评分筛选
+    // await logseq.UI.showMsg("正在进行语义相关性分析...", 'info');
+    const refinedResults = await batchEvaluateRelevance(query, initialResults);
+
+    // 4. 生成总结
+    const formattedResults = refinedResults
       .map((result: SearchResult) => result.block.content)
       .join('\n');
 
-    // 显示正在总结的消息
     await logseq.UI.showMsg("正在总结...", 'info');
-
-    // 4. 生成总结
-    const summaryPrompt = `
-请针对用户问题"${query}"，基于以下内容进行重点总结：
-1. 需要总结与问题直接相关的信息
-2. 并且进行适当延伸，不要遗漏重要信息
-3. 按信息的相关程度排序
-4. 确保回答切中问题要点
-5. 如果内容与问题关联不大，请明确指出
-
-相关内容：${formattedResults}
-`;
-    const summary = await ollamaGenerate(summaryPrompt);
+    const summary = await ollamaGenerate(getSummaryPrompt(query, formattedResults));
 
     return {
       summary: `\n${summary}\n`,
-      results: searchResults
+      results: refinedResults
     };
   } catch (error) {
     console.error("AI搜索失败:", error);

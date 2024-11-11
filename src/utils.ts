@@ -75,6 +75,7 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
 export async function semanticSearch(keywords: string[]): Promise<SearchResult[]> {
   try {
     const results: SearchResult[] = [];
+    // const maxInitialResults = 30; // 限制第一轮筛选的结果数量
 
     for (const keyword of keywords) {
       const query = `
@@ -90,7 +91,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
         searchResults.forEach((result: any) => {
           const block = result[0];
           const score = calculateRelevanceScore(block, keywords);
-          if (score > 3.5) {
+          if (score > 2) {
             results.push({
               block,
               score
@@ -101,7 +102,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     }
 
     // 考虑父块信息
-    results.forEach(async result => {
+    await Promise.all(results.map(async result => {
       if (result.block.parent) {
         try {
           const parentQuery = `
@@ -116,15 +117,15 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           console.error("父块查询失败:", error);
         }
       }
-    });
+    }));
 
     // 按相关度排序并去重
     return Array.from(new Map(
       results
         .sort((a, b) => b.score - a.score)
+        .slice(0, 50) // 限制返回数量
         .map(item => [item.block.uuid, item])
     ).values());
-    // .slice(0, 10); // 限制返回数量
   } catch (error) {
     console.error("语义搜索失败:", error);
     return [];
