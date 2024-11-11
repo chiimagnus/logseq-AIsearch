@@ -93,6 +93,11 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
       ? logseq.settings.maxResults 
       : 50;
+    
+    // 获取用户设置
+    const includeParent = logseq.settings?.includeParent ?? true;
+    const includeSiblings = logseq.settings?.includeSiblings ?? true;
+    const includeChildren = logseq.settings?.includeChildren ?? true;
 
     for (const keyword of keywords) {
       const query = `
@@ -111,8 +116,8 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           // 1. 初始化时，fullContent 就是当前块的内容
           let fullContent = block.content;
 
-          // 1. 获取父块内容
-          if (block.parent) {
+          // 根据用户设置获取父块内容
+          if (block.parent && includeParent) {
             try {
               const parentQuery = `
                 [:find (pull ?b [*])
@@ -123,42 +128,46 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
                 fullContent = parentBlock[0][0].content + "\n" + fullContent;
               }
 
-              // 2. 获取兄弟块内容（同一父块下的其他块）
-              const siblingsQuery = `
-                [:find (pull ?b [*])
-                 :where 
-                 [?b :block/parent ?parent]
-                 [?parent :block/uuid "${block.parent}"]
-                 [(not= ?b :block/uuid "${block.uuid}")]]  ; 排除当前块
-              `;
-              const siblings = await logseq.DB.datascriptQuery(siblingsQuery);
-              if (siblings && siblings.length > 0) {
-                const siblingsContent = siblings
-                  .map((sibling: any) => sibling[0].content)
-                  .join("\n");
-                fullContent = fullContent + "\n--- 相关内容 ---\n" + siblingsContent;
+              // 根据用户设置获取兄弟块内容
+              if (includeSiblings) {
+                const siblingsQuery = `
+                  [:find (pull ?b [*])
+                   :where 
+                   [?b :block/parent ?parent]
+                   [?parent :block/uuid "${block.parent}"]
+                   [(not= ?b :block/uuid "${block.uuid}")]]
+                `;
+                const siblings = await logseq.DB.datascriptQuery(siblingsQuery);
+                if (siblings && siblings.length > 0) {
+                  const siblingsContent = siblings
+                    .map((sibling: any) => sibling[0].content)
+                    .join("\n");
+                  fullContent = fullContent + "\n--- 相关内容 ---\n" + siblingsContent;
+                }
               }
             } catch (error) {
               console.error("父块或兄弟块查询失败:", error);
             }
           }
 
-          // 3. 获取子块内容
-          try {
-            const childrenQuery = `
-              [:find (pull ?b [*])
-               :where [?b :block/parent ?parent]
-               [?parent :block/uuid "${block.uuid}"]]
-            `;
-            const children = await logseq.DB.datascriptQuery(childrenQuery);
-            if (children && children.length > 0) {
-              const childrenContent = children
-                .map((child: any) => child[0].content)
-                .join("\n");
-              fullContent += "\n" + childrenContent;
+          // 根据用户设置获取子块内容
+          if (includeChildren) {
+            try {
+              const childrenQuery = `
+                [:find (pull ?b [*])
+                 :where [?b :block/parent ?parent]
+                 [?parent :block/uuid "${block.uuid}"]]
+              `;
+              const children = await logseq.DB.datascriptQuery(childrenQuery);
+              if (children && children.length > 0) {
+                const childrenContent = children
+                  .map((child: any) => child[0].content)
+                  .join("\n");
+                fullContent += "\n" + childrenContent;
+              }
+            } catch (error) {
+              console.error("子块查询失败:", error);
             }
-          } catch (error) {
-            console.error("子块查询失败:", error);
           }
 
           // 4. 计算相关性分数
