@@ -14,23 +14,36 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
   const content = block.content.toLowerCase();
   let score = 0;
 
-  // 1. 关键词匹配度（考虑位置权重）
+  // 1. 关键词匹配和共现分析
+  const keywordPairs = keywords.flatMap((k1, i) => 
+    keywords.slice(i + 1).map(k2 => [k1, k2])
+  );
+  
   keywords.forEach(keyword => {
     const keywordLower = keyword.toLowerCase();
     const matches = [...content.matchAll(new RegExp(keywordLower, 'gi'))];
     
-    matches.forEach(match => {
-      if (match.index !== undefined) {
-        // 标题权重：如果关键词出现在内容开始部分，给予更高权重
-        const positionWeight = Math.exp(-match.index / 100);
-        // 完整匹配权重：优先完整词匹配而不是部分匹配
-        const exactMatchWeight = content.includes(` ${keywordLower} `) ? 1.5 : 1;
-        // 关键词密度权重：考虑相邻关键词的距离
-        const densityWeight = matches.length > 1 ? 1.2 : 1;
-        
-        score += 2 * positionWeight * exactMatchWeight * densityWeight;
+    if (matches.length > 0) {
+      // 位置权重
+      const positionWeight = Math.exp(-matches[0].index! / 100);
+      // 完整匹配权重
+      const exactMatchWeight = content.includes(` ${keywordLower} `) ? 1.5 : 1;
+      // 密度权重
+      const densityWeight = matches.length > 1 ? 1.2 : 1;
+      
+      score += 2 * positionWeight * exactMatchWeight * densityWeight;
+
+      // 检查与其他关键词的共现
+      const hasCoOccurrence = keywordPairs
+        .filter(pair => pair.includes(keyword))
+        .some(([k1, k2]) => 
+          content.includes(k1.toLowerCase()) && content.includes(k2.toLowerCase())
+        );
+      
+      if (hasCoOccurrence) {
+        score *= 1.5; // 增加共现权重
       }
-    });
+    }
   });
 
   // 2. 内容长度权重（使用sigmoid函数平滑过渡）
