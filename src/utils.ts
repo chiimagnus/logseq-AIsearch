@@ -75,7 +75,6 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
 export async function semanticSearch(keywords: string[]): Promise<SearchResult[]> {
   try {
     const results: SearchResult[] = [];
-    // const maxInitialResults = 30; // 限制第一轮筛选的结果数量
 
     for (const keyword of keywords) {
       const query = `
@@ -88,36 +87,57 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       const searchResults = await logseq.DB.datascriptQuery(query);
       
       if (searchResults) {
-        searchResults.forEach((result: any) => {
+        for (const result of searchResults) {
           const block = result[0];
-          const score = calculateRelevanceScore(block, keywords);
+          
+          // 1. 初始化时，fullContent 就是当前块的内容
+          let fullContent = block.content;
+
+          // 2. 如果有父块，将父块内容添加到前面
+          if (block.parent) {
+            try {
+              const parentQuery = `
+                [:find (pull ?b [*])
+                 :where [?b :block/uuid "${block.parent}"]]
+              `;
+              const parentBlock = await logseq.DB.datascriptQuery(parentQuery);
+              if (parentBlock && parentBlock.length > 0) {
+                fullContent = parentBlock[0][0].content + "\n" + fullContent;
+              }
+            } catch (error) {
+              console.error("父块查询失败:", error);
+            }
+          }
+
+          // 3. 如果有子块，将子块内容添加到后面
+          try {
+            const childrenQuery = `
+              [:find (pull ?b [*])
+               :where [?b :block/parent ?parent]
+               [?parent :block/uuid "${block.uuid}"]]
+            `;
+            const children = await logseq.DB.datascriptQuery(childrenQuery);
+            if (children && children.length > 0) {
+              const childrenContent = children
+                .map((child: any) => child[0].content)
+                .join("\n");
+              fullContent += "\n" + childrenContent;
+            }
+          } catch (error) {
+            console.error("子块查询失败:", error);
+          }
+
+          // 4. 计算相关性分数
+          const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords);
           if (score > 2) {
             results.push({
-              block,
+              block: { ...block, content: fullContent },
               score
             });
           }
-        });
-      }
-    }
-
-    // 考虑父块信息
-    await Promise.all(results.map(async result => {
-      if (result.block.parent) {
-        try {
-          const parentQuery = `
-            [:find (pull ?b [*])
-             :where [?b :block/uuid "${result.block.parent}"]]
-          `;
-          const parentBlock = await logseq.DB.datascriptQuery(parentQuery);
-          if (parentBlock && parentBlock.length > 0) {
-            result.block.content = parentBlock[0][0].content + " " + result.block.content;
-          }
-        } catch (error) {
-          console.error("父块查询失败:", error);
         }
       }
-    }));
+    }
 
     // 按相关度排序并去重
     return Array.from(new Map(
