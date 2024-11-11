@@ -1,9 +1,7 @@
 import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
-import App from "./App";
-// import "./index.css";
-import { aiSearch } from './ollama';  // 新增：导入 Ollama API 调用函数
+import { aiSearch } from './ollama';
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 
 const settings: SettingSchemaDesc[] = [
@@ -89,6 +87,6 @@ logseq.ready(main).catch(console.error);
 const root = ReactDOM.createRoot(document.getElementById("app")!);
 root.render(
   <React.StrictMode>
-    <App />
+    {/* <App /> */}
   </React.StrictMode>
 );

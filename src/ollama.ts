@@ -47,8 +47,8 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       };
     }
 
-    // 显示正在搜索的关键词，设置timeout为3秒
-    logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info', { timeout: 5000 });
+    // 显示正在搜索的消息
+    await logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info');
 
     // 2. 执行语义搜索
     const searchResults = await semanticSearch(keywords);
@@ -64,10 +64,8 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       .map((result: SearchResult) => result.block.content)
       .join('\n');
 
-    // 在“正在搜索”消息结束后显示“正在总结”消息，持续10秒
-    setTimeout(() => {
-      logseq.UI.showMsg("正在总结...", 'info', { timeout: 10000 });
-    }, 6000);
+    // 显示正在总结的消息
+    await logseq.UI.showMsg("正在总结...", 'info');
 
     // 4. 生成总结
     const summaryPrompt = `
