@@ -93,7 +93,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           // 1. 初始化时，fullContent 就是当前块的内容
           let fullContent = block.content;
 
-          // 2. 如果有父块，将父块内容添加到前面
+          // 1. 获取父块内容
           if (block.parent) {
             try {
               const parentQuery = `
@@ -104,12 +104,28 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
               if (parentBlock && parentBlock.length > 0) {
                 fullContent = parentBlock[0][0].content + "\n" + fullContent;
               }
+
+              // 2. 获取兄弟块内容（同一父块下的其他块）
+              const siblingsQuery = `
+                [:find (pull ?b [*])
+                 :where 
+                 [?b :block/parent ?parent]
+                 [?parent :block/uuid "${block.parent}"]
+                 [(not= ?b :block/uuid "${block.uuid}")]]  ; 排除当前块
+              `;
+              const siblings = await logseq.DB.datascriptQuery(siblingsQuery);
+              if (siblings && siblings.length > 0) {
+                const siblingsContent = siblings
+                  .map((sibling: any) => sibling[0].content)
+                  .join("\n");
+                fullContent = fullContent + "\n--- 相关内容 ---\n" + siblingsContent;
+              }
             } catch (error) {
-              console.error("父块查询失败:", error);
+              console.error("父块或兄弟块查询失败:", error);
             }
           }
 
-          // 3. 如果有子块，将子块内容添加到后面
+          // 3. 获取子块内容
           try {
             const childrenQuery = `
               [:find (pull ?b [*])
