@@ -2,6 +2,7 @@ export interface SearchResult {
   block: {
     content: string;
     uuid: string;
+    parent?: string;
     page?: {
       name: string;
       "journal-day"?: number;
@@ -106,13 +107,30 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       }
     }
 
+    // 考虑父块信息
+    results.forEach(async result => {
+      if (result.block.parent) {
+        try {
+          const parentQuery = `
+            [:find (pull ?b [*])
+             :where [?b :block/uuid "${result.block.parent}"]]
+          `;
+          const parentBlock = await logseq.DB.datascriptQuery(parentQuery);
+          if (parentBlock && parentBlock.length > 0) {
+            result.block.content = parentBlock[0][0].content + " " + result.block.content;
+          }
+        } catch (error) {
+          console.error("父块查询失败:", error);
+        }
+      }
+    });
+
     // 按相关度排序并去重
     return Array.from(new Map(
       results
         .sort((a, b) => b.score - a.score)
         .map(item => [item.block.uuid, item])
-    ).values())
-    // .slice(0, 10); // 限制返回数量
+    ).values());    // .slice(0, 10); // 限制返回数量
   } catch (error) {
     console.error("语义搜索失败:", error);
     return [];
