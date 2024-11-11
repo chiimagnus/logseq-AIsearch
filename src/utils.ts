@@ -69,6 +69,19 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
     score *= 1.4; // 适当提高格式权重
   }
 
+  // 5. 层级权重（父块、当前块、子块的权重不同）
+  const blockType = content.includes('--- 相关内容 ---') ? 'sibling' : 
+                   content === block.content ? 'current' : 
+                   'child';
+
+  const hierarchyWeight = {
+    current: 1.5,  // 当前块权重最高
+    sibling: 1.2,  // 兄弟块次之
+    child: 1.0     // 子块权重最低
+  };
+
+  score *= hierarchyWeight[blockType];
+
   return Math.max(0, Math.min(10, score)); // 限制分数范围在0-10之间
 }
 

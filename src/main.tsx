@@ -42,7 +42,11 @@ function main() {
 
         // 构造带有代码块格式的文本
         const formattedText = `\`\`\`markdown
-以下内容为AI搜索的结果:${summary}\`\`\``;
+AI搜索结果：
+${summary}
+
+注：内容包含父块、兄弟块和子块的相关信息
+\`\`\``;
 
         // 插入AI生成的内容作为子块
         const aiSummaryBlock = await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
