@@ -88,6 +88,11 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
 export async function semanticSearch(keywords: string[]): Promise<SearchResult[]> {
   try {
     const results: SearchResult[] = [];
+    // 获取用户设置的最大结果数，如果没有设置则使用默认值 50
+    // 明确指定 maxResults 的类型为 number
+    const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
+      ? logseq.settings.maxResults 
+      : 50;
 
     for (const keyword of keywords) {
       const query = `
@@ -172,7 +177,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     return Array.from(new Map(
       results
         .sort((a, b) => b.score - a.score)
-        .slice(0, 50) // 限制返回数量
+        .slice(0, maxResults) // 使用用户设置的 maxResults
         .map(item => [item.block.uuid, item])
     ).values());
   } catch (error) {
