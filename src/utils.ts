@@ -28,9 +28,9 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
       // 位置权重，作用：位置权重通过关键词在内容中的位置来影响得分。关键词出现在内容开头通常被认为更重要。
       const positionWeight = Math.exp(-matches[0].index! / 100);
       // 完整匹配权重，作用：如果一个关键词在内容中完整出现，完整匹配权重会提高该内容的得分。
-      const exactMatchWeight = content.includes(` ${keywordLower} `) ? 1.5 : 1;
+      const exactMatchWeight = content.includes(` ${keywordLower} `) ? 2.0 : 1;
       // 密度权重，作用：如果一个关键词在内容中多次出现，密度权重会提高该内容的得分。
-      const densityWeight = matches.length > 1 ? 1.2 : 1;
+      const densityWeight = matches.length > 1 ? 1.1 : 1;
       
       score += 3 * positionWeight * exactMatchWeight * densityWeight;
 
@@ -42,24 +42,17 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
         );
       
       if (hasCoOccurrence) {
-        score *= 1.7;
+        score *= 2.0; // 提高共现权重
       }
     }
   });
 
   // 2. 内容长度权重（使用sigmoid函数平滑过渡），作用：内容长度权重用于调整内容长度对得分的影响。较短的内容通常得分更高。
   const idealLength = 300;
-  const lengthWeight = 1 / (1 + Math.exp((content.length - idealLength) / 300));
+  const lengthWeight = 1 / (1 + Math.exp((content.length - idealLength) / 300)); // 调整平滑参数
   score *= lengthWeight;
 
-  // 3. 时间衰减因子（使用对数衰减，降低衰减速度）
-  if (block.page?.["journal-day"]) {
-    const daysAgo = (Date.now() - block.page["journal-day"]) / (1000 * 60 * 60 * 24);
-    // 使用对数衰减，一年后权重降为0.9
-    score *= Math.max(0.1, 1 - Math.log(daysAgo + 1) / Math.log(365 + 1) * 0.9);
-  }
-
-  // 4. 上下文相关性（检查周围内容是否也包含关键词）
+  // 3. 上下文相关性（检查周围内容是否也包含关键词）
   const contextRelevance = keywords.some(keyword => {
     const surroundingContent = content.slice(Math.max(0, content.indexOf(keyword.toLowerCase()) - 50), 
                                           content.indexOf(keyword.toLowerCase()) + keyword.length + 50);
@@ -68,12 +61,12 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
   });
   
   if (contextRelevance) {
-    score *= 1.5;
+    score *= 1.7; // 提高上下文相关性权重
   }
 
-  // 5. 格式权重（标题、列表等特殊格式给予额外权重）
-  if (content.startsWith('#') || content.startsWith('- ') || content.startsWith('* ')) {
-    score *= 1.3;
+  // 4. 格式权重（标题、列表等特殊格式给予额外权重）
+  if (content.startsWith('#') || content.startsWith('- ') || content.startsWith('* ') || content.startsWith('[[')) {
+    score *= 1.4; // 适当提高格式权重
   }
 
   return Math.max(0, Math.min(10, score)); // 限制分数范围在0-10之间
@@ -97,7 +90,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
         searchResults.forEach((result: any) => {
           const block = result[0];
           const score = calculateRelevanceScore(block, keywords);
-          if (score > 2.0) {
+          if (score > 3.5) {
             results.push({
               block,
               score
