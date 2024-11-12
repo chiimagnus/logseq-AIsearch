@@ -5,20 +5,21 @@ export async function extractKeywords(input: string): Promise<string[]> {
     const prompt = `
 分析用户问题"${input}"，提取关键搜索词。要求：
 1. 提取核心主题词、关键行为词、场景词等
-2. 考虑同义词和相关概念扩展
-3. 确保关键词与问题核心高度相关
-4. 只返回JSON数组格式，不要其他任何内容
-5. 按重要性排序，返回5～8个关键词
-6. 尽量细化关键词，避免过于笼统
+2. 必须考虑同义词和相关概念扩展
+3. 细化关键词，避免笼统，关键词能拆分尽量拆分
+4. 确保关键词与问题核心高度相关
+4. 只返回JSON数组格式,不要其他任何内容
+5. 必须返回5~8个关键词
+6. 按重要性排序，把最重要的三个关键词放在最前面
 
-示例输入："我跟一个女孩表白过，结果怎么样"
-示例输出：["表白","恋爱","结果","感情","约会"]
+示例输入："我跟xxx表白过，结果怎么样"
+示例输出：["xxx","表白","恋爱","结果","感情","约会"]
 
 示例输入："如何提高编程效率"
-示例输出：["编程效率","开发工具","代码质量","最佳实践"]
-
+示例输出：["编程","效率","开发","工具","代码","质量","最佳实践"]
+    
 示例输入："我对巫师3的剧情有什么感受"
-示例输出：["巫师3","剧情","感受","游戏体验","角色发展"]
+示例输出：["巫师3","剧情","感受","游戏","体验","角色","发展"]
 `;
     
     const response = await ollamaGenerate(prompt);
@@ -33,7 +34,9 @@ export async function extractKeywords(input: string): Promise<string[]> {
       return [];
     }
     
+    const importantKeywords = aiKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
     console.log("提取的关键词:", aiKeywords);
+    console.log("重要关键词:", importantKeywords);
     return aiKeywords;
   } catch (error) {
     console.error("关键词提取失败:", error);

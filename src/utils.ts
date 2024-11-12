@@ -11,7 +11,7 @@ export interface SearchResult {
   score: number;
 }
 
-export function calculateRelevanceScore(block: any, keywords: string[]): number {
+export function calculateRelevanceScore(block: any, keywords: string[], importantKeywords: string[]): number {
   const content = block.content.toLowerCase();
   let score = 0;
 
@@ -32,7 +32,14 @@ export function calculateRelevanceScore(block: any, keywords: string[]): number 
       // 密度权重，作用：如果一个关键词在内容中多次出现，密度权重会提高该内容的得分。
       const densityWeight = matches.length > 1 ? 1.1 : 1;
       
-      score += 3 * positionWeight * exactMatchWeight * densityWeight;
+      let keywordScore = 3 * positionWeight * exactMatchWeight * densityWeight;
+
+      // 增加重要关键词的权重
+      if (importantKeywords.includes(keyword)) {
+        keywordScore *= 1.5; // 提高重要关键词的权重
+      }
+
+      score += keywordScore;
 
       // 检查与其他关键词的共现，作用：如果多个关键词在内容中共现，共现权重会提高该内容的得分。
       const hasCoOccurrence = keywordPairs
@@ -89,7 +96,6 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
   try {
     const results: SearchResult[] = [];
     // 获取用户设置的最大结果数，如果没有设置则使用默认值 50
-    // 明确指定 maxResults 的类型为 number
     const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
       ? logseq.settings.maxResults 
       : 50;
@@ -171,7 +177,8 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           }
 
           // 4. 计算相关性分数
-          const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords);
+          const importantKeywords = keywords.slice(0, 3); // 假设你已经在某处提取了重要关键词
+          const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords, importantKeywords);
           if (score > 2) {
             results.push({
               block: { ...block, content: fullContent },

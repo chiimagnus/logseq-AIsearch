@@ -29,28 +29,28 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "minScore",
     type: "number",
-    default: 5.0,
+    default: 4.0,
     title: "最低相关度分数",
-    description: "设置结果筛选的最低相关度分数（0-10）"
+    description: "设置结果筛选的最低相关度分数(0-10)"
   },
   {
     key: "includeParent",
     type: "boolean",
-    default: true,
+    default: false,
     title: "包含父块",
     description: "搜索结果是否包含父块内容"
   },
   {
     key: "includeSiblings",
     type: "boolean",
-    default: true,
+    default: false,
     title: "包含兄弟块",
     description: "搜索结果是否包含兄弟块内容"
   },
   {
     key: "includeChildren",
     type: "boolean",
-    default: true,
+    default: false,
     title: "包含子块",
     description: "搜索结果是否包含子块内容"
   }
@@ -77,7 +77,7 @@ function main() {
 
         // 构造带有代码块格式的文本
         const formattedText = `\`\`\`markdown
-AI搜索结果：${summary}\`\`\``;
+AI搜索结果: ${summary}\`\`\``;
 
         // 插入AI生成的内容作为子块
         const aiSummaryBlock = await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
