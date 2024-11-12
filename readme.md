@@ -55,7 +55,8 @@
 
 ## Some problems
 - [x] ~~CORS 的限制解决方案: https://github.com/omagdy7/ollama-logseq/issues/32~~
-
+- [ ] 可能会调用较多的ollama模型资源，因此会占用较大的Mac内存：）【2024-11-12】
+- [ ] 我现在还不知道该如何避免搜索准确的同时，又降低性能消耗，抱歉😭【2024-11-12】
 
 ## Buy me a coffee☕️
 <img src="public/buymeacoffee.jpg" style="width: 50%;">
