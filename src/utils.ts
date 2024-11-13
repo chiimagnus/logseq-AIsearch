@@ -121,6 +121,11 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           
           // 1. 初始化时，fullContent 就是当前块的内容
           let fullContent = block.content;
+          const createdAt = new Date(block['created-at']).toLocaleString('zh-CN');
+          const updatedAt = new Date(block['updated-at']).toLocaleString('zh-CN');
+          
+          // 在内容前添加时间信息
+          fullContent = `[创建于: ${createdAt}${createdAt !== updatedAt ? `, 更新于: ${updatedAt}` : ''}]\n${fullContent}`;
 
           // 根据用户设置获取父块内容
           if (block.parent && includeParent) {
