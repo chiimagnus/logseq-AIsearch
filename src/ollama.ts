@@ -100,15 +100,28 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[], ba
 
 // 添加 getSummaryPrompt 函数定义
 function getSummaryPrompt(query: string, content: string): string {
-  return `
-请针对用户问题"${query}"，基于以下内容进行重点总结：
-1. 需要总结与问题直接相关的信息
-2. 并且进行适当延伸，不要遗漏重要信息
-3. 按信息的相关程度排序
-4. 确保回答切中问题要点
-5. 如果内容与问题关联不大，请明确指出
-相关内容：${content}
-`;
+  return `作为你的笔记助手，我将帮你分析与问题"${query}"相关的笔记内容。
+
+笔记内容：${content}
+
+请按以下方式组织回答：
+1. 直接相关的记录
+   - 找出最相关的笔记重点
+   - 注意提取简短但重要的想法
+   - 关注个人感悟和思考
+
+2. 上下文补充
+   - 结合相关笔记的上下文
+   - 注意时间线上的关联
+   - 补充必要的背景信息
+
+3. 个人见解整合
+   - 将零散的想法串联
+   - 总结个人经验和教训
+   - 提炼有价值的思考
+
+如果笔记内容与问题关联度不高，请直接说明。
+请用简洁自然的语言回答，就像在和朋友分享见解一样。`;
 }
 
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
