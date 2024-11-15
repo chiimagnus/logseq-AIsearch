@@ -134,42 +134,45 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     const keywords = await extractKeywords(query);
     if (keywords.length === 0) {
       return {
-        summary: "未能提取到有效关键词",
+        summary: "",
         results: []
       };
     }
-
-    // await logseq.UI.showMsg(`正在搜索：${keywords.join('，')}`, 'info');
 
     // 2. 第一轮：基于关键词的粗筛
     const initialResults = await semanticSearch(keywords);
     if (initialResults.length === 0) {
       return {
-        summary: "未找到相关内容",
+        summary: "",
         results: []
       };
     }
 
     // 3. 第二轮：批量AI评分筛选
-    // await logseq.UI.showMsg("正在进行语义相关性分析...", 'info');
     const refinedResults = await batchEvaluateRelevance(query, initialResults);
-
-    // 4. 生成总结
-    const formattedResults = refinedResults
-      .map((result: SearchResult) => result.block.content)
-      .join('\n');
-
-    await logseq.UI.showMsg("正在总结...", 'info');
-    const summary = await ollamaGenerate(getSummaryPrompt(query, formattedResults));
+    
+    // 4. 根据设置决定是否生成AI总结
+    const enableAISummary = logseq.settings?.enableAISummary ?? true;
+    let summary = "";
+    
+    if (enableAISummary) {
+      await logseq.UI.showMsg("正在总结...", 'info');
+      const formattedResults = refinedResults
+        .map((result: SearchResult) => result.block.content)
+        .join('\n');
+  
+      await logseq.UI.showMsg("正在总结...", 'info');
+      summary = await ollamaGenerate(getSummaryPrompt(query, formattedResults));
+    }
 
     return {
-      summary: `\n${summary}\n`,
+      summary: summary ? `\n${summary}\n` : "",
       results: refinedResults
     };
   } catch (error) {
     console.error("AI搜索失败:", error);
     return {
-      summary: "搜索过程中出现错误,请稍后重试",
+      summary: "",
       results: []
     };
   }
