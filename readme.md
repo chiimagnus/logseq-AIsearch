@@ -20,6 +20,10 @@
 
 
 ## Roadmap
+- [ ] 制作一个完整demo
+- [ ] 发布英文版本
+- [ ] 尝试其他大模型的使用情况，给出推荐模型
+- [ ] 尝试英语的AI搜索
 
 - [x] v1.0.0
   <div style="text-align: center;">
