@@ -1,56 +1,64 @@
-# 🎉🎉🎉 logseq-plugin-AISearch💫💫💫
+<h1 align="center">
+    🎉 logseq-plugin-AISearch
+</h1>
 
->基于当前block内容，进行logseq文档内的全局搜索，返回笔记来源，并可以进行AI总结。
+一款基于AI的Logseq智能搜索插件，可以根据当前block内容进行全局文档搜索，并提供AI智能总结功能。
 
+## ✨ 主要功能
+- 🔍 基于当前block内容的智能搜索
+- 📝 搜索结果的AI智能总结
+- 🔗 快速跳转到原始笔记
+- ⚡️ 支持自定义AI模型和参数
 
-## What you need?
-1. 你在开始使用该插件之前需要部署[ollama](https://ollama.com/)大模型。
-2. 你需要注意，该插件默认配置（可以更改）：
-   - Ollama 主机地址（默认为 localhost:11434）
-   - AI 模型（默认为 qwen2.5）
-3. 然后，你就可以通过`/AI-Search`命令或者快捷键`alt+mod+a`调用该插件啦！
-4. 祝你使用愉快！对了，记得打开ollama app哦！
+## 🚀 快速开始
 
+### 前置要求
+1. 安装并部署 [ollama](https://ollama.com/) 大模型
+2. 确保 ollama 服务正常运行
 
-## Demo
-<div style="text-align: center;">
-  <img src="public/demo1.png" style="width: 50%;">
-  <img src="public/demo2.png" style="width: 50%;">
+### 安装配置
+1. 在 Logseq 市场安装插件
+2. 配置参数（可选）：
+   - Ollama 主机地址（默认：localhost:11434）
+   - AI 模型（默认：qwen2.5）
+
+### 使用方法
+- 命令方式：输入 `/AI-Search`
+- 快捷键：`alt+mod+a`
+
+## 📸 功能展示
+<div align="center">
+  <img src="public/demo1.png" width="600">
+  <img src="public/demo2.png" width="600">
 </div>
 
+## 🗺️ 开发计划
+- [ ] 完善demo
+- [ ] 评测并推荐最优模型
+- [ ] 优化英文搜索体验
 
-## Roadmap
-- [ ] 制作一个完整demo
-- [ ] 发布英文版本
-- [ ] 尝试其他大模型的使用情况，给出推荐模型
-- [ ] 尝试英语的AI搜索
-
-- [x] v1.0.0
-  <div style="text-align: center;">
-    <img src="public/v1.0-AIsearch插件设计.png" style="width: 90%;">
+### 已完成
+- [x] v1.0.0 核心功能发布
+  <div align="center">
+    <img src="public/v1.0-AIsearch插件设计.png" width="800">
   </div>
 
->详情请见[CHANGELOG.md](CHANGELOG.md)
+> 更多更新详情请查看 [CHANGELOG.md](CHANGELOG.md)
 
+## 🔧 常见问题
 
-## Thanks🙏
-1. [logseq插件API文档](https://plugins-doc.logseq.com/)
-2. [logseq插件开发实战](https://correctroad.gitbook.io/logseq-plugins-in-action/chapter-1/make-logseq-plugins-support-settings)
-3. [logseq-plugins-smartsearch](https://github.com/sethyuan/logseq-plugin-smartsearch)
-4. [ollama-logseq](https://github.com/omagdy7/ollama-logseq)
-5. [logseq-plugin-link-preview](https://github.com/pengx17/logseq-plugin-link-preview)
-6. 非常感谢ollama-logseq的开发者[@omagdy7](https://github.com/omagdy7)提供的帮助！
+- ✅ 性能优化：持续改进中，努力在搜索准确度和性能消耗之间寻找平衡
 
-<!-- 1. [farfalle](https://github.com/rashadphz/farfalle)
-2. [FreeAskInternet](https://github.com/nashsu/FreeAskInternet)
-3. [search_with_ai](https://github.com/yokingma/search_with_ai) -->
+## 🙏 致谢
+- [logseq插件API文档](https://plugins-doc.logseq.com/)
+- [logseq插件开发实战](https://correctroad.gitbook.io/logseq-plugins-in-action/chapter-1/make-logseq-plugins-support-settings)
+- [logseq-plugins-smartsearch](https://github.com/sethyuan/logseq-plugin-smartsearch)
+- [ollama-logseq](https://github.com/omagdy7/ollama-logseq)
+- [logseq-plugin-link-preview](https://github.com/pengx17/logseq-plugin-link-preview)
 
+特别感谢 ollama-logseq 开发者 [@omagdy7](https://github.com/omagdy7) 帮助我解决了 CORS 跨域限制问题：[参考链接](https://github.com/omagdy7/ollama-logseq/issues/32)
 
-## Some problems
-- [x] CORS 的限制解决方案: https://github.com/omagdy7/ollama-logseq/issues/32
-- [x] 我现在还不知道该如何避免搜索准确的同时，又降低性能消耗，抱歉😭【2024-11-12】
-
-## Buy me a coffee☕️
-<div style="text-align: center;">
-  <img src="public/buymeacoffee.jpg" style="width: 50%;">
+## ☕️ 支持作者
+<div align="center">
+  <img src="public/buymeacoffee.jpg" width="400">
 </div>
