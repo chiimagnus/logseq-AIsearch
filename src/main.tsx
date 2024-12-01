@@ -1,7 +1,7 @@
 import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
-import { aiSearch } from './ollama';
+import { aiSearch } from './apiSelector';
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 
 const settings: SettingSchemaDesc[] = [
@@ -117,7 +117,7 @@ async function aiSearchCommand() {
 
     await logseq.UI.showMsg("开始搜索...", "info");
 
-    // 调用 Ollama API，生成文本
+    // 调用 大模型 API，生成文本
     const { summary, results } = await aiSearch(blockContent);
 
     // 检查是否启用AI总结
