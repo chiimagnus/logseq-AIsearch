@@ -1,6 +1,3 @@
-import { extractKeywords } from './keywordExtraction';
-import { semanticSearch, type SearchResult } from './utils';
-
 export async function zhipuGenerate(prompt: string): Promise<string> {
   try {
     const apiKey = logseq.settings?.zhipuApiKey;

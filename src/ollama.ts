@@ -1,6 +1,3 @@
-import { extractKeywords } from './keywordExtraction';
-import { semanticSearch, type SearchResult } from './utils';
-
 export async function ollamaGenerate(prompt: string): Promise<string> {
   try {
     const host = logseq.settings?.host || 'localhost:11434';

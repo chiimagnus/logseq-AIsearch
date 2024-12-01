@@ -4,7 +4,7 @@ import { extractKeywords } from './keywordExtraction';
 import { semanticSearch, type SearchResult } from './utils';
 
 export async function generate(prompt: string): Promise<string> {
-  const apiType = logseq.settings?.apiType || "Ollama";
+  const apiType = logseq.settings?.apiType;
   if (apiType === "Ollama") {
     return await ollamaGenerate(prompt);
   } else if (apiType === "智谱清言") {
@@ -42,7 +42,7 @@ export async function evaluateRelevance(query: string, content: string): Promise
 
 仅返回0-10的分数，无需解释。`;
 
-  const apiType = logseq.settings?.apiType || "Ollama";
+  const apiType = logseq.settings?.apiType;
   const response = apiType === "Ollama" ? await ollamaGenerate(prompt) : await zhipuGenerate(prompt);
   return parseFloat(response) || 0;
 }
@@ -139,7 +139,7 @@ export async function aiSearch(query: string): Promise<{summary: string, results
         .join('\n');
   
       await logseq.UI.showMsg("正在总结...", 'info');
-      const apiType = logseq.settings?.apiType || "Ollama";
+      const apiType = logseq.settings?.apiType;
       summary = apiType === "Ollama" 
         ? await ollamaGenerate(getSummaryPrompt(query, formattedResults))
         : await zhipuGenerate(getSummaryPrompt(query, formattedResults));
