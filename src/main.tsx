@@ -6,6 +6,14 @@ import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 
 const settings: SettingSchemaDesc[] = [
   {
+    key: "apiType",
+    type: "enum",
+    title: "API 类型",
+    description: "选择使用的 API 类型",
+    enumChoices: ["Ollama", "智谱清言"],
+    default: "Ollama"
+  },
+  {
     key: "host",
     type: "string",
     title: "Ollama 主机",
@@ -15,7 +23,7 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "model",
     type: "string",
-    title: "AI 模型",
+    title: "Ollama 大模型",
     description: "设置要使用的 Ollama 模型",
     default: "qwen2.5"
   },
