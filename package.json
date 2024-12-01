@@ -1,6 +1,6 @@
 {
   "name": "logseq-aisearch",
-  "version": "v1.0.0",
+  "version": "v1.1.2",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",

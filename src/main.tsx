@@ -28,6 +28,27 @@ const settings: SettingSchemaDesc[] = [
     default: "qwen2.5"
   },
   {
+    key: "zhipuApiKey",
+    type: "string",
+    title: "智谱清言 API Key",
+    description: "输入智谱清言 API 的密钥",
+    default: ""
+  },
+  {
+    key: "zhipuBaseUrl",
+    type: "string",
+    title: "智谱清言 Base URL",
+    description: "输入智谱清言 API 的base_url（默认即可）",
+    default: "https://open.bigmodel.cn/api/paas/v4/"
+  },
+  {
+    key: "zhipuModel",
+    type: "string",
+    title: "智谱清言大模型（glm-4-flash目前是免费的）",
+    description: "输入要使用的智谱清言模型名称",
+    default: "glm-4-flash"
+  },
+  {
     key: "maxResults",
     type: "number",
     default: 50,
