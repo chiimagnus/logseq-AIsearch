@@ -11,7 +11,7 @@ const settings: SettingSchemaDesc[] = [
     title: "API 类型",
     description: "选择使用的 API 类型",
     enumChoices: ["Ollama", "智谱清言"],
-    default: "Ollama"
+    default: "智谱清言"
   },
   {
     key: "host",
