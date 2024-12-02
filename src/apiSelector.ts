@@ -5,10 +5,10 @@ import { semanticSearch, type SearchResult } from './utils';
 
 export async function generate(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType;
-  if (apiType === "Ollama") {
-    return await ollamaGenerate(prompt);
-  } else if (apiType === "智谱清言") {
+  if (apiType === "智谱清言") {
     return await zhipuGenerate(prompt);
+  } else if (apiType === "Ollama") {
+    return await ollamaGenerate(prompt);
   }
   throw new Error("Unsupported API type");
 }
