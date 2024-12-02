@@ -39,7 +39,7 @@
   - Windows: `Alt + Ctrl + A`
 
 ## 📸 功能展示
-[demo.mp4](public/demo.mp4)
+[demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)
 or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
