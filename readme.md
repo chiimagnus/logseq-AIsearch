@@ -39,9 +39,9 @@
   - Windows: `Alt + Ctrl + A`
 
 ## 📸 功能展示
-<div align="center">
-  <img src="public/demo.mp4" width="500">
-</div>
+[demo.mp4](public/demo.mp4)
+or
+[demo_bilibili](xxx)
 
 ## 🗺️ 开发计划
 - [ ] 增加更多模型支持
