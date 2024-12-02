@@ -2,6 +2,10 @@
     🎉 logseq-plugin-AISearch
 </h1>
 
+<div align="center">
+    <a href="readme.md">中文</a> | <a href="readme_en.md">English</a>
+</div>
+
 An AI-based intelligent search plugin for Logseq that can perform global document searches based on the current block content and provide AI-powered summary features.
 
 ## ✨ Main Features
