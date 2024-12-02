@@ -1,4 +1,4 @@
-import { ollamaGenerate } from './ollama';
+import { generate } from './apiSelector';
 
 export async function extractKeywords(input: string): Promise<string[]> {
   try {
@@ -32,7 +32,7 @@ export async function extractKeywords(input: string): Promise<string[]> {
 示例输出3:["创业经历","失败感悟","执念","回顾","心态转变","成长","过程价值"]
 `;
     
-    const response = await ollamaGenerate(prompt);
+    const response = await generate(prompt);
     let aiKeywords: string[] = [];
     
     try {
