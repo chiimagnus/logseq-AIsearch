@@ -1,9 +1,11 @@
 <h1 align="center">
     🎉 logseq-plugin-AISearch
 </h1>
+
 <div align="center">
     <a href="readme.md">中文</a> | <a href="readme_en.md">English</a>
 </div>
+
 一款基于AI的Logseq智能搜索插件，可以根据当前block内容进行全局文档搜索，并提供AI智能总结功能。
 
 ## ✨ 主要功能
