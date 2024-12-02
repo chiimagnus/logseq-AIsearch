@@ -27,10 +27,10 @@
 2. 根据选择的方式配置参数：
    - Ollama方式：
      - 设置主机地址（默认：localhost:11434）
-     - 选择AI模型（默认：qwen2.5）
+     - 选择AI模型（默认：qwen2.5，默认为7B参数）
    - 智谱清言方式：
      - 配置API密钥
-     - 选择模型（如：glm-4-plus）
+     - 选择模型（如：glm-4-plus、glm-4-flash）
 
 ### 使用方法
 - 命令方式：输入 `/AI-Search`
@@ -38,8 +38,7 @@
 
 ## 📸 功能展示
 <div align="center">
-  <img src="public/demo1.png" width="600">
-  <img src="public/demo2.png" width="600">
+  <img src="public/demo1.png" width="500">
 </div>
 
 ## 🗺️ 开发计划
@@ -48,10 +47,10 @@
 - [ ] 优化时间维度的AI总结
 
 ### 已完成
-- [x] v1.0.0 核心功能发布
 - [x] v1.3.0 新增智谱清言大模型API支持
+- [x] v1.0.0 核心功能发布
   <div align="center">
-    <img src="public/v1.0-AIsearch插件设计.png" width="800">
+    <img src="public/v1.0-AIsearch插件设计.png" width="600">
   </div>
 
 > 更多更新详情请查看 [CHANGELOG.md](CHANGELOG.md)
@@ -71,5 +70,5 @@
 
 ## ☕️ 支持作者
 <div align="center">
-  <img src="public/buymeacoffee.jpg" width="400">
+  <img src="https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/buymeacoffee.jpg" width="400">
 </div>
