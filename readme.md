@@ -71,6 +71,7 @@ or
 特别感谢 ollama-logseq 开发者 [@omagdy7](https://github.com/omagdy7) 帮助我解决了 CORS 跨域限制问题：[参考链接](https://github.com/omagdy7/ollama-logseq/issues/32)
 
 ## ☕️ 支持作者
+[buymeacoffee](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/buymeacoffee.jpg)
 <div align="center">
   <img src="https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/buymeacoffee.jpg" width="400">
 </div>
