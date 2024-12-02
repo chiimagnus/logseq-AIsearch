@@ -9,18 +9,28 @@
 - 📝 搜索结果的AI智能总结
 - 🔗 快速跳转到原始笔记
 - ⚡️ 支持自定义AI模型和参数
+- 🌐 新增智谱清言大模型API支持
 
 ## 🚀 快速开始
 
-### 前置要求
-1. 安装并部署 [ollama](https://ollama.com/) 大模型
-2. 确保 ollama 服务正常运行
+### 前置要求（二选一）
+1. Ollama本地部署
+   - 安装并部署 [ollama](https://ollama.com/) 大模型
+   - 确保 ollama 服务正常运行
+2. 智谱清言API
+   - 在[智谱清言开放平台](https://open.bigmodel.cn/pricing)申请API密钥
+   - 获取模型调用权限
+   - PS：可选用免费的glm-4-flash模型
 
 ### 安装配置
 1. 在 Logseq 市场安装插件
-2. 配置参数（可选）：
-   - Ollama 主机地址（默认：localhost:11434）
-   - AI 模型（默认：qwen2.5）
+2. 根据选择的方式配置参数：
+   - Ollama方式：
+     - 设置主机地址（默认：localhost:11434）
+     - 选择AI模型（默认：qwen2.5）
+   - 智谱清言方式：
+     - 配置API密钥
+     - 选择模型（如：glm-4-plus）
 
 ### 使用方法
 - 命令方式：输入 `/AI-Search`
@@ -33,12 +43,13 @@
 </div>
 
 ## 🗺️ 开发计划
-- [ ] 完善demo
-- [ ] 评测并推荐最优模型
-- [ ] 优化英文搜索体验
+- [ ] 增加更多模型支持
+- [ ] 增加暂停和取消功能
+- [ ] 优化时间维度的AI总结
 
 ### 已完成
 - [x] v1.0.0 核心功能发布
+- [x] v1.3.0 新增智谱清言大模型API支持
   <div align="center">
     <img src="public/v1.0-AIsearch插件设计.png" width="800">
   </div>
