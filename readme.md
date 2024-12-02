@@ -41,7 +41,7 @@
 ## 📸 功能展示
 [demo.mp4](public/demo.mp4)
 or
-[demo_bilibili](xxx)
+[demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
 ## 🗺️ 开发计划
 - [ ] 增加更多模型支持
