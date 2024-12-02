@@ -117,7 +117,7 @@ async function aiSearchCommand() {
 
     await logseq.UI.showMsg("开始搜索...", "info");
 
-    // 调用 大模型 API，生成文本
+    // 调用 大模型 API，开始搜索
     const { summary, results } = await aiSearch(blockContent);
 
     // 检查是否启用AI总结
