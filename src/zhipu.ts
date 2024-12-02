@@ -1,35 +1,30 @@
+import OpenAI from "openai";
+
 export async function zhipuGenerate(prompt: string): Promise<string> {
   try {
-    const apiKey = logseq.settings?.zhipuApiKey;
-    const baseUrl = logseq.settings?.zhipuBaseUrl || 'https://open.bigmodel.cn/api/paas/v4/';
-    const model = logseq.settings?.zhipuModel || 'glm-4-flash';
-
-    const response = await fetch(`${baseUrl}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: model,
-        prompt: prompt
-      })
-    }).catch(error => {
-      logseq.UI.showMsg("请确保智谱清言服务正在运行，并检查API密钥和模型名称是否正确", 'warning');
-      return null;
+    const apiKey = logseq.settings?.zhipuApiKey as string | undefined;
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      baseURL: "https://open.bigmodel.cn/api/paas/v4",
+      dangerouslyAllowBrowser: true
     });
 
-    if (!response || !response.ok) {
-      logseq.UI.showMsg("请求失败，请检查智谱清言服务状态", 'warning');
-      return "请求失败，请稍后重试";
-    }
+    const response = await openai.chat.completions.create({
+      model: (logseq.settings?.zhipuModel as string) || 'glm-4-plus',
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1
+    });
 
-    const data = await response.json();
-    return data.response || '';
-    
+    return response.choices[0].message.content || '';
   } catch (error) {
     console.error("智谱清言 API Error:", error);
     logseq.UI.showMsg("调用智谱清言 API 失败，请检查服务状态", 'error');
     return "请求失败，请稍后重试";
   }
-} 
+}
