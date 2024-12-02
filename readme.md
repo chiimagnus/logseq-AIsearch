@@ -35,10 +35,12 @@
 ### 使用方法
 - 命令方式：输入 `/AI-Search`
 - 快捷键：`alt+mod+a`
+  - Mac: `⌥ + ⌘ + A` (Alt + Command + A)
+  - Windows: `Alt + Ctrl + A`
 
 ## 📸 功能展示
 <div align="center">
-  <img src="public/demo1.png" width="500">
+  <img src="public/demo.mp4" width="500">
 </div>
 
 ## 🗺️ 开发计划
