@@ -46,7 +46,15 @@ export async function evaluateRelevance(query: string, content: string): Promise
   return parseFloat(response) || 0;
 }
 
-async function batchEvaluateRelevance(query: string, results: SearchResult[], batchSize: number = 5): Promise<SearchResult[]> {
+async function batchEvaluateRelevance(query: string, results: SearchResult[]): Promise<SearchResult[]> {
+  const batchSize: number = typeof logseq.settings?.batchSize === 'number' 
+    ? logseq.settings.batchSize 
+    : 10; // 默认值为10
+
+  console.log(`Configured batch size: ${logseq.settings?.batchSize}`);
+  console.log(`Using batch size: ${batchSize}`);
+  console.log(`Processing ${results.length} results with batch size of ${batchSize}`);
+  
   const refinedResults: SearchResult[] = [];
   const totalBatches = Math.ceil(results.length / batchSize);
   const minScore: number = typeof logseq.settings?.minScore === 'number' 

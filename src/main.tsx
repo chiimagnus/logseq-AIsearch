@@ -91,6 +91,13 @@ const settings: SettingSchemaDesc[] = [
     description: "是否启用AI总结功能"
   },
   {
+    key: "batchSize",
+    type: "number",
+    default: 10,
+    title: "批处理大小",
+    description: "设置并行处理相关性得分的批处理大小"
+  },
+  {
     key: "shortcut",
     type: "string",
     title: "快捷键",
