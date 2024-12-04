@@ -134,8 +134,7 @@ async function aiSearchCommand() {
     // 如果启用了AI总结且有总结内容，先插入AI总结
     if (enableAISummary && summary) {
       const formattedText = `\`\`\`markdown
-${summary}
-\`\`\``;
+${summary}\`\`\``;
       aiSummaryBlock = await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
         sibling: false,
       });
