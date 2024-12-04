@@ -1,6 +1,6 @@
 {
   "name": "logseq-aisearch",
-  "version": "v1.4.3",
+  "version": "v1.4.4",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "@logseq/libs": "^0.0.17",
+    "chrono-node": "^2.7.7",
     "compromise": "^13.11.1",
     "lunr": "^2.3.9",
     "openai": "^4.73.1",
