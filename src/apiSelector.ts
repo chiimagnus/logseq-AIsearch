@@ -88,28 +88,23 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
 }
 
 function getSummaryPrompt(query: string, content: string): string {
-  return `作为你的笔记助手，我将帮你分析与问题"${query}"相关的笔记内容。
-
+  return `作为你的笔记助手和日常生活秘书，我将帮你分析与问题"${query}"相关的笔记内容。
 笔记内容：${content}
-
 请按以下方式组织回答：
-1. 时间维度分析
-   - 注意笔记的创建和更新时间
-   - 关注内容中提到的时间点
-   - 理解事件发生的先后顺序
-
-2. 核心内容提取
+1. 直接相关的记录
    - 找出最相关的笔记重点
    - 注意提取简短但重要的想法
    - 关注个人感悟和思考
-
-3. 时间线整合
-   - 将零散的想法按时间顺序串联
-   - 展示思考或经验的演进过程
-   - 突出关键的时间节点和转折
-
+2. 上下文补充
+   - 结合相关笔记的上下文
+   - 注意时间线上的关联
+   - 补充必要的背景信息
+3. 个人见解整合
+   - 将零散的想法串联
+   - 总结个人经验和教训
+   - 提炼有价值的思考
 如果笔记内容与问题关联度不高，请直接说明。
-请用简洁自然的语言回答，注意将时间维度自然地融入叙述中。`;
+请用简洁自然的语言回答，就像在和朋友分享见解一样。`;
 }
 
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
