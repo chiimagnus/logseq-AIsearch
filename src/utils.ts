@@ -125,7 +125,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           const updatedAt = new Date(block['updated-at']).toLocaleString('zh-CN');
           
           // 在内容前添加时间信息
-          fullContent = `[创建于: ${createdAt}${createdAt !== updatedAt ? `, 更新于: ${updatedAt}` : ''}]\n${fullContent}`;
+          fullContent = `[这条笔记创建于: ${createdAt}${createdAt !== updatedAt ? `, 更新于: ${updatedAt}` : ''}]\n${fullContent}`;
 
           // 根据用户设置获取父块内容
           if (block.parent && includeParent) {
