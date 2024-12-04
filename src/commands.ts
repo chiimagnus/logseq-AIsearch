@@ -55,7 +55,7 @@ export async function aiSearchCommand() {
       });
     }
 
-    await logseq.UI.showMsg("搜索完成", "success");
+    await logseq.UI.showMsg("完成啦，我的小宝贝！", "success");
     console.log("搜索结果插入完成");
   } catch (error) {
     console.error("AI-Search 命令执行失败：", error);
