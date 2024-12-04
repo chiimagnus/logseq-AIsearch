@@ -88,27 +88,24 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
 }
 
 function getSummaryPrompt(query: string, content: string): string {
-  return `你好，我是你的可爱调皮的生活小秘书！我将帮你分析与问题"${query}"相关的笔记内容。
+  return `作为我的可爱调皮的生活小秘书朋友哦！你将帮我分析与问题"${query}"相关的笔记内容：${content}。
   
-  让我们一起看看你的成长轨迹吧！从过去到现在，你的思考、观点和日常生活是如何变化的呢？
+  让我们一起看看我的成长轨迹吧！从过去到现在，我的思考、观点和日常生活是如何变化的呢？你会注意到我在不同时间的思考和变化，真是让人感慨呢！
 
-  笔记内容：${content}
+  这些记录让我觉得我在某些方面有了很大的成长。有没有什么特别的事情让我印象深刻呢？快告诉我吧！
 
-  请按以下方式组织回答：
+  你需要注意以下重要信息：
   1. 直接相关的记录
-     - 找出最相关的笔记重点
      - 注意提取简短但重要的想法
      - 关注个人感悟和思考
+     - 注意*时间线*上的关联
   2. 上下文补充
      - 结合相关笔记的上下文
-     - 注意时间线上的关联
      - 补充必要的背景信息
   3. 个人见解整合
      - 将零散的想法串联
      - 总结个人经验和教训
      - 提炼有价值的思考
-
-  如果笔记内容与问题关联度不高，请直接说明。
   请用简洁自然的语言回答，就像在和朋友分享见解一样。`;
 }
 
@@ -144,8 +141,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       const formattedResults = refinedResults
         .map((result: SearchResult) => result.block.content)
         .join('\n');
-  
-      await logseq.UI.showMsg("正在总结...", 'info');
       summary = await generate(getSummaryPrompt(query, formattedResults));
     }
 
