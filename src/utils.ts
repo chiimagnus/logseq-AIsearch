@@ -107,7 +107,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
 
     for (const keyword of keywords) {
       const query = `
-        [:find (pull ?b [*])
+        [:find (pull ?b [* {:block/page [:block/name :block/journal-day]}])
          :where
          [?b :block/content ?c]
          [(clojure.string/includes? ?c "${keyword}")]]
@@ -119,13 +119,12 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
         for (const result of searchResults) {
           const block = result[0];
           
-          // 1. 初始化时，fullContent 就是当前块的内容
+          // 初始化时，获取页面信息并添加到内容前面
           let fullContent = block.content;
-          const createdAt = new Date(block['created-at']).toLocaleString('zh-CN');
-          const updatedAt = new Date(block['updated-at']).toLocaleString('zh-CN');
+          const pageName = block.page?.name || '未知页面';
           
-          // 在内容前添加时间信息
-          fullContent = `[这条笔记创建于: ${createdAt}${createdAt !== updatedAt ? `, 更新于: ${updatedAt}` : ''}]\n${fullContent}`;
+          // 在内容前添加页面信息
+          fullContent = `*${pageName}*\n${fullContent}`;
 
           // 根据用户设置获取父块内容
           if (block.parent && includeParent) {
