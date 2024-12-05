@@ -18,7 +18,7 @@ export async function zhipuGenerate(prompt: string): Promise<string> {
         }
       ],
       max_tokens: undefined,
-      temperature: 0.5
+      temperature: 0.3
     });
 
     return response.choices[0].message.content || '';
