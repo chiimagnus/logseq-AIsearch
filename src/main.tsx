@@ -123,6 +123,23 @@ function main() {
 
   // 注册一个反斜杠命令，名为 AI-Search
   logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
+
+  // 添加顶栏按钮
+  logseq.App.registerUIItem('toolbar', {
+    key: 'aisearch-settings',
+    template: `
+      <a class="button" data-on-click="openSettings">
+        <i class="ti ti-settings"></i>
+      </a>
+    `
+  })
+
+  // 处理设置按钮点击
+  logseq.provideModel({
+    openSettings() {
+      logseq.showSettingsUI()
+    }
+  })
 }
 
 // 启动插件
