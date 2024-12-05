@@ -129,10 +129,10 @@ function main() {
     key: 'AI-Search',
     template: `
       <a class="button" data-on-click="openSettings">
-        <svg width="24" height="24" viewBox="0 -1 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="24" height="24" viewBox="0 -2 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="10" cy="10" r="7"/>
           <line x1="19" y1="19" x2="15" y2="15"/>
-          <text x="7" y="13" font-size="6" fill="currentColor" stroke="none" font-weight="bold">AI</text>
+          <text x="5" y="13.5" font-size="9.5" fill="currentColor" stroke="none" font-weight="bold">AI</text>
         </svg>
       </a>
     `
