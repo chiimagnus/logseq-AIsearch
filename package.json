@@ -1,5 +1,5 @@
 {
-  "name": "logseq-aisearch",
+  "name": "AI Search",
   "version": "v1.5.3",
   "main": "dist/index.html",
   "scripts": {
