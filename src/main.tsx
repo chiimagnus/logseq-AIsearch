@@ -124,12 +124,16 @@ function main() {
   // 注册一个反斜杠命令，名为 AI-Search
   logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
 
-  // 添加顶栏按钮
+  // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
-    key: 'aisearch-settings',
+    key: 'AI-Search',
     template: `
       <a class="button" data-on-click="openSettings">
-        <i class="ti ti-settings"></i>
+        <svg width="24" height="24" viewBox="0 -1 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7"/>
+          <line x1="19" y1="19" x2="15" y2="15"/>
+          <text x="7" y="13" font-size="6" fill="currentColor" stroke="none" font-weight="bold">AI</text>
+        </svg>
       </a>
     `
   })
