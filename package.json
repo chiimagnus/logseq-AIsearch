@@ -1,6 +1,6 @@
 {
   "name": "AI Search",
-  "version": "v1.5.3",
+  "version": "v1.5.4",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
