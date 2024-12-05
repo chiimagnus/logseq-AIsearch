@@ -9,7 +9,7 @@ export async function extractKeywords(input: string): Promise<string[]> {
         - 行为动作/方法论/理论框架
         - 情感态度/价值取向/深层思考
       2. 提取关键信息:
-        - 时间/地点/人物等具体要素
+        - 日期时间/地点/人物等具体要素
         - 专业领域的限定词和框架
         - 个人观点和思考维度
       3. 补充延伸信息:
