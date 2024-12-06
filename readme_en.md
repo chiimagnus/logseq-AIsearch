@@ -48,9 +48,8 @@ or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
 ## 🗺️ Development Plan
-- [ ] Add support for more models
-- [ ] Add pause and cancel features
-- [ ] Optimize AI summary for time dimension
+- [x] Add support for more models
+- [x] Optimize AI summary for time dimension
 
 ### Completed
 - [x] v1.3.0 Added support for the Zhipu Qingyan large model API
