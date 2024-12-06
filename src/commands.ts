@@ -26,7 +26,7 @@ export async function aiSearchCommand() {
       currentBlock.uuid,
       `笔记来源 (${results.length}条相关笔记)`,
       {
-        sibling: true,
+        sibling: false,
       }
     );
 
@@ -52,8 +52,8 @@ export async function aiSearchCommand() {
     // 如果启用了AI总结且有总结内容，在笔记来源后插入AI总结
     if (enableAISummary && summary) {
       const formattedText = `\`\`\`markdown\n${summary.trim()}\n\`\`\``;
-      await logseq.Editor.insertBlock(notesBlock.uuid, formattedText, {
-        sibling: true,
+      await logseq.Editor.insertBlock(currentBlock.uuid, formattedText, {
+        sibling: false,
       });
     }
 
