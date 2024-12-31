@@ -10,7 +10,7 @@ export async function generate(prompt: string): Promise<string> {
   } else if (apiType === "Ollama") {
     return await ollamaGenerate(prompt);
   }
-  throw new Error("Unsupported API type");
+  throw new Error("不支持的 API 类型 | Unsupported API type");
 }
 
 export async function evaluateRelevance(query: string, content: string): Promise<number> {
@@ -66,7 +66,7 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
     const currentBatch = i / batchSize + 1;
     
     // 更新进度提示
-    await logseq.UI.showMsg(`正在分析第 ${currentBatch}/${totalBatches} 批内容...`, 'info');
+    await logseq.UI.showMsg(`正在分析第 ${currentBatch}/${totalBatches} 批内容... | Analyzing batch ${currentBatch}/${totalBatches}...`, 'info');
     
     // 并行处理每个批次
     const batchPromises = batch.map(async (result) => {
@@ -137,7 +137,7 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     let summary = "";
     
     if (enableAISummary) {
-      await logseq.UI.showMsg("正在总结...", 'info');
+      await logseq.UI.showMsg("正在总结... | Summarizing...", 'info');
       const formattedResults = refinedResults
         .map((result: SearchResult) => result.block.content)
         .join('\n');
@@ -149,7 +149,7 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       results: refinedResults
     };
   } catch (error) {
-    console.error("AI搜索失败:", error);
+    console.error("AI搜索失败 | AI search failed:", error);
     return {
       summary: "",
       results: []

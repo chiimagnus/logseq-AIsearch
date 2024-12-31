@@ -23,8 +23,8 @@ export async function zhipuGenerate(prompt: string): Promise<string> {
 
     return response.choices[0].message.content || '';
   } catch (error) {
-    console.error("智谱清言 API Error:", error);
-    logseq.UI.showMsg("调用智谱清言 API 失败，请检查服务状态", 'error');
-    return "请求失败，请稍后重试";
+    console.error("智谱清言 API Error | Zhipu API Error:", error);
+    logseq.UI.showMsg("调用智谱清言 API 失败，请检查服务状态 | Failed to call Zhipu API, please check service status", 'error');
+    return "请求失败，请稍后重试 | Request failed, please try again later";
   }
 }
