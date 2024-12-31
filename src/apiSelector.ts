@@ -1,7 +1,7 @@
 import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
 import { extractKeywords } from './keywordExtraction';
-import { semanticSearch, type SearchResult } from './utils';
+import { semanticSearch, type SearchResult, detectLanguage } from './utils';
 
 export async function generate(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType;
@@ -14,7 +14,37 @@ export async function generate(prompt: string): Promise<string> {
 }
 
 export async function evaluateRelevance(query: string, content: string): Promise<number> {
-  const prompt = `作为一个善于理解个人笔记的助手，请深入分析这条笔记与用户问题的关联度。请特别注意时间维度的分析。
+  const lang = detectLanguage(query);
+  
+  const prompt = lang === 'en' ? `
+    As an assistant specializing in understanding personal notes, analyze the relevance between this note and the user's question. Pay special attention to the time dimension.
+
+Question: ${query}
+Note content: ${content}
+
+Scoring dimensions (Total 10 points):
+1. Content Relevance (0-4 points)
+- Does it touch the core question, even if briefly
+- Contains personal insights or thoughts
+- Time relevance of note creation/update
+
+2. Time Dimension (0-3 points)
+- Specific time points mentioned
+- Time sequence and development
+- Note creation time relevance
+
+3. Personal Significance (0-3 points)
+- Helps understand user's thoughts
+- Timeline continuity and changes
+- Experience accumulation span
+
+Please understand:
+1. Timestamp at start indicates creation/update time
+2. Content may include various time expressions
+3. Even brief content can be valuable if time-relevant
+
+Return only a score from 0-10, no explanation.` : `
+    作为一个善于理解个人笔记的助手，请深入分析这条笔记与用户问题的关联度。请特别注意时间维度的分析。
 
 问题：${query}
 笔记内容：${content}
@@ -88,25 +118,49 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
 }
 
 function getSummaryPrompt(query: string, content: string): string {
-  return `作为我的可爱调皮的生活小秘书朋友哦！你将帮我分析与问题"${query}"相关的笔记内容：${content}。
+  const lang = detectLanguage(query);
+  
+  return lang === 'en' ? `
+    As your friendly life secretary, I'll help analyze the notes related to your question "${query}": ${content}
+
+Let's look at your growth journey! How have your thoughts, views, and daily life changed from past to present? Your thoughts and changes at different times are fascinating!
+
+These records show significant growth. What events left deep impressions? Let me share!
+
+Important points to note:
+1. Directly related notes (no need for original content)
+   - Notice *timeline* connections
+   - Extract key brief ideas
+   - Focus on personal insights
+2. Context supplementation
+   - Combine related notes context
+   - Add necessary background
+3. Personal insight integration
+   - Connect scattered thoughts
+   - Summarize experiences and lessons
+   - Extract valuable insights
+
+Please respond naturally, as if sharing insights with a friend.` : `
+    作为我的可爱调皮的生活小秘书朋友哦！你将帮我分析与问题"${query}"相关的笔记内容：${content}。
 
 让我们一起看看我的成长轨迹吧！从过去到现在，我的思考、观点和日常生活是如何变化的呢？你会注意到我在不同时间的思考和变化，真是让人感慨呢！
 
 这些记录让我觉得我在某些方面有了很大的成长。有没有什么特别的事情让我印象深刻呢？快告诉我吧！
 
-  你需要注意以下重要信息：
-  1. 直接相关的笔记，但不需要原来笔记内容
-     - 注意*时间线*上的关联
-     - 注意提取简短但重要的想法
-     - 关注个人感悟和思考
-  2. 上下文补充
-     - 结合相关笔记的上下文
-     - 补充必要的背景信息
-  3. 个人见解整合
-     - 将零散的想法串联
-     - 总结个人经验和教训
-     - 提炼有价值的思考
-  请用简洁自然的语言回答，就像在和朋友分享见解一样。`;
+你需要注意以下重要信息：
+1. 直接相关的笔记，但不需要原来笔记内容
+   - 注意*时间线*上的关联
+   - 注意提取简短但重要的想法
+   - 关注个人感悟和思考
+2. 上下文补充
+   - 结合相关笔记的上下文
+   - 补充必要的背景信息
+3. 个人见解整合
+   - 将零散的想法串联
+   - 总结个人经验和教训
+   - 提炼有价值的思考
+
+请用简洁自然的语言回答，就像在和朋友分享见解一样。`;
 }
 
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {

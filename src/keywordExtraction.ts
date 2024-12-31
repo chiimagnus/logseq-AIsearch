@@ -1,8 +1,39 @@
 import { generate } from './apiSelector';
+import { detectLanguage } from './utils';
 
 export async function extractKeywords(input: string): Promise<string[]> {
   try {
-    const prompt = `
+    const lang = detectLanguage(input);
+    
+    const prompt = lang === 'en' ? `
+      Analyze the user input "${input}" and extract key information. Requirements:
+      1. Core elements:
+        - Subject/Technical terms/Core concepts
+        - Actions/Methods/Theoretical frameworks
+        - Emotional attitudes/Value orientations
+      2. Key information:
+        - Date, time, location, people
+        - Professional domain terms
+        - Personal viewpoints
+      3. Extended information:
+        - Related concepts/Influencing factors
+        - Development trends/Future outlook
+        - Experience summary
+      4. Others:
+        - Refine keywords, avoid vagueness
+        - Sort by importance (3 most important first)
+        - Number of keywords: 5-10
+        - Return format: JSON array only
+
+      Example 1: "How do I feel about the storyline of The Witcher 3"
+      Output 1: ["Witcher 3", "storyline", "feelings", "gaming", "experience", "characters", "development"]
+
+      Example 2: "Just finished reading 'Principles', think systematic thinking is crucial in work"
+      Output 2: ["systematic thinking", "Principles", "work", "methodology", "efficiency", "improvement", "mindset"]
+
+      Example 3: "Reflecting on five years of entrepreneurship taught me to let go and enjoy the process"
+      Output 3: ["entrepreneurship", "lessons learned", "letting go", "reflection", "mindset change", "growth", "process"]
+      ` : `
       分析用户输入"${input}"，智能提取关键信息。要求：
       1. 识别核心要素:
         - 主题词/专业术语/核心概念
