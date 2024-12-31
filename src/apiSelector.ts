@@ -121,13 +121,17 @@ function getSummaryPrompt(query: string, content: string): string {
   const lang = detectLanguage(query);
   
   return lang === 'en' ? `
-    As your friendly life secretary, I'll help analyze the notes related to your question "${query}": ${content}
+    As your friendly life secretary, I'll help analyze the notes related to your question "${query}". Here's the content to analyze: ${content}
 
-Let's look at your growth journey! How have your thoughts, views, and daily life changed from past to present? Your thoughts and changes at different times are fascinating!
+First, evaluate if there's enough meaningful content to summarize:
+1. Check if the notes contain substantial information:
+   - Are there multiple distinct ideas or experiences?
+   - Is there enough context to understand the topic?
+   - Are there meaningful insights or reflections?
+2. If the content is insufficient (e.g., too brief, lacks context, or contains no meaningful insights), respond with:
+   "The available notes are too limited for a comprehensive summary. Consider adding more detailed notes about this topic."
 
-These records show significant growth. What events left deep impressions? Let me share!
-
-Important points to note:
+If there's enough content, then analyze as follows:
 1. Directly related notes (no need for original content)
    - Notice *timeline* connections
    - Extract key brief ideas
@@ -141,16 +145,20 @@ Important points to note:
    - Extract valuable insights
 
 Please respond naturally, as if sharing insights with a friend.` : `
-    作为我的可爱调皮的生活小秘书朋友哦！你将帮我分析与问题"${query}"相关的笔记内容：${content}。
+    作为你的贴心小助手，我来帮你分析与问题"${query}"相关的笔记内容。以下是需要分析的内容：${content}
 
-让我们一起看看我的成长轨迹吧！从过去到现在，我的思考、观点和日常生活是如何变化的呢？你会注意到我在不同时间的思考和变化，真是让人感慨呢！
+首先，让我们评估一下内容是否足够进行总结：
+1. 检查笔记是否包含足够的有意义信息：
+   - 是否包含多个不同的想法或经历？
+   - 是否有足够的上下文来理解主题？
+   - 是否包含有价值的见解或思考？
+2. 如果内容不足（例如：过于简短、缺乏上下文、或没有实质性的见解），请回复：
+   "当前相关笔记内容较少，无法进行全面的总结。建议添加更多关于该主题的详细笔记。"
 
-这些记录让我觉得我在某些方面有了很大的成长。有没有什么特别的事情让我印象深刻呢？快告诉我吧！
-
-你需要注意以下重要信息：
-1. 直接相关的笔记，但不需要原来笔记内容
+如果内容充足，则按以下方式分析：
+1. 直接相关的笔记内容分析
    - 注意*时间线*上的关联
-   - 注意提取简短但重要的想法
+   - 提取关键的简短想法
    - 关注个人感悟和思考
 2. 上下文补充
    - 结合相关笔记的上下文
