@@ -8,100 +8,100 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "apiType",
     type: "enum",
-    title: "API 类型",
-    description: "选择使用的 API 类型",
+    title: "API 类型 / API Type",
+    description: "选择使用的 API 类型\nSelect the API type to use",
     enumChoices: ["Ollama", "智谱清言"],
     default: "智谱清言"
   },
   {
     key: "host",
     type: "string",
-    title: "Ollama 主机",
-    description: "设置 Ollama 服务的主机地址和端口",
+    title: "Ollama 主机 / Ollama Host",
+    description: "设置 Ollama 服务的主机地址和端口\nSet the host address and port for Ollama service",
     default: "localhost:11434"
   },
   {
     key: "model",
     type: "string",
-    title: "Ollama 大模型",
-    description: "设置要使用的 Ollama 模型",
+    title: "Ollama 大模型 / Ollama Model",
+    description: "设置要使用的 Ollama 模型\nSet the Ollama model to use",
     default: "qwen2.5"
   },
   {
     key: "zhipuApiKey",
     type: "string",
-    title: "智谱清言 API Key",
-    description: "输入智谱清言 API 的密钥",
+    title: "智谱清言 API Key / Zhipu API Key",
+    description: "输入智谱清言 API 的密钥\nEnter the API key for Zhipu API",
     default: ""
   },
   {
     key: "zhipuBaseUrl",
     type: "string",
-    title: "智谱清言 Base URL",
-    description: "输入智谱清言 API 的base_url（默认即可）",
+    title: "智谱清言 Base URL / Zhipu Base URL",
+    description: "输入智谱清言 API 的base_url（默认即可）\nEnter the base URL for Zhipu API (default value is recommended)",
     default: "https://open.bigmodel.cn/api/paas/v4/"
   },
   {
     key: "zhipuModel",
     type: "string",
-    title: "智谱清言大模型（glm-4-flash目前是免费的）",
-    description: "输入要使用的智谱清言模型名称",
+    title: "智谱清言大模型 / Zhipu Model",
+    description: "输入要使用的智谱清言模型名称（glm-4-flash目前是免费的）\nEnter the Zhipu model name (glm-4-flash is currently free)",
     default: "glm-4-flash"
   },
   {
     key: "maxResults",
     type: "number",
     default: 50,
-    title: "最大搜索结果数",
-    description: "设置搜索返回的最大结果数量"
+    title: "最大搜索结果数 / Max Results",
+    description: "设置搜索返回的最大结果数量\nSet the maximum number of search results to return"
   },
   {
     key: "minScore",
     type: "number",
     default: 4.0,
-    title: "最低相关度分数",
-    description: "设置结果筛选的最低相关度分数(0-10)"
+    title: "最低相关度分数 / Minimum Score",
+    description: "设置结果筛选的最低相关度分数(0-10)\nSet the minimum relevance score for filtering results (0-10)"
   },
   {
     key: "includeParent",
     type: "boolean",
     default: false,
-    title: "包含父块",
-    description: "搜索结果是否包含父块内容"
+    title: "包含父块 / Include Parent",
+    description: "搜索结果是否包含父块内容\nWhether to include parent block content in search results"
   },
   {
     key: "includeSiblings",
     type: "boolean",
     default: false,
-    title: "包含兄弟块",
-    description: "搜索结果是否包含兄弟块内容"
+    title: "包含兄弟块 / Include Siblings",
+    description: "搜索结果是否包含兄弟块内容\nWhether to include sibling block content in search results"
   },
   {
     key: "includeChildren",
     type: "boolean",
     default: false,
-    title: "包含子块",
-    description: "搜索结果是否包含子块内容"
+    title: "包含子块 / Include Children",
+    description: "搜索结果是否包含子块内容\nWhether to include child block content in search results"
   },
   {
     key: "enableAISummary",
     type: "boolean",
     default: false,
-    title: "启用AI总结",
-    description: "是否启用AI总结功能"
+    title: "启用AI总结 / Enable AI Summary",
+    description: "是否启用AI总结功能\nWhether to enable AI summary feature"
   },
   {
     key: "batchSize",
     type: "number",
     default: 10,
-    title: "批处理大小",
-    description: "设置并行处理相关性得分的批处理大小"
+    title: "批处理大小 / Batch Size",
+    description: "设置并行处理相关性得分的批处理大小\nSet the batch size for parallel relevance score processing"
   },
   {
     key: "shortcut",
     type: "string",
-    title: "快捷键",
-    description: "设置 AI-Search 的快捷键",
+    title: "快捷键 / Shortcut",
+    description: "设置 AI-Search 的快捷键\nSet the shortcut key for AI-Search",
     default: "alt+mod+a"
   }
 ];
