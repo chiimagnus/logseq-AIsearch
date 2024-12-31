@@ -12,7 +12,7 @@ export async function ollamaGenerate(prompt: string): Promise<string> {
         model: model,
         prompt: prompt,
         stream: false,
-        temperature: 0
+        temperature: 0.1
       })
     }).catch(error => {
       logseq.UI.showMsg("请确保 Ollama 服务正在运行，并检查主机地址和模型名称是否正确 | Please ensure Ollama service is running and check if host address and model name are correct", 'warning');
