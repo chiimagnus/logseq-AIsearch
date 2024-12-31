@@ -40,16 +40,16 @@ export async function extractKeywords(input: string): Promise<string[]> {
       const cleanedResponse = response.replace(/```json\s*|\s*```/g, '').trim();
       aiKeywords = JSON.parse(cleanedResponse);
     } catch (e) {
-      console.error("AI关键词解析失败:", e);
+      console.error("AI关键词解析失败｜AI Keyword Parsing Failed:", e);
       return [];
     }
     
     const importantKeywords = aiKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
-    console.log("提取的关键词:", aiKeywords);
-    console.log("重要关键词:", importantKeywords);
+    console.log("Extracted keywords:", aiKeywords);
+    console.log("Important keywords:", importantKeywords);
     return aiKeywords;
   } catch (error) {
-    console.error("关键词提取失败:", error);
+    console.error("关键词提取失败｜Keyword Extraction Failed:", error);
     return [];
   }
 }
