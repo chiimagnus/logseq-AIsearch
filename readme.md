@@ -48,9 +48,8 @@ or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
 ## 🗺️ 开发计划
-- [x] 增加更多模型支持
-- [x] 优化时间维度的AI总结
-- [x] 支持英文版的prompt
+- [ ]增加AI-Reminiscence功能：logseq plugin, manage your logseq notes to different kinds just like Apple Photos!
+- [ ]增加UI界面，实现多轮对话
 
 ### 已完成
 - [x] v1.3.0 新增智谱清言大模型API支持
@@ -60,10 +59,6 @@ or
   </div>
 
 > 更多更新详情请查看 [CHANGELOG.md](CHANGELOG.md)
-
-## 🔧 常见问题
-
-- ✅ 性能优化：持续改进中，努力在搜索准确度和性能消耗之间寻找平衡
 
 ## 🙏 致谢
 - [logseq插件API文档](https://plugins-doc.logseq.com/)
