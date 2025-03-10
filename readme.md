@@ -1,5 +1,5 @@
 <h1 align="center">
-    🎉 logseq-plugin-AISearch
+    🎉 AI Reminiscence
 </h1>
 
 <div align="center">
@@ -8,12 +8,15 @@
 
 一款基于AI的Logseq智能搜索插件，可以根据当前block内容进行全局文档搜索，并提供AI智能总结功能。
 
-## ✨ 主要功能
+## ✨ 主要功能1
 - 🔍 基于当前block内容的智能搜索
 - 📝 搜索结果的AI智能总结
 - 🔗 快速跳转到原始笔记
 - ⚡️ 支持自定义AI模型和参数
 - 🌐 新增智谱清言大模型API支持
+
+## ✨ 主要功能2
+- logseq plugin, manage your logseq notes to different kinds just like Apple Photos!
 
 ## 🚀 快速开始
 
