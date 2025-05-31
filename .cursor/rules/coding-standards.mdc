@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 编码标准与最佳实践
+
+## 编写代码时的核心原则
+
+在开发Logseq插件时，请严格遵循以下编码标准：
+
+### React 开发规范
+- 使用最新的React 18特性，如并发渲染和自动批处理
+- 优先使用函数组件和Hooks，避免使用类组件
+- 实现组件的懒加载和代码分割以优化性能
+- 遵循组件设计最佳实践，如组件的单一职责和可复用性
+
+### Logseq 集成规范
+- 合理使用Logseq提供的API进行功能扩展
+- 确保插件与Logseq的Markdown解析器兼容
+- 合理使用Logseq的上下文和自定义Hooks管理全局状态
+
+### 代码质量标准
+- 使用TypeScript进行类型检查，提高代码质量
+- 编写详细的代码注释，并在代码中添加必要的错误处理和日志记录
+- 实现适当的性能优化，如使用useMemo和useCallback
+- 实现响应式设计，确保在不同设备上的良好体验
+
+## 相关配置文件
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript配置
+- [tailwind.config.js](mdc:tailwind.config.js) - 样式配置
+- [postcss.config.js](mdc:postcss.config.js) - CSS处理配置

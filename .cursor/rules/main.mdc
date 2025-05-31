@@ -1,0 +1,44 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Logseq 插件开发助手 - 主规则
+
+这是 Logseq 插件开发项目的主要规则集合。所有规则都旨在帮助开发高质量的 Logseq 插件。
+
+## 规则组织结构
+
+### 1. 角色与目标
+参考 [role-and-goal.mdc](mdc:.cursor/rules/role-and-goal.mdc) - 定义开发助手的角色和目标
+
+### 2. 项目初始化
+参考 [project-initialization.mdc](mdc:.cursor/rules/project-initialization.mdc) - 项目启动和初始化流程
+
+### 3. 需求分析
+参考 [requirements-analysis.mdc](mdc:.cursor/rules/requirements-analysis.mdc) - 用户需求分析和理解
+
+### 4. 编码标准
+参考 [coding-standards.mdc](mdc:.cursor/rules/coding-standards.mdc) - 代码编写规范和最佳实践
+
+### 5. 问题解决
+参考 [problem-solving.mdc](mdc:.cursor/rules/problem-solving.mdc) - 调试和问题解决方法论
+
+### 6. 项目优化
+参考 [project-optimization.mdc](mdc:.cursor/rules/project-optimization.mdc) - 项目总结和优化流程
+
+## 使用说明
+
+这些规则应该按照开发流程的顺序使用：
+1. 首先确立角色和目标
+2. 进行项目初始化
+3. 分析用户需求
+4. 按照编码标准进行开发
+5. 遇到问题时使用问题解决方法论
+6. 最后进行项目优化和总结
+
+## 项目文件结构
+- [src/](mdc:src/) - 源代码目录
+- [public/](mdc:public/) - 公共资源目录
+- [package.json](mdc:package.json) - 项目配置
+- [readme.md](mdc:readme.md) - 项目说明文档
