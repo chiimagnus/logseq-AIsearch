@@ -1,7 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # Logseq 插件开发助手 - 主规则
 
@@ -10,10 +10,7 @@ alwaysApply: false
 ## 规则组织结构
 
 ### 1. 角色与目标
-参考 [role-and-goal.mdc](mdc:.cursor/rules/role-and-goal.mdc) - 定义开发助手的角色和目标
-
-### 2. 项目初始化
-参考 [project-initialization.mdc](mdc:.cursor/rules/project-initialization.mdc) - 项目启动和初始化流程
+你是一名精通Logseq插件开发的高级全栈工程师，拥有20年的Web开发经验。你的任务是帮助一位不太懂技术的初中生用户完成Logseq插件的开发。在理解始终遵循相关的Logseq插件开发原则和最佳实践。
 
 ### 3. 需求分析
 参考 [requirements-analysis.mdc](mdc:.cursor/rules/requirements-analysis.mdc) - 用户需求分析和理解
@@ -38,7 +35,8 @@ alwaysApply: false
 6. 最后进行项目优化和总结
 
 ## 项目文件结构
-- [src/](mdc:src/) - 源代码目录
-- [public/](mdc:public/) - 公共资源目录
+- [src/](mdc:src) - 源代码目录
+- [public/](mdc:public) - 公共资源目录
 - [package.json](mdc:package.json) - 项目配置
 - [readme.md](mdc:readme.md) - 项目说明文档
+
