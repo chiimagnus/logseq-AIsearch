@@ -50,18 +50,11 @@
 or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
+
 ## 🗺️ 开发计划
 - [ ]增加AI-Reminiscence功能：logseq plugin, manage your logseq notes to different kinds just like Apple Photos!
 - [ ]增加UI界面，实现多轮对话
 
-### 已完成
-- [x] v1.3.0 新增智谱清言大模型API支持
-- [x] v1.0.0 核心功能发布
-  <div align="center">
-    <img src="public/v1.0-AIsearch插件设计.png" width="600">
-  </div>
-
-> 更多更新详情请查看 [CHANGELOG.md](CHANGELOG.md)
 
 ## 🙏 致谢
 - [logseq插件API文档](https://plugins-doc.logseq.com/)
