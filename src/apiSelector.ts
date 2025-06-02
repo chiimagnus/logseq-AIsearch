@@ -1,5 +1,6 @@
 import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
+import { siliconflowGenerate } from './siliconflow';
 import { extractKeywords } from './keywordExtraction';
 import { semanticSearch, type SearchResult, detectLanguage } from './utils';
 
@@ -17,6 +18,8 @@ export async function generate(prompt: string): Promise<string> {
     response = await zhipuGenerate(prompt);
   } else if (apiType === "Ollama") {
     response = await ollamaGenerate(prompt);
+  } else if (apiType === "硅基流动") {
+    response = await siliconflowGenerate(prompt);
   } else {
     throw new Error("不支持的 API 类型 | Unsupported API type");
   }
