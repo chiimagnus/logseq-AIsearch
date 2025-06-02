@@ -1,11 +1,49 @@
 import { generate } from './apiSelector';
 import { detectLanguage } from './utils';
+import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
+
+export interface ExtractedKeywordsResult {
+  keywords: string[];
+  timeContext?: TimeToolsResult;
+}
 
 export async function extractKeywords(input: string): Promise<string[]> {
+  const result = await extractKeywordsWithTimeContext(input);
+  return result.keywords;
+}
+
+export async function extractKeywordsWithTimeContext(input: string): Promise<ExtractedKeywordsResult> {
   try {
+    // 检查是否启用时间工具
+    const enableTimeTools = logseq.settings?.enableTimeTools ?? true;
+    const timeToolsDebug = logseq.settings?.timeToolsDebug ?? false;
+    
+    let timeContext: TimeToolsResult | undefined;
+    
+    if (enableTimeTools) {
+      // 解析时间上下文
+      timeContext = await parseTimeQuery(input);
+      
+      if (timeToolsDebug || timeContext.hasTimeContext) {
+        console.log("🕒 [时间工具] 时间解析结果 | Time parsing result:");
+        console.log("📅 时间范围:", timeContext.timeRanges);
+        console.log("🔍 时间关键词:", timeContext.keywords);
+        console.log("⏰ 是否包含时间上下文:", timeContext.hasTimeContext);
+      }
+    } else {
+      console.log("ℹ️ [时间工具] 时间工具已禁用，跳过时间解析");
+      timeContext = {
+        timeRanges: [],
+        keywords: [],
+        originalQuery: input,
+        hasTimeContext: false
+      };
+    }
+    
     const lang = detectLanguage(input);
     
-    const prompt = lang === 'en' ? `
+    // 根据是否有时间上下文调整prompt
+    const basePrompt = lang === 'en' ? `
       Analyze the user input "${input}" and extract key information. Requirements:
       1. Core elements:
         - Subject/Technical terms/Core concepts
@@ -67,11 +105,20 @@ export async function extractKeywords(input: string): Promise<string[]> {
       重要：你的回复必须只包含JSON数组，不要包含其他文本或解释。
       `;
     
+    // 构建包含时间上下文的完整prompt
+    const timeContextInfo = timeContext.hasTimeContext 
+      ? (lang === 'en' 
+        ? `\n\nTime context detected: ${timeContext.timeRanges.map(r => r.description).join(', ')}. Please include time-related keywords in your analysis.`
+        : `\n\n检测到时间上下文：${timeContext.timeRanges.map(r => r.description).join('、')}。请在分析中包含时间相关的关键词。`)
+      : '';
+    
+    const finalPrompt = basePrompt + timeContextInfo;
+    
     console.log("🏷️ [关键词提取] 开始提取关键词 | Starting keyword extraction");
     console.log("📝 用户输入:", input);
     console.log("🌐 检测语言:", lang);
     
-    const response = await generate(prompt);
+    const response = await generate(finalPrompt);
     let aiKeywords: string[] = [];
     let cleanedResponse = '';
     
@@ -105,19 +152,34 @@ export async function extractKeywords(input: string): Promise<string[]> {
       console.error("AI关键词解析失败｜AI Keyword Parsing Failed:", e);
       console.error("原始响应｜Original Response:", response);
       console.error("清理后响应｜Cleaned Response:", cleanedResponse);
-      return [];
+      return {
+        keywords: [],
+        timeContext
+      };
     }
     
-    const importantKeywords = aiKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
+    // 合并AI提取的关键词和时间相关关键词
+    const timeBasedKeywords = enableTimeTools ? generateTimeBasedKeywords(timeContext) : [];
+    const allKeywords = [...new Set([...aiKeywords, ...timeBasedKeywords])]; // 去重
+    
+    const importantKeywords = allKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
     
     console.log("✅ [关键词提取成功] 提取到的关键词 | Extracted keywords successfully:");
-    console.log("🔍 所有关键词:", aiKeywords);
+    console.log("🔍 AI关键词:", aiKeywords);
+    console.log("🕒 时间关键词:", timeBasedKeywords);
+    console.log("🔗 合并后关键词:", allKeywords);
     console.log("⭐ 重要关键词 (前3个):", importantKeywords);
-    console.log("📊 关键词数量:", aiKeywords.length);
+    console.log("📊 关键词数量:", allKeywords.length);
     
-    return aiKeywords;
+    return {
+      keywords: allKeywords,
+      timeContext
+    };
   } catch (error) {
     console.error("关键词提取失败｜Keyword Extraction Failed:", error);
-    return [];
+    return {
+      keywords: [],
+      timeContext: undefined
+    };
   }
 }

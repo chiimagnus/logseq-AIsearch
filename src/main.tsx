@@ -184,6 +184,29 @@ const settings: SettingSchemaDesc[] = [
     default: false,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+  },
+  
+  // ==================== MCP工具设置 ====================
+  {
+    key: "mcpToolsHeader",
+    type: "heading",
+    title: "🛠️ MCP 工具设置 / MCP Tools Settings",
+    description: "配置Model Control Protocol工具的启用状态",
+    default: ""
+  },
+  {
+    key: "enableTimeTools",
+    type: "boolean",
+    default: true,
+    title: "🕒 启用时间工具 / Enable Time Tools",
+    description: "启用时间相关查询的智能解析（如'今天做了什么'、'去年的今天'等）\nEnable intelligent parsing for time-related queries (e.g., 'what did I do today', 'this day last year', etc.)"
+  },
+  {
+    key: "timeToolsDebug",
+    type: "boolean",
+    default: false,
+    title: "🔍 时间工具调试模式 / Time Tools Debug Mode",
+    description: "显示详细的时间解析过程（开发调试用）\nShow detailed time parsing process (for development debugging)"
   }
 ];
 

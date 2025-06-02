@@ -1,16 +1,13 @@
 import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
 import { siliconflowGenerate } from './siliconflow';
-import { extractKeywords } from './keywordExtraction';
+import { extractKeywords, extractKeywordsWithTimeContext } from './keywordExtraction';
 import { semanticSearch, type SearchResult, detectLanguage } from './utils';
+import { filterResultsByTimeRange, generateTimeContextSummary, type TimeToolsResult } from './timeTools';
 
 export async function generate(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType;
-  
-  console.log("🤖 [AI调用开始] 发送Prompt给AI模型 | Starting AI call with prompt:");
-  console.log("📝 Prompt内容:", prompt);
-  console.log("🔧 使用的API类型:", apiType);
-  
+    
   let response: string;
   const startTime = Date.now();
   
@@ -27,11 +24,7 @@ export async function generate(prompt: string): Promise<string> {
   const endTime = Date.now();
   const duration = endTime - startTime;
   
-  console.log("✅ [AI响应完成] AI模型完整回复内容 | AI Response completed:");
   console.log("📄 AI完整响应:", response);
-  console.log("⏱️ 响应耗时:", `${duration}ms`);
-  console.log("📊 响应长度:", `${response.length} 字符`);
-  console.log("─".repeat(50));
   
   return response;
 }
@@ -94,15 +87,10 @@ Return only a score from 0-10, no explanation.` : `
 3. 即使是简短的一句话，只要时间维度相关，也可能具有很高的价值
 
 仅返回0-10的分数，无需解释。`;
-
-  console.log("🔍 [相关性评分] 开始评估笔记相关性 | Starting relevance evaluation");
-  console.log("❓ 用户问题:", query);
-  console.log("📄 笔记内容:", content.substring(0, 200) + (content.length > 200 ? "..." : ""));
   
   const response = await generate(prompt);
   const score = parseFloat(response) || 0;
   
-  console.log("⭐ [评分结果] 相关性分数:", score);
   
   return score;
 }
@@ -111,11 +99,6 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
   const batchSize: number = typeof logseq.settings?.batchSize === 'number' 
     ? logseq.settings.batchSize 
     : 10; // 默认值为10
-
-  console.log("⚙️ [批量评分配置] Batch evaluation configuration:");
-  console.log(`📋 配置的批量大小: ${logseq.settings?.batchSize}`);
-  console.log(`📋 实际使用批量大小: ${batchSize}`);
-  console.log(`📊 待处理结果数量: ${results.length}`);
   
   const refinedResults: SearchResult[] = [];
   const totalBatches = Math.ceil(results.length / batchSize);
@@ -127,7 +110,6 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
     const batch = results.slice(i, i + batchSize);
     const currentBatch = i / batchSize + 1;
     
-    console.log(`🔄 [批量处理] 正在处理第 ${currentBatch}/${totalBatches} 批，包含 ${batch.length} 个项目`);
     
     // 更新进度提示
     await logseq.UI.showMsg(`正在分析第 ${currentBatch}/${totalBatches} 批内容... | Analyzing batch ${currentBatch}/${totalBatches}...`, 'info');
@@ -153,7 +135,6 @@ async function batchEvaluateRelevance(query: string, results: SearchResult[]): P
     const batchEndTime = Date.now();
     const batchDuration = batchEndTime - batchStartTime;
     
-    console.log(`✅ 第 ${currentBatch} 批处理完成，耗时 ${batchDuration}ms，筛选出 ${validResults.length} 个有效结果`);
   }
 
   return refinedResults.sort((a, b) => b.score - a.score);
@@ -215,12 +196,22 @@ Please respond naturally, as if sharing insights with a friend.` : `
 
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
   try {
-    console.log("🚀 [AI搜索开始] 启动智能搜索流程 | Starting AI search process");
     console.log("🔎 搜索查询:", query);
     
-    // 1. 提取关键词
-    console.log("📍 [步骤1/4] 正在提取关键词...");
-    const keywords = await extractKeywords(query);
+    // 1. 提取关键词和时间上下文
+    console.log("📍 [步骤1/5] 正在提取关键词和时间上下文...");
+    const keywordResult = await extractKeywordsWithTimeContext(query);
+    const keywords = keywordResult.keywords;
+    const timeContext = keywordResult.timeContext;
+    
+    // 显示时间上下文信息
+    const enableTimeTools = logseq.settings?.enableTimeTools ?? true;
+    if (enableTimeTools && timeContext?.hasTimeContext) {
+      const timeContextMsg = generateTimeContextSummary(timeContext);
+      console.log("🕒 " + timeContextMsg);
+      await logseq.UI.showMsg(timeContextMsg, 'info');
+    }
+    
     if (keywords.length === 0) {
       console.log("❌ 未提取到任何关键词，搜索结束");
       return {
@@ -230,7 +221,7 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     }
 
     // 2. 第一轮：基于关键词的粗筛
-    console.log("📍 [步骤2/4] 正在进行初步搜索...");
+    console.log("📍 [步骤2/5] 正在进行初步搜索...");
     const initialResults = await semanticSearch(keywords);
     console.log("📊 初步搜索结果数量:", initialResults.length);
     
@@ -242,23 +233,74 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       };
     }
 
-    // 3. 第二轮：批量AI评分筛选
-    console.log("📍 [步骤3/4] 正在进行AI智能筛选...");
-    const refinedResults = await batchEvaluateRelevance(query, initialResults);
+    // 3. 第二轮：时间感知优化（如果有时间上下文）
+    let timeOptimizedResults = initialResults;
+    if (enableTimeTools && timeContext?.hasTimeContext) {
+      console.log("📍 [步骤3/5] 正在应用时间感知优化...");
+      
+      // 优先保留包含具体日期格式的结果
+      const dateKeywords = timeContext.keywords.filter(keyword => 
+        /\d{4}[-年]\d{1,2}[-月]\d{1,2}日?/.test(keyword) ||
+        /\d{1,2}[-月]\d{1,2}日?/.test(keyword) ||
+        /\d{4}[/.]\d{1,2}[/.]\d{1,2}/.test(keyword)
+      );
+      
+      if (dateKeywords.length > 0) {
+        // 优先显示包含具体日期的结果
+        const dateRelatedResults = initialResults.filter(result => 
+          dateKeywords.some(dateKeyword => 
+            result.block.content.includes(dateKeyword) ||
+            result.block.page?.name?.includes(dateKeyword)
+          )
+        );
+        
+        if (dateRelatedResults.length > 0) {
+          console.log("📊 找到包含具体日期的结果:", dateRelatedResults.length, "个");
+          // 将日期相关的结果排在前面，其他结果排在后面
+          timeOptimizedResults = [...dateRelatedResults, ...initialResults.filter(r => !dateRelatedResults.includes(r))];
+        } else {
+          console.log("📊 未找到包含具体日期的结果，尝试时间范围过滤");
+          // 如果没有找到具体日期匹配，回退到时间范围过滤
+          if (timeContext.timeRanges.length > 0) {
+            timeOptimizedResults = filterResultsByTimeRange(initialResults, timeContext.timeRanges);
+            console.log("📊 时间范围过滤后结果数量:", timeOptimizedResults.length);
+            
+            if (timeOptimizedResults.length === 0) {
+              console.log("❌ 时间范围过滤后无结果，保持原始结果");
+              timeOptimizedResults = initialResults;
+            }
+          }
+        }
+      }
+    } else {
+      console.log("📍 [步骤3/5] 跳过时间感知优化（无时间上下文或时间工具已禁用）");
+    }
+
+    // 4. 第三轮：批量AI评分筛选
+    console.log("📍 [步骤4/5] 正在进行AI智能筛选...");
+    const refinedResults = await batchEvaluateRelevance(query, timeOptimizedResults);
     console.log("📊 AI筛选后结果数量:", refinedResults.length);
     
-    // 4. 根据设置决定是否生成AI总结
+    // 5. 根据设置决定是否生成AI总结
     const enableAISummary = logseq.settings?.enableAISummary ?? true;
     let summary = "";
     
     if (enableAISummary && refinedResults.length > 0) {
-      console.log("📍 [步骤4/4] 正在生成AI总结...");
+      console.log("📍 [步骤5/5] 正在生成AI总结...");
       await logseq.UI.showMsg("正在总结... | Summarizing...", 'info');
       const formattedResults = refinedResults
         .map((result: SearchResult) => result.block.content)
         .join('\n');
       console.log("📄 用于总结的内容长度:", formattedResults.length, "字符");
-      summary = await generate(getSummaryPrompt(query, formattedResults));
+      
+      // 构建包含时间上下文的总结prompt
+      let summaryPrompt = getSummaryPrompt(query, formattedResults);
+      if (enableTimeTools && timeContext?.hasTimeContext) {
+        const timeContextInfo = generateTimeContextSummary(timeContext);
+        summaryPrompt += `\n\n${timeContextInfo}\n请在总结中特别关注时间相关的信息和发展脉络。`;
+      }
+      
+      summary = await generate(summaryPrompt);
       console.log("✅ AI总结生成完成");
     } else if (!enableAISummary) {
       console.log("ℹ️ AI总结功能已禁用，跳过总结步骤");
