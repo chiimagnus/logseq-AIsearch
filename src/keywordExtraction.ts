@@ -67,6 +67,10 @@ export async function extractKeywords(input: string): Promise<string[]> {
       重要：你的回复必须只包含JSON数组，不要包含其他文本或解释。
       `;
     
+    console.log("🏷️ [关键词提取] 开始提取关键词 | Starting keyword extraction");
+    console.log("📝 用户输入:", input);
+    console.log("🌐 检测语言:", lang);
+    
     const response = await generate(prompt);
     let aiKeywords: string[] = [];
     let cleanedResponse = '';
@@ -105,8 +109,12 @@ export async function extractKeywords(input: string): Promise<string[]> {
     }
     
     const importantKeywords = aiKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
-    console.log("Extracted keywords:", aiKeywords);
-    console.log("Important keywords:", importantKeywords);
+    
+    console.log("✅ [关键词提取成功] 提取到的关键词 | Extracted keywords successfully:");
+    console.log("🔍 所有关键词:", aiKeywords);
+    console.log("⭐ 重要关键词 (前3个):", importantKeywords);
+    console.log("📊 关键词数量:", aiKeywords.length);
+    
     return aiKeywords;
   } catch (error) {
     console.error("关键词提取失败｜Keyword Extraction Failed:", error);
