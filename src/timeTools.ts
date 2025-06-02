@@ -186,7 +186,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
   // 解析今天
   if (timePatterns.today.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const todayDate = new Date(referenceDate);
+    const todayDate = new Date(referenceDate); // 基于参考日期
     const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
     const endOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59);
     timeRanges.push({
@@ -198,12 +198,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     // 添加今天的各种日期格式作为关键词
     keywords.push(...generateDateKeywords(todayDate));
     keywords.push("今天", "today", "当天");
+    console.log("📅 [时间解析] 今天:", todayDate.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析昨天
   if (timePatterns.yesterday.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const yesterday = new Date(referenceDate);
+    const yesterday = new Date(referenceDate); // 基于参考日期
     yesterday.setDate(yesterday.getDate() - 1);
     const startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
     const endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
@@ -216,12 +217,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     // 添加昨天的各种日期格式作为关键词
     keywords.push(...generateDateKeywords(yesterday));
     keywords.push("昨天", "yesterday");
+    console.log("📅 [时间解析] 昨天:", yesterday.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析本周
   if (timePatterns.thisWeek.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const startOfWeek = getStartOfWeek(referenceDate);
+    const startOfWeek = getStartOfWeek(referenceDate); // 基于参考日期
     const endOfWeek = getEndOfWeek(referenceDate);
     timeRanges.push({
       start: startOfWeek,
@@ -230,12 +232,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("本周", "这周", "this week");
+    console.log("📅 [时间解析] 本周:", startOfWeek.toLocaleDateString(), "至", endOfWeek.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析上周
   if (timePatterns.lastWeek.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const lastWeekStart = new Date(referenceDate);
+    const lastWeekStart = new Date(referenceDate); // 基于参考日期
     lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     const startOfLastWeek = getStartOfWeek(lastWeekStart);
     const endOfLastWeek = getEndOfWeek(lastWeekStart);
@@ -246,12 +249,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("上周", "上个星期", "last week");
+    console.log("📅 [时间解析] 上周:", startOfLastWeek.toLocaleDateString(), "至", endOfLastWeek.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析本月
   if (timePatterns.thisMonth.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const startOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+    const startOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1); // 基于参考日期
     const endOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59);
     timeRanges.push({
       start: startOfMonth,
@@ -260,12 +264,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("本月", "这个月", "this month");
+    console.log("📅 [时间解析] 本月:", startOfMonth.toLocaleDateString(), "至", endOfMonth.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析上月
   if (timePatterns.lastMonth.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const lastMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1);
+    const lastMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1); // 基于参考日期
     const endOfLastMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0, 23, 59, 59);
     timeRanges.push({
       start: lastMonth,
@@ -274,12 +279,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("上月", "上个月", "last month");
+    console.log("📅 [时间解析] 上月:", lastMonth.toLocaleDateString(), "至", endOfLastMonth.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析今年
   if (timePatterns.thisYear.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const startOfYear = new Date(referenceDate.getFullYear(), 0, 1);
+    const startOfYear = new Date(referenceDate.getFullYear(), 0, 1); // 基于参考日期
     const endOfYear = new Date(referenceDate.getFullYear(), 11, 31, 23, 59, 59);
     timeRanges.push({
       start: startOfYear,
@@ -288,12 +294,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("今年", "this year");
+    console.log("📅 [时间解析] 今年:", startOfYear.toLocaleDateString(), "至", endOfYear.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析去年
   if (timePatterns.lastYear.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const lastYear = referenceDate.getFullYear() - 1;
+    const lastYear = referenceDate.getFullYear() - 1; // 基于参考日期
     const startOfLastYear = new Date(lastYear, 0, 1);
     const endOfLastYear = new Date(lastYear, 11, 31, 23, 59, 59);
     timeRanges.push({
@@ -303,12 +310,13 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       isRelativeTime: true
     });
     keywords.push("去年", "last year");
+    console.log("📅 [时间解析] 去年:", startOfLastYear.toLocaleDateString(), "至", endOfLastYear.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析去年的今天
   if (timePatterns.lastYearToday.some(pattern => pattern.test(query))) {
     hasTimeContext = true;
-    const lastYearToday = new Date(referenceDate.getFullYear() - 1, referenceDate.getMonth(), referenceDate.getDate());
+    const lastYearToday = new Date(referenceDate.getFullYear() - 1, referenceDate.getMonth(), referenceDate.getDate()); // 基于参考日期
     const startOfDay = new Date(lastYearToday.getFullYear(), lastYearToday.getMonth(), lastYearToday.getDate());
     const endOfDay = new Date(lastYearToday.getFullYear(), lastYearToday.getMonth(), lastYearToday.getDate(), 23, 59, 59);
     timeRanges.push({
@@ -320,6 +328,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     // 添加去年今天的各种日期格式作为关键词
     keywords.push(...generateDateKeywords(lastYearToday));
     keywords.push("去年的今天", "去年今天", "去年同期", "this day last year");
+    console.log("📅 [时间解析] 去年的今天:", lastYearToday.toLocaleDateString(), "（基于参考日期）");
   }
 
   // 解析具体天数前
@@ -328,7 +337,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     while ((match = pattern.exec(query)) !== null) {
       hasTimeContext = true;
       const daysAgo = parseInt(match[1]);
-      const targetDate = new Date(referenceDate);
+      const targetDate = new Date(referenceDate); // 基于参考日期
       targetDate.setDate(targetDate.getDate() - daysAgo);
       const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
       const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
@@ -341,6 +350,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
       // 添加具体天数前的各种日期格式作为关键词
       keywords.push(...generateDateKeywords(targetDate));
       keywords.push(`${daysAgo}天前`, `${daysAgo} days ago`);
+      console.log("📅 [时间解析]", `${daysAgo}天前:`, targetDate.toLocaleDateString(), "（基于参考日期）");
     }
   }
 
@@ -350,7 +360,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     while ((match = pattern.exec(query)) !== null) {
       hasTimeContext = true;
       const weeksAgo = parseInt(match[1]);
-      const targetDate = new Date(referenceDate);
+      const targetDate = new Date(referenceDate); // 基于参考日期
       targetDate.setDate(targetDate.getDate() - (weeksAgo * 7));
       const startOfWeek = getStartOfWeek(targetDate);
       const endOfWeek = getEndOfWeek(targetDate);
@@ -361,6 +371,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
         isRelativeTime: true
       });
       keywords.push(`${weeksAgo}周前`, `${weeksAgo} weeks ago`);
+      console.log("📅 [时间解析]", `${weeksAgo}周前:`, startOfWeek.toLocaleDateString(), "至", endOfWeek.toLocaleDateString(), "（基于参考日期）");
     }
   }
 
@@ -370,7 +381,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
     while ((match = pattern.exec(query)) !== null) {
       hasTimeContext = true;
       const monthsAgo = parseInt(match[1]);
-      const targetDate = new Date(referenceDate);
+      const targetDate = new Date(referenceDate); // 基于参考日期
       targetDate.setMonth(targetDate.getMonth() - monthsAgo);
       const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
       const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
@@ -381,6 +392,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
         isRelativeTime: true
       });
       keywords.push(`${monthsAgo}个月前`, `${monthsAgo} months ago`);
+      console.log("📅 [时间解析]", `${monthsAgo}个月前:`, startOfMonth.toLocaleDateString(), "至", endOfMonth.toLocaleDateString(), "（基于参考日期）");
     }
   }
 
@@ -419,6 +431,7 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
         isRelativeTime: false
       });
       keywords.push(match[0]);
+      console.log("📅 [时间解析] 具体日期:", specificDate.toLocaleDateString(), "（来源: " + match[0] + "）");
     }
   }
 
@@ -456,14 +469,6 @@ function getEndOfWeek(date: Date): Date {
 export function generateTimeBasedKeywords(timeResult: TimeToolsResult): string[] {
   const allKeywords = [...timeResult.keywords];
   
-  // 添加通用时间相关关键词
-  if (timeResult.hasTimeContext) {
-    allKeywords.push(
-      "时间", "time", "日期", "date", 
-      "记录", "record", "日志", "log",
-      "回忆", "memory", "想起", "recall"
-    );
-  }
   
   // 确保返回去重后的关键词，并按重要性排序
   // 将具体的日期格式关键词排在前面
@@ -473,9 +478,20 @@ export function generateTimeBasedKeywords(timeResult: TimeToolsResult): string[]
     /\d{1,2}[-月]\d{1,2}日?/.test(keyword) ||
     /\d{4}[/.]\d{1,2}[/.]\d{1,2}/.test(keyword)
   );
-  const otherKeywords = uniqueKeywords.filter(keyword => !dateKeywords.includes(keyword));
   
-  return [...dateKeywords, ...otherKeywords];
+  // 其他非日期格式的时间关键词（如"今天"、"昨天"等）
+  const timeKeywords = uniqueKeywords.filter(keyword => 
+    !dateKeywords.includes(keyword) && 
+    !/^(时间|time|日期|date|记录|record|日志|log|回忆|memory|想起|recall)$/i.test(keyword)
+  );
+  
+  // 合并并限制数量为5个
+  const finalKeywords = [...dateKeywords, ...timeKeywords].slice(0, 5);
+  
+  console.log("🕒 [时间关键词提取] 成功提取时间关键词 | Time keywords extracted successfully:");
+  console.log("⏰ 时间关键词:", finalKeywords);
+  
+  return finalKeywords;
 }
 
 /**

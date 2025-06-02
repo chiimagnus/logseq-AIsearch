@@ -2,8 +2,8 @@ import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
 import { siliconflowGenerate } from './siliconflow';
 import { extractKeywords, extractKeywordsWithTimeContext } from './keywordExtraction';
-import { semanticSearch, type SearchResult, detectLanguage } from './utils';
-import { filterResultsByTimeRange, generateTimeContextSummary, type TimeToolsResult } from './timeTools';
+import { semanticSearch, type SearchResult, detectLanguage, timeAwareSearch } from './utils';
+import { filterResultsByTimeRange, generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
 
 export async function generate(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType;
@@ -23,8 +23,6 @@ export async function generate(prompt: string): Promise<string> {
   
   const endTime = Date.now();
   const duration = endTime - startTime;
-  
-  console.log("📄 AI完整响应:", response);
   
   return response;
 }
@@ -201,7 +199,7 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     // 1. 提取关键词和时间上下文
     console.log("📍 [步骤1/5] 正在提取关键词和时间上下文...");
     const keywordResult = await extractKeywordsWithTimeContext(query);
-    const keywords = keywordResult.keywords;
+    const aiKeywords = keywordResult.keywords;
     const timeContext = keywordResult.timeContext;
     
     // 显示时间上下文信息
@@ -212,7 +210,15 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       await logseq.UI.showMsg(timeContextMsg, 'info');
     }
     
-    if (keywords.length === 0) {
+    // 2. 生成时间关键词
+    let timeKeywords: string[] = [];
+    if (enableTimeTools && timeContext?.hasTimeContext) {
+      timeKeywords = generateTimeBasedKeywords(timeContext);
+      console.log("⏰ 时间关键词数量:", timeKeywords.length);
+      console.log("🔍 AI关键词数量:", aiKeywords.length);
+    }
+    
+    if (timeKeywords.length === 0 && aiKeywords.length === 0) {
       console.log("❌ 未提取到任何关键词，搜索结束");
       return {
         summary: "",
@@ -220,68 +226,28 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       };
     }
 
-    // 2. 第一轮：基于关键词的粗筛
-    console.log("📍 [步骤2/5] 正在进行初步搜索...");
-    const initialResults = await semanticSearch(keywords);
-    console.log("📊 初步搜索结果数量:", initialResults.length);
+    // 3. 使用时间优先的搜索策略
+    console.log("📍 [步骤2/5] 开始时间优先搜索...");
+    const searchResults = await timeAwareSearch(timeKeywords, aiKeywords);
+    console.log("📊 时间优先搜索结果数量:", searchResults.length);
     
-    if (initialResults.length === 0) {
-      console.log("❌ 初步搜索无结果，搜索结束");
+    if (searchResults.length === 0) {
+      console.log("❌ 时间优先搜索无结果，搜索结束");
       return {
         summary: "",
         results: []
       };
     }
 
-    // 3. 第二轮：时间感知优化（如果有时间上下文）
-    let timeOptimizedResults = initialResults;
-    if (enableTimeTools && timeContext?.hasTimeContext) {
-      console.log("📍 [步骤3/5] 正在应用时间感知优化...");
-      
-      // 优先保留包含具体日期格式的结果
-      const dateKeywords = timeContext.keywords.filter(keyword => 
-        /\d{4}[-年]\d{1,2}[-月]\d{1,2}日?/.test(keyword) ||
-        /\d{1,2}[-月]\d{1,2}日?/.test(keyword) ||
-        /\d{4}[/.]\d{1,2}[/.]\d{1,2}/.test(keyword)
-      );
-      
-      if (dateKeywords.length > 0) {
-        // 优先显示包含具体日期的结果
-        const dateRelatedResults = initialResults.filter(result => 
-          dateKeywords.some(dateKeyword => 
-            result.block.content.includes(dateKeyword) ||
-            result.block.page?.name?.includes(dateKeyword)
-          )
-        );
-        
-        if (dateRelatedResults.length > 0) {
-          console.log("📊 找到包含具体日期的结果:", dateRelatedResults.length, "个");
-          // 将日期相关的结果排在前面，其他结果排在后面
-          timeOptimizedResults = [...dateRelatedResults, ...initialResults.filter(r => !dateRelatedResults.includes(r))];
-        } else {
-          console.log("📊 未找到包含具体日期的结果，尝试时间范围过滤");
-          // 如果没有找到具体日期匹配，回退到时间范围过滤
-          if (timeContext.timeRanges.length > 0) {
-            timeOptimizedResults = filterResultsByTimeRange(initialResults, timeContext.timeRanges);
-            console.log("📊 时间范围过滤后结果数量:", timeOptimizedResults.length);
-            
-            if (timeOptimizedResults.length === 0) {
-              console.log("❌ 时间范围过滤后无结果，保持原始结果");
-              timeOptimizedResults = initialResults;
-            }
-          }
-        }
-      }
-    } else {
-      console.log("📍 [步骤3/5] 跳过时间感知优化（无时间上下文或时间工具已禁用）");
-    }
+    // 4. 跳过原来的时间感知优化步骤，因为已经在timeAwareSearch中处理
+    console.log("📍 [步骤3/5] 时间感知优化已在搜索中完成，跳过此步骤");
 
-    // 4. 第三轮：批量AI评分筛选
+    // 5. 批量AI评分筛选
     console.log("📍 [步骤4/5] 正在进行AI智能筛选...");
-    const refinedResults = await batchEvaluateRelevance(query, timeOptimizedResults);
+    const refinedResults = await batchEvaluateRelevance(query, searchResults);
     console.log("📊 AI筛选后结果数量:", refinedResults.length);
     
-    // 5. 根据设置决定是否生成AI总结
+    // 6. 根据设置决定是否生成AI总结
     const enableAISummary = logseq.settings?.enableAISummary ?? true;
     let summary = "";
     
@@ -308,11 +274,12 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       console.log("ℹ️ 无搜索结果，跳过总结步骤");
     }
 
-    console.log("🎉 [AI搜索完成] 搜索流程结束 | AI search process completed");
     console.log("📋 最终结果:", {
       summary: summary ? "已生成总结" : "无总结",
       resultCount: refinedResults.length,
-      summaryLength: summary.length
+      summaryLength: summary.length,
+      timeKeywordsUsed: timeKeywords.length,
+      aiKeywordsUsed: aiKeywords.length
     });
     
     return {

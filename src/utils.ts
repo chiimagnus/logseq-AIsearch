@@ -206,6 +206,196 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
   }
 }
 
+/**
+ * 页面搜索功能 - 搜索页面名称中包含关键词的页面
+ */
+export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
+  try {
+    const results: SearchResult[] = [];
+    const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
+      ? logseq.settings.maxResults 
+      : 50;
+
+    console.log("📄 [页面搜索] 开始搜索页面... | Starting page search...");
+    
+    for (const keyword of keywords) {
+      // 搜索页面名称包含关键词的页面，修复查询语法
+      const pageQuery = `
+        [:find (pull ?p [:block/uuid :block/name :block/journal-day])
+         :where
+         [?p :block/name ?n]
+         [(clojure.string/includes? ?n "${keyword}")]]
+      `;
+
+      const pageResults = await logseq.DB.datascriptQuery(pageQuery);
+      
+      if (pageResults) {
+        for (const result of pageResults) {
+          const page = result[0];
+          
+          // 获取页面的首个块
+          const firstBlockQuery = `
+            [:find (pull ?b [*])
+             :where
+             [?b :block/page ?p]
+             [?p :block/name "${page.name}"]
+             [?b :block/parent ?p]]
+          `;
+          
+          let pageBlock;
+          const firstBlockResults = await logseq.DB.datascriptQuery(firstBlockQuery);
+          
+          if (firstBlockResults && firstBlockResults.length > 0) {
+            pageBlock = firstBlockResults[0][0];
+          } else {
+            // 创建虚拟块表示空页面
+            pageBlock = {
+              uuid: `page-${page.uuid}`,
+              content: `页面: ${page.name}`,
+              page: {
+                name: page.name,
+                "journal-day": page["journal-day"] || null
+              }
+            };
+          }
+          
+          // 构建页面内容，包括页面名称和主要内容
+          let fullContent = `*${page.name}*\n`;
+          if (firstBlockResults && firstBlockResults.length > 0) {
+            const pageContent = firstBlockResults
+              .slice(0, 5) // 只取前5个块，避免内容过多
+              .map((blockResult: any) => blockResult[0].content || '')
+              .filter((content: string) => content.trim())
+              .join('\n');
+            fullContent += pageContent;
+          } else {
+            fullContent += `[空页面 | Empty page]`;
+          }
+
+          // 计算相关性分数，页面名称匹配给予更高权重
+          const importantKeywords = keywords.slice(0, 3);
+          let score = calculateRelevanceScore({ ...pageBlock, content: fullContent }, keywords, importantKeywords);
+          
+          // 如果页面名称直接包含关键词，给予额外加分
+          if (keywords.some(kw => page.name.toLowerCase().includes(kw.toLowerCase()))) {
+            score *= 1.5; // 页面名称匹配加权
+            console.log("📄 找到匹配页面:", page.name, "分数:", score);
+          }
+          
+          if (score > 2) {
+            results.push({
+              block: { ...pageBlock, content: fullContent },
+              score
+            });
+          }
+        }
+      }
+    }
+
+    const finalResults = Array.from(new Map(
+      results
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxResults)
+        .map(item => [item.block.uuid, item])
+    ).values());
+    
+    console.log("📄 [页面搜索] 找到页面数量:", finalResults.length);
+    return finalResults;
+    
+  } catch (error) {
+    console.error("页面搜索失败:", error);
+    return [];
+  }
+}
+
+/**
+ * 时间优先的综合搜索 - 根据时间关键词优先搜索，然后搜索AI关键词
+ */
+export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string[]): Promise<SearchResult[]> {
+  try {
+    console.log("🕒 [时间优先搜索] 开始时间感知搜索...");
+    console.log("⏰ 时间关键词:", timeKeywords);
+    console.log("🔍 AI关键词:", aiKeywords);
+    
+    let finalResults: SearchResult[] = [];
+    
+    // 第一阶段：如果有时间关键词，优先使用时间关键词搜索
+    if (timeKeywords.length > 0) {
+      console.log("📍 [阶段1] 使用时间关键词搜索（块 + 页面）...");
+      
+      // 只有时间关键词才同时搜索块和页面
+      const [timeBlockResults, timePageResults] = await Promise.all([
+        semanticSearch(timeKeywords),
+        pageSearch(timeKeywords)
+      ]);
+      
+      // 合并时间搜索结果
+      const timeResults = [...timeBlockResults, ...timePageResults];
+      console.log("📊 时间关键词搜索结果:", timeResults.length, "个");
+      
+      if (timeResults.length > 0 && aiKeywords.length > 0) {
+        // 第二阶段：在时间过滤的结果中搜索AI关键词
+        console.log("📍 [阶段2] 在时间结果中搜索AI关键词...");
+        
+        const refinedResults = timeResults.filter(result => {
+          const content = result.block.content.toLowerCase();
+          return aiKeywords.some(keyword => 
+            content.includes(keyword.toLowerCase())
+          );
+        });
+        
+        console.log("📊 AI关键词过滤后结果:", refinedResults.length, "个");
+        
+        if (refinedResults.length > 0) {
+          // 重新计算相关性分数，考虑AI关键词
+          refinedResults.forEach(result => {
+            const combinedKeywords = [...timeKeywords, ...aiKeywords];
+            result.score = calculateRelevanceScore(
+              result.block, 
+              combinedKeywords, 
+              [...timeKeywords, ...aiKeywords.slice(0, 3)]
+            );
+          });
+          
+          finalResults = refinedResults.sort((a, b) => b.score - a.score);
+        } else {
+          // 如果AI关键词过滤后没有结果，保留时间搜索结果
+          console.log("ℹ️ AI关键词过滤后无结果，保留时间搜索结果");
+          finalResults = timeResults;
+        }
+      } else {
+        // 只有时间关键词，没有AI关键词
+        finalResults = timeResults;
+      }
+    } else if (aiKeywords.length > 0) {
+      // 没有时间关键词，只搜索块，不搜索页面
+      console.log("📍 [阶段1] 无时间关键词，只搜索块内容...");
+      const aiBlockResults = await semanticSearch(aiKeywords);
+      finalResults = aiBlockResults;
+      console.log("📊 AI关键词搜索结果:", finalResults.length, "个（仅块内容）");
+    }
+    
+    // 最终去重和排序
+    const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
+      ? logseq.settings.maxResults 
+      : 50;
+      
+    const uniqueResults = Array.from(new Map(
+      finalResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxResults)
+        .map(item => [item.block.uuid, item])
+    ).values());
+    
+    console.log("✅ [时间优先搜索] 最终结果数量:", uniqueResults.length);
+    return uniqueResults;
+    
+  } catch (error) {
+    console.error("时间感知搜索失败:", error);
+    return [];
+  }
+}
+
 export function detectLanguage(text: string): 'en' | 'zh' {
   // 计算英文字符的比例
   const englishChars = text.match(/[a-zA-Z]/g)?.length || 0;
