@@ -69,13 +69,38 @@ export async function extractKeywords(input: string): Promise<string[]> {
     
     const response = await generate(prompt);
     let aiKeywords: string[] = [];
+    let cleanedResponse = '';
     
     try {
-      // 尝试清理响应文本，只保留JSON数组部分
-      const cleanedResponse = response.replace(/```json\s*|\s*```/g, '').trim();
+      // 清理响应文本，移除代码块标记和thinking标签
+      // 首先移除常见的代码块标记
+      cleanedResponse = response.replace(/```json\s*|\s*```/g, '').trim();
+      
+      // 移除各种thinking标签（支持多种格式）
+      // 这些正则表达式处理不同AI模型可能产生的推理内容格式
+      cleanedResponse = cleanedResponse
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')  // 移除 <think>...</think>
+        .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')  // 移除 <thinking>...</thinking>
+        .replace(/\*\*思考过程\*\*[\s\S]*?(?=\[)/gi, '')  // 移除 **思考过程** 开头的内容
+        .replace(/思考：[\s\S]*?(?=\[)/gi, '')  // 移除 思考： 开头的内容
+        .replace(/^[\s\S]*?(?=\[)/g, '')  // 移除JSON数组前的所有内容
+        .replace(/\][\s\S]*$/g, ']')  // 移除JSON数组后的所有内容
+        .trim();
+      
+      // 如果清理后的内容不是以 [ 开头，尝试找到JSON数组
+      // 这是一个额外的安全措施，确保我们能找到有效的JSON数组
+      if (!cleanedResponse.startsWith('[')) {
+        const jsonMatch = cleanedResponse.match(/\[[\s\S]*?\]/);
+        if (jsonMatch) {
+          cleanedResponse = jsonMatch[0];
+        }
+      }
+      
       aiKeywords = JSON.parse(cleanedResponse);
     } catch (e) {
       console.error("AI关键词解析失败｜AI Keyword Parsing Failed:", e);
+      console.error("原始响应｜Original Response:", response);
+      console.error("清理后响应｜Cleaned Response:", cleanedResponse);
       return [];
     }
     
