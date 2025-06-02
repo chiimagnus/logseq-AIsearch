@@ -1,5 +1,5 @@
 ---
-description: 
+description: 修复bug、问题时参考此rule
 globs: 
 alwaysApply: false
 ---
