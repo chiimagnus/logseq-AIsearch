@@ -22,8 +22,8 @@ export async function siliconflowGenerate(prompt: string): Promise<string> {
             content: prompt
           }
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.1,
+        max_tokens: 10000,
         stream: false
       })
     });

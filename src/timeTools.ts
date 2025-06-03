@@ -488,9 +488,6 @@ export function generateTimeBasedKeywords(timeResult: TimeToolsResult): string[]
   // 合并并限制数量为5个
   const finalKeywords = [...dateKeywords, ...timeKeywords].slice(0, 5);
   
-  console.log("🕒 [时间关键词提取] 成功提取时间关键词 | Time keywords extracted successfully:");
-  console.log("⏰ 时间关键词:", finalKeywords);
-  
   return finalKeywords;
 }
 

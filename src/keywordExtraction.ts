@@ -25,7 +25,6 @@ export async function extractKeywordsWithTimeContext(input: string): Promise<Ext
       timeContext = await parseTimeQuery(input);
       
       if (timeToolsDebug || timeContext.hasTimeContext) {
-        console.log("🕒 [时间工具] 时间解析结果 | Time parsing result:");
         console.log("📅 时间范围:", timeContext.timeRanges);
         console.log("🔍 时间关键词:", timeContext.keywords);
         console.log("⏰ 是否包含时间上下文:", timeContext.hasTimeContext);
@@ -115,7 +114,6 @@ export async function extractKeywordsWithTimeContext(input: string): Promise<Ext
     const finalPrompt = basePrompt + timeContextInfo;
     
     console.log("🏷️ [关键词提取] 开始提取关键词 | Starting keyword extraction");
-    console.log("📝 用户输入:", input);
     console.log("🌐 检测语言:", lang);
     
     const response = await generate(finalPrompt);

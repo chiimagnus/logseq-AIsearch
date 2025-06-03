@@ -331,11 +331,7 @@ export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
         .slice(0, maxResults)
         .map(item => [item.block.uuid, item])
     ).values());
-    
-    console.log("📄 [页面搜索] 找到页面数量:", finalResults.length);
-    if (finalResults.length > 0) {
-      console.log("📋 [页面搜索] 前3个页面:", finalResults.slice(0, 3).map(r => r.block.page?.name));
-    }
+
     return finalResults;
     
   } catch (error) {
@@ -351,10 +347,6 @@ export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
  */
 export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string[]): Promise<SearchResult[]> {
   try {
-    console.log("🕒 [时间优先搜索] 开始重构版本的时间感知搜索...");
-    console.log("⏰ 时间关键词:", timeKeywords);
-    console.log("🔍 AI关键词:", aiKeywords);
-    
     let finalResults: SearchResult[] = [];
     
     // 情况1：有时间关键词 - 分层搜索
@@ -446,7 +438,6 @@ export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string
         .map(item => [item.block.uuid, item])
     ).values());
     
-    console.log("✅ [时间优先搜索] 最终结果数量:", uniqueResults.length);
     return uniqueResults;
     
   } catch (error) {

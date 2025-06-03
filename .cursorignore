@@ -5,3 +5,4 @@ dev_doc.md
 readme.md
 public/
 dist/
+node_modules/

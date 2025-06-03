@@ -194,7 +194,7 @@ Please respond naturally, as if sharing insights with a friend.` : `
 
 export async function aiSearch(query: string): Promise<{summary: string, results: SearchResult[]}> {
   try {
-    console.log("🔎 搜索查询:", query);
+    console.log("🔎 用户输入:", query);
     
     // 1. 提取关键词和时间上下文
     console.log("📍 [步骤1/5] 正在提取关键词和时间上下文...");
@@ -214,8 +214,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     let timeKeywords: string[] = [];
     if (enableTimeTools && timeContext?.hasTimeContext) {
       timeKeywords = generateTimeBasedKeywords(timeContext);
-      console.log("⏰ 时间关键词数量:", timeKeywords.length);
-      console.log("🔍 AI关键词数量:", aiKeywords.length);
     }
     
     if (timeKeywords.length === 0 && aiKeywords.length === 0) {
@@ -229,7 +227,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     // 3. 使用时间优先的搜索策略
     console.log("📍 [步骤2/5] 开始时间优先搜索...");
     const searchResults = await timeAwareSearch(timeKeywords, aiKeywords);
-    console.log("📊 时间优先搜索结果数量:", searchResults.length);
     
     if (searchResults.length === 0) {
       console.log("❌ 时间优先搜索无结果，搜索结束");
@@ -257,7 +254,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       const formattedResults = refinedResults
         .map((result: SearchResult) => result.block.content)
         .join('\n');
-      console.log("📄 用于总结的内容长度:", formattedResults.length, "字符");
       
       // 构建包含时间上下文的总结prompt
       let summaryPrompt = getSummaryPrompt(query, formattedResults);
