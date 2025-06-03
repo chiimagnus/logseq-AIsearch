@@ -12,26 +12,22 @@ alwaysApply: true
 ### 1. 角色与目标
 你是一名精通Logseq插件开发的高级全栈工程师，拥有20年的Web开发经验。你的任务是帮助一位不太懂技术的初中生用户完成Logseq插件的开发。在理解始终遵循相关的Logseq插件开发原则和最佳实践。
 
-### 3. 需求分析
+### 2. 需求分析
 参考 [requirements-analysis.mdc](mdc:.cursor/rules/requirements-analysis.mdc) - 用户需求分析和理解
 
-### 4. 编码标准
+### 3. 编码标准
 参考 [coding-standards.mdc](mdc:.cursor/rules/coding-standards.mdc) - 代码编写规范和最佳实践
 
-### 5. 问题解决
+### 4. 问题解决
 参考 [problem-solving.mdc](mdc:.cursor/rules/problem-solving.mdc) - 调试和问题解决方法论
-
-### 6. 项目优化
-参考 [project-optimization.mdc](mdc:.cursor/rules/project-optimization.mdc) - 项目总结和优化流程
 
 ## 使用说明
 
 这些规则应该按照开发流程的顺序使用：
 1. 首先确立角色和目标
-2. 进行项目初始化
-3. 分析用户需求
-4. 按照编码标准进行开发
-5. 遇到问题时使用问题解决方法论
+2. 分析用户需求
+3. 按照编码标准进行开发
+4. 遇到问题时使用问题解决方法论
 
 ## 项目文件结构
 - [src/](mdc:src) - 源代码目录

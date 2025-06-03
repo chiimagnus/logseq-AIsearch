@@ -26,6 +26,8 @@ alwaysApply: false
 - 实现适当的性能优化，如使用useMemo和useCallback
 - 实现响应式设计，确保在不同设备上的良好体验
 
+在整个过程中，始终参考[Logseq官方文档](mdc:https:/docs.logseq.com)，确保使用最新的Logseq开发最佳实践。
+
 ## 相关配置文件
 - [tsconfig.json](mdc:tsconfig.json) - TypeScript配置
 - [tailwind.config.js](mdc:tailwind.config.js) - 样式配置
