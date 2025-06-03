@@ -85,8 +85,8 @@ const settings: SettingSchemaDesc[] = [
     key: "zhipuModel",
     type: "string",
     title: "🤖 模型名称 / Model Name",
-    description: "输入要使用的智谱清言模型名称（glm-4-flash目前是免费的）\nEnter the Zhipu model name (glm-4-flash is currently free)",
-    default: "glm-4-flash"
+    description: "输入要使用的智谱清言模型名称\nEnter the Zhipu model name (glm-4-flash is currently free)",
+    default: "GLM-4-Flash-250414"
   },
   
   // ==================== 硅基流动 ====================

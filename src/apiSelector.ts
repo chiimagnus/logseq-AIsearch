@@ -197,7 +197,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     console.log("🔎 用户输入:", query);
     
     // 1. 提取关键词和时间上下文
-    console.log("📍 [步骤1/5] 正在提取关键词和时间上下文...");
     const keywordResult = await extractKeywordsWithTimeContext(query);
     const aiKeywords = keywordResult.keywords;
     const timeContext = keywordResult.timeContext;
@@ -225,7 +224,6 @@ export async function aiSearch(query: string): Promise<{summary: string, results
     }
 
     // 3. 使用时间优先的搜索策略
-    console.log("📍 [步骤2/5] 开始时间优先搜索...");
     const searchResults = await timeAwareSearch(timeKeywords, aiKeywords);
     
     if (searchResults.length === 0) {
@@ -236,20 +234,15 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       };
     }
 
-    // 4. 跳过原来的时间感知优化步骤，因为已经在timeAwareSearch中处理
-    console.log("📍 [步骤3/5] 时间感知优化已在搜索中完成，跳过此步骤");
-
-    // 5. 批量AI评分筛选
-    console.log("📍 [步骤4/5] 正在进行AI智能筛选...");
+    // 4. 批量AI评分筛选
     const refinedResults = await batchEvaluateRelevance(query, searchResults);
     console.log("📊 AI筛选后结果数量:", refinedResults.length);
     
-    // 6. 根据设置决定是否生成AI总结
+    // 5. 根据设置决定是否生成AI总结
     const enableAISummary = logseq.settings?.enableAISummary ?? true;
     let summary = "";
     
     if (enableAISummary && refinedResults.length > 0) {
-      console.log("📍 [步骤5/5] 正在生成AI总结...");
       await logseq.UI.showMsg("正在总结... | Summarizing...", 'info');
       const formattedResults = refinedResults
         .map((result: SearchResult) => result.block.content)
@@ -264,24 +257,13 @@ export async function aiSearch(query: string): Promise<{summary: string, results
       
       summary = await generate(summaryPrompt);
       console.log("✅ AI总结生成完成");
-    } else if (!enableAISummary) {
-      console.log("ℹ️ AI总结功能已禁用，跳过总结步骤");
-    } else {
-      console.log("ℹ️ 无搜索结果，跳过总结步骤");
     }
-
-    console.log("📋 最终结果:", {
-      summary: summary ? "已生成总结" : "无总结",
-      resultCount: refinedResults.length,
-      summaryLength: summary.length,
-      timeKeywordsUsed: timeKeywords.length,
-      aiKeywordsUsed: aiKeywords.length
-    });
     
     return {
       summary: summary ? `\n${summary}\n` : "",
       results: refinedResults
     };
+
   } catch (error) {
     console.error("💥 [AI搜索失败] AI search failed:", error);
     return {

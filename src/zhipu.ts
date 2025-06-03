@@ -10,14 +10,14 @@ export async function zhipuGenerate(prompt: string): Promise<string> {
     });
 
     const response = await openai.chat.completions.create({
-      model: (logseq.settings?.zhipuModel as string) || 'glm-4-plus',
+      model: (logseq.settings?.zhipuModel as string) || 'GLM-4-Flash-250414',
       messages: [
         {
           role: "user",
           content: prompt
         }
       ],
-      max_tokens: undefined,
+      max_tokens: 2000,
       temperature: 0.1
     });
 

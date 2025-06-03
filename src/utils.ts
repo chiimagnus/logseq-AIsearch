@@ -217,7 +217,7 @@ export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
       ? logseq.settings.maxResults 
       : 50;
 
-    console.log("📄 [页面搜索] 开始搜索页面（重点获取完整内容）...");
+    
     
     for (const keyword of keywords) {
       // 搜索页面名称包含关键词的页面
@@ -266,7 +266,7 @@ export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
               
               fullContent += pageContent;
               
-              console.log("📄 [页面内容] 页面:", page.name, "包含", pageContentBlocks.length, "个内容块");
+    
             } else {
               // 页面有块但没有实际内容
               pageBlock = {
@@ -312,7 +312,7 @@ export async function pageSearch(keywords: string[]): Promise<SearchResult[]> {
               /\d{1,2}[-月]\d{1,2}日?/.test(page.name) ||
               /\d{4}[/.]\d{1,2}[/.]\d{1,2}/.test(page.name)) {
             score *= 1.5; // 日期页面额外加权
-            console.log("📅 日期页面额外加分:", page.name, "最终分数:", score.toFixed(2));
+            
           }
           
           if (score > 2) {
@@ -351,7 +351,7 @@ export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string
     
     // 情况1：有时间关键词 - 分层搜索
     if (timeKeywords.length > 0) {
-      console.log("📍 [阶段1] 检测到时间词，开始时间优先搜索...");
+  
       
       // 第一层：用时间关键词搜索相关的pages和blocks
       console.log("🔍 [阶段1.1] 使用时间关键词搜索pages和blocks...");
