@@ -1,9 +1,9 @@
 import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
 import { siliconflowGenerate } from './siliconflow';
-import { extractKeywords, extractKeywordsWithTimeContext } from './keywordExtraction';
-import { semanticSearch, type SearchResult, detectLanguage, timeAwareSearch } from './utils';
-import { filterResultsByTimeRange, generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
+import { extractKeywords, extractKeywordsWithTimeContext } from '../core/keywordExtraction';
+import { semanticSearch, type SearchResult, detectLanguage, timeAwareSearch } from '../tools/utils';
+import { filterResultsByTimeRange, generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
 
 export async function generate(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType;

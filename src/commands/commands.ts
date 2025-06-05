@@ -1,4 +1,4 @@
-import { aiSearch } from './apiSelector';
+import { aiSearch } from '../services/apiSelector';
 
 export async function aiSearchCommand() {
   try {

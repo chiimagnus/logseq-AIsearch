@@ -1,6 +1,6 @@
-import { generate } from './apiSelector';
-import { detectLanguage } from './utils';
-import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
+import { generate } from '../services/apiSelector';
+import { detectLanguage } from '../tools/utils';
+import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
 
 export interface ExtractedKeywordsResult {
   keywords: string[];
