@@ -162,7 +162,6 @@ export async function extractKeywordsWithTimeContext(input: string): Promise<Ext
     
     const importantKeywords = allKeywords.slice(0, 3); // 选择前三个关键词作为重要关键词
     
-    console.log("✅ [关键词提取成功] 提取到的关键词 | Extracted keywords successfully:");
     console.log("🔍 AI关键词:", aiKeywords);
     console.log("🕒 时间关键词:", timeBasedKeywords);
     console.log("🔗 合并后关键词:", allKeywords);
