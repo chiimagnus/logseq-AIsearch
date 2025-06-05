@@ -1,5 +1,5 @@
 <h1 align="center">
-    🎉 logseq-plugin-AISearch
+    🎉 AI Search
 </h1>
 
 <div align="center">
@@ -12,29 +12,9 @@ An AI-based intelligent search plugin for Logseq that can perform global documen
 - 🔍 Intelligent search based on the current block content
 - 📝 AI-powered summary of search results
 - 🔗 Quick jump to the original note
-- ⚡️ Support for custom AI models and parameters
-- 🌐 Added support for the Zhipu Qingyan large model API
+- Support for ollama, Zhipu Qingyan, and Silicon Flow large models
 
 ## 🚀 Quick Start
-
-### Prerequisites (Choose one)
-1. Ollama Local Deployment
-   - Install and deploy the [ollama](https://ollama.com/) large model
-   - Ensure the ollama service is running properly
-2. Zhipu Qingyan API
-   - Apply for an API key on the [Zhipu Qingyan Open Platform](https://open.bigmodel.cn/pricing)
-   - Obtain model access permissions
-   - PS: You can choose the free glm-4-flash model
-
-### Installation and Configuration
-1. Install the plugin from the Logseq marketplace
-2. Configure parameters based on the chosen method:
-   - Ollama Method:
-     - Set the host address (default: localhost:11434)
-     - Choose the AI model (default: qwen2.5, default 7B parameters)
-   - Zhipu Qingyan Method:
-     - Configure the API key
-     - Choose the model (e.g., glm-4-plus, glm-4-flash)
 
 ### Usage
 - Command: Enter `/AI-Search`
@@ -47,23 +27,8 @@ An AI-based intelligent search plugin for Logseq that can perform global documen
 or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
-## 🗺️ Development Plan
-- [x] Add support for more models
-- [x] Optimize AI summary for time dimension
-- [x] Support English version prompt
-
-### Completed
-- [x] v1.3.0 Added support for the Zhipu Qingyan large model API
-- [x] v1.0.0 Core features released
-  <div align="center">
-    <img src="public/v1.0-AIsearch插件设计.png" width="600">
-  </div>
-
-> For more update details, please check [CHANGELOG.md](CHANGELOG.md)
-
-## 🔧 FAQ
-
-- ✅ Performance Optimization: Continuous improvement, striving to balance search accuracy and performance consumption
+## Development Plan
+- [ ] Implement AI intent recognition and tool invocation.
 
 ## 🙏 Acknowledgments
 - [Logseq Plugin API Documentation](https://plugins-doc.logseq.com/)

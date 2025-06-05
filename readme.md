@@ -1,5 +1,5 @@
 <h1 align="center">
-    🎉 AI Reminiscence
+    🎉 AI Search
 </h1>
 
 <div align="center">
@@ -8,36 +8,13 @@
 
 一款基于AI的Logseq智能搜索插件，可以根据当前block内容进行全局文档搜索，并提供AI智能总结功能。
 
-## ✨ 主要功能1
+## ✨ 主要功能
 - 🔍 基于当前block内容的智能搜索
 - 📝 搜索结果的AI智能总结
-- 🔗 快速跳转到原始笔记
-- ⚡️ 支持自定义AI模型和参数
-- 🌐 新增智谱清言大模型API支持
-
-## ✨ 主要功能2
-- logseq plugin, manage your logseq notes to different kinds just like Apple Photos!
+- 🔗 链接原始笔记
+- 支持ollama、智谱清言、硅基流动大模型
 
 ## 🚀 快速开始
-
-### 前置要求（二选一）
-1. Ollama本地部署
-   - 安装并部署 [ollama](https://ollama.com/) 大模型
-   - 确保 ollama 服务正常运行
-2. 智谱清言API
-   - 在[智谱清言开放平台](https://open.bigmodel.cn/pricing)申请API密钥
-   - 获取模型调用权限
-   - PS：可选用免费的glm-4-flash模型
-
-### 安装配置
-1. 在 Logseq 市场安装插件
-2. 根据选择的方式配置参数：
-   - Ollama方式：
-     - 设置主机地址（默认：localhost:11434）
-     - 选择AI模型（默认：qwen2.5，默认为7B参数）
-   - 智谱清言方式：
-     - 配置API密钥
-     - 选择模型（如：glm-4-plus、glm-4-flash）
 
 ### 使用方法
 - 命令方式：输入 `/AI-Search`
@@ -50,11 +27,8 @@
 or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
 
-
-## 🗺️ 开发计划
-- [ ]增加AI-Reminiscence功能：logseq plugin, manage your logseq notes to different kinds just like Apple Photos!
-- [ ]增加UI界面，实现多轮对话
-
+## 开发计划
+- [ ]实现AI意图识别、工具调用。
 
 ## 🙏 致谢
 - [logseq插件API文档](https://plugins-doc.logseq.com/)
