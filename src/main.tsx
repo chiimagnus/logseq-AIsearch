@@ -10,22 +10,22 @@ const settings: SettingSchemaDesc[] = [
     key: "globalSettingsHeader",
     type: "heading",
     title: "🌐 全局设置 / Global Settings",
-    description: "基本的插件设置",
+    description: "",
     default: ""
   },
   {
     key: "apiType",
     type: "enum",
-    title: "🔧 API 类型 / API Type",
-    description: "选择使用的 AI 服务提供商\nSelect the AI service provider to use",
-    enumChoices: ["Ollama", "自定义API"],
-    default: "自定义API"
+    title: "🔧 大模型服务商 / LLM Provider",
+    description: "",
+    enumChoices: ["Ollama", "Custom LLM API"],
+    default: "Ollama"
   },
   {
     key: "shortcut",
     type: "string",
     title: "⌨️ 快捷键 / Shortcut",
-    description: "设置 AI-Search 的快捷键\nSet the shortcut key for AI-Search",
+    description: "",
     default: "alt+mod+a"
   },
   
@@ -34,22 +34,22 @@ const settings: SettingSchemaDesc[] = [
     key: "ollamaHeader",
     type: "heading",
     title: "🖥️ Ollama 本地部署 / Ollama Local Deployment",
-    description: "配置本地 Ollama 服务的连接参数",
+    description: "",
     default: ""
   },
   {
     key: "host",
     type: "string",
-    title: "🌐 Ollama 主机 / Ollama Host",
-    description: "设置 Ollama 服务的主机地址和端口\nSet the host address and port for Ollama service",
+    title: "🌐 主机地址和端口 / Host Address and Port",
+    description: "",
     default: "localhost:11434"
   },
   {
     key: "model",
     type: "string",
-    title: "🤖 Ollama 大模型 / Ollama Model",
-    description: "设置要使用的 Ollama 模型\nSet the Ollama model to use",
-    default: "qwen2.5"
+    title: "🤖 模型名称 / Model Name",
+    description: "",
+    default: "deepseek-r1:8b"
   },
   
   // ==================== 自定义API配置 ====================
@@ -57,72 +57,42 @@ const settings: SettingSchemaDesc[] = [
     key: "unifiedApiHeader",
     type: "heading",
     title: "🛠️ 自定义API配置 / Custom API Configuration",
-    description: "配置自定义大模型API服务的连接参数（支持OpenAI、智谱清言、硅基流动、Anthropic等所有兼容服务）",
-    default: ""
-  },
-  {
-    key: "apiKey",
-    type: "string",
-    title: "🔐 API Key",
-    description: "输入API密钥\nEnter the API key",
+    description:
+`
+🧠 智谱清言Zhipu AI: https://open.bigmodel.cn/api/paas/v4/chat/completions
+    
+🤖 硅基流动SiliconFlow: https://api.siliconflow.cn/v1/chat/completions
+`,
     default: ""
   },
   {
     key: "apiUrl",
     type: "string",
     title: "🔗 完整API URL / Full API URL",
-    description: "API的完整URL地址，包含具体端点\nComplete API URL with specific endpoint",
+    description: "",
+    default: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+  },
+  {
+    key: "apiKey",
+    type: "string",
+    title: "🔐 API Key",
+    description: "",
     default: ""
   },
   {
     key: "modelName",
     type: "string",
     title: "🤖 模型名称 / Model Name",
-    description: "要使用的模型名称\nModel name to use",
-    default: ""
+    description: "",
+    default: "GLM-4-Flash-250414"
   },
   
-  // ==================== API预设配置说明 ====================
-  {
-    key: "presetConfigHeader",
-    type: "heading",
-    title: "📋 配置参考 / Configuration Reference",
-    description: "常用API服务配置参考",
-    default: ""
-  },
-  {
-    key: "configReference",
-    type: "string",
-    title: "📖 配置参考 / Configuration Reference",
-    description: `常用API服务配置参考：
-    
-🧠 智谱清言 / Zhipu AI:
-• API URL: https://open.bigmodel.cn/api/paas/v4/chat/completions
-• 推荐模型: GLM-4-Flash-250414 (免费), glm-4-plus, glm-4-0520
-
-🤖 硅基流动 / SiliconFlow:
-• API URL: https://api.siliconflow.cn/v1/chat/completions
-• 推荐模型: Qwen/Qwen2.5-7B-Instruct, deepseek-ai/DeepSeek-R1
-
-🤖 OpenAI:
-• API URL: https://api.openai.com/v1/chat/completions
-• 推荐模型: gpt-4o-mini, gpt-4o, gpt-3.5-turbo
-
-🎭 Anthropic:
-• API URL: https://api.anthropic.com/v1/messages
-• 推荐模型: claude-3-5-sonnet-20241022, claude-3-haiku-20240307
-
-🔧 其他兼容OpenAI格式的API服务也可使用`,
-    default: "",
-    inputAs: "textarea"
-  },
-  
-  // ==================== 搜索设置 ====================
+  // ==================== 高级设置 ====================
   {
     key: "searchSettingsHeader",
     type: "heading",
-    title: "🔍 搜索设置 / Search Settings",
-    description: "配置搜索算法和结果处理参数",
+    title: "🔍 高级设置 / Advanced Settings",
+    description: "",
     default: ""
   },
   {
@@ -145,15 +115,6 @@ const settings: SettingSchemaDesc[] = [
     default: 10,
     title: "⚡ 批处理大小 / Batch Size",
     description: "设置并行处理相关性得分的批处理大小\nSet the batch size for parallel relevance score processing"
-  },
-  
-  // ==================== 内容设置 ====================
-  {
-    key: "contentSettingsHeader",
-    type: "heading",
-    title: "📝 内容设置 / Content Settings",
-    description: "配置搜索结果包含的内容范围",
-    default: ""
   },
   {
     key: "includeParent",
