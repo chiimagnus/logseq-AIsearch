@@ -51,13 +51,6 @@ const settings: SettingSchemaDesc[] = [
     description: "设置要使用的 Ollama 模型\nSet the Ollama model to use",
     default: "qwen2.5"
   },
-  {
-    key: "ollamaTimeout",
-    type: "number",
-    title: "⏱️ 连接超时 / Timeout",
-    description: "设置 Ollama 连接超时时间（秒）\nSet Ollama connection timeout (seconds)",
-    default: 30
-  },
   
   // ==================== 自定义API配置 ====================
   {
@@ -87,13 +80,6 @@ const settings: SettingSchemaDesc[] = [
     title: "🤖 模型名称 / Model Name",
     description: "要使用的模型名称\nModel name to use",
     default: ""
-  },
-  {
-    key: "apiTimeout",
-    type: "number",
-    title: "⏱️ 连接超时 / Timeout",
-    description: "设置API连接超时时间（秒）\nSet API connection timeout (seconds)",
-    default: 30
   },
   
   // ==================== API预设配置说明 ====================

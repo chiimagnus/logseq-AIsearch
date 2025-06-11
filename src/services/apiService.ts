@@ -14,7 +14,6 @@ export async function generateResponse(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType as string;
     
   let response: string;
-  const startTime = Date.now();
   
   if (apiType === "Ollama") {
     response = await ollamaGenerate(prompt);
@@ -23,11 +22,6 @@ export async function generateResponse(prompt: string): Promise<string> {
   } else {
     throw new Error("不支持的 API 类型 | Unsupported API type");
   }
-  
-  const endTime = Date.now();
-  const duration = endTime - startTime;
-  
-  console.log(`📡 [API调用] ${apiType} 响应时间: ${duration}ms`);
   
   return response;
 } 
