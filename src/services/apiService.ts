@@ -17,7 +17,7 @@ export async function generateResponse(prompt: string): Promise<string> {
   
   if (apiType === "Ollama") {
     response = await ollamaGenerate(prompt);
-  } else if (apiType === "自定义API") {
+  } else if (apiType === "Custom LLM API") {
     response = await unifiedApiGenerate(prompt);
   } else {
     throw new Error("不支持的 API 类型 | Unsupported API type");

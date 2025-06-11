@@ -8,7 +8,7 @@ export async function unifiedApiGenerate(prompt: string): Promise<string> {
   const apiUrl = logseq.settings?.apiUrl;
   const model = logseq.settings?.modelName;
   const timeout = 30000; // 转换为毫秒
-  const apiType = logseq.settings?.apiType || "自定义API";
+  const apiType = logseq.settings?.apiType || "Custom LLM API";
 
   if (!apiKey) {
     throw new Error(`${apiType} API Key 未设置 | ${apiType} API Key not set`);
