@@ -1,7 +1,7 @@
 import { ollamaGenerate } from './ollama';
 import { zhipuGenerate } from './zhipu';
 import { siliconflowGenerate } from './siliconflow';
-import { extractKeywords, extractKeywordsWithTimeContext } from '../core/keywordExtraction';
+import { extractKeywords, extractKeywordsWithTimeContext } from '../tools/keywordExtraction';
 import { semanticSearch, type SearchResult, detectLanguage, timeAwareSearch } from '../tools/utils';
 import { filterResultsByTimeRange, generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
 import { getRelevanceEvaluationPrompt } from '../prompts/relevanceEvaluation';

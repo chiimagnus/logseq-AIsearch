@@ -1,6 +1,8 @@
+// 时间解析/扩展工具
+
 import { generate } from '../services/apiSelector';
-import { detectLanguage } from '../tools/utils';
-import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
+import { detectLanguage } from './utils';
+import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
 import { getKeywordExtractionPrompt } from '../prompts/keywordExtraction';
 
 export interface ExtractedKeywordsResult {
