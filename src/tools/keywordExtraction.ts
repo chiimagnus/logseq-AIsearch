@@ -1,7 +1,7 @@
 // 时间解析/扩展工具
 
-import { generate } from '../services/apiSelector';
-import { detectLanguage } from './utils';
+import { generateResponse } from '../services/apiService';
+import { detectLanguage } from './languageDetector';
 import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
 import { getKeywordExtractionPrompt } from '../prompts/keywordExtraction';
 
@@ -55,7 +55,7 @@ export async function extractKeywordsWithTimeContext(input: string): Promise<Ext
     console.log("🏷️ [关键词提取] 开始提取关键词 | Starting keyword extraction");
     console.log("🌐 检测语言:", lang);
     
-    const response = await generate(finalPrompt);
+    const response = await generateResponse(finalPrompt);
     let aiKeywords: string[] = [];
     let cleanedResponse = '';
     
