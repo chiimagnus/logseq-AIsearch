@@ -4,25 +4,22 @@
  */
 
 import { ollamaGenerate } from '../LLMs/ollama';
-import { zhipuGenerate } from '../LLMs/zhipu';
-import { siliconflowGenerate } from '../LLMs/siliconflow';
+import { unifiedApiGenerate } from '../LLMs/unifiedApi';
 
 /**
  * 统一的AI模型调用接口
  * Unified AI Model Call Interface
  */
 export async function generateResponse(prompt: string): Promise<string> {
-  const apiType = logseq.settings?.apiType;
+  const apiType = logseq.settings?.apiType as string;
     
   let response: string;
   const startTime = Date.now();
   
-  if (apiType === "智谱清言") {
-    response = await zhipuGenerate(prompt);
-  } else if (apiType === "Ollama") {
+  if (apiType === "Ollama") {
     response = await ollamaGenerate(prompt);
-  } else if (apiType === "硅基流动") {
-    response = await siliconflowGenerate(prompt);
+  } else if (apiType === "自定义API") {
+    response = await unifiedApiGenerate(prompt);
   } else {
     throw new Error("不支持的 API 类型 | Unsupported API type");
   }

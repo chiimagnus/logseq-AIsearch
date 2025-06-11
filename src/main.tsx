@@ -18,8 +18,8 @@ const settings: SettingSchemaDesc[] = [
     type: "enum",
     title: "🔧 API 类型 / API Type",
     description: "选择使用的 AI 服务提供商\nSelect the AI service provider to use",
-    enumChoices: ["Ollama", "智谱清言", "硅基流动"],
-    default: "智谱清言"
+    enumChoices: ["Ollama", "自定义API"],
+    default: "自定义API"
   },
   {
     key: "shortcut",
@@ -59,64 +59,76 @@ const settings: SettingSchemaDesc[] = [
     default: 30
   },
   
-  // ==================== 智谱清言 ====================
+  // ==================== 自定义API配置 ====================
   {
-    key: "zhipuHeader",
+    key: "unifiedApiHeader",
     type: "heading",
-    title: "🧠 智谱清言 / Zhipu AI",
-    description: "配置智谱清言 AI 服务的连接参数",
+    title: "🛠️ 自定义API配置 / Custom API Configuration",
+    description: "配置自定义大模型API服务的连接参数（支持OpenAI、智谱清言、硅基流动、Anthropic等所有兼容服务）",
     default: ""
   },
   {
-    key: "zhipuApiKey",
+    key: "apiKey",
     type: "string",
     title: "🔐 API Key",
-    description: "输入智谱清言 API 的密钥\nEnter the API key for Zhipu API",
+    description: "输入API密钥\nEnter the API key",
     default: ""
   },
   {
-    key: "zhipuBaseUrl",
+    key: "apiUrl",
     type: "string",
-    title: "🔗 Base URL",
-    description: "输入智谱清言 API 的base_url（默认即可）\nEnter the base URL for Zhipu API (default value is recommended)",
-    default: "https://open.bigmodel.cn/api/paas/v4/"
+    title: "🔗 完整API URL / Full API URL",
+    description: "API的完整URL地址，包含具体端点\nComplete API URL with specific endpoint",
+    default: ""
   },
   {
-    key: "zhipuModel",
+    key: "modelName",
     type: "string",
     title: "🤖 模型名称 / Model Name",
-    description: "输入要使用的智谱清言模型名称\nEnter the Zhipu model name (glm-4-flash is currently free)",
-    default: "GLM-4-Flash-250414"
+    description: "要使用的模型名称\nModel name to use",
+    default: ""
+  },
+  {
+    key: "apiTimeout",
+    type: "number",
+    title: "⏱️ 连接超时 / Timeout",
+    description: "设置API连接超时时间（秒）\nSet API connection timeout (seconds)",
+    default: 30
   },
   
-  // ==================== 硅基流动 ====================
+  // ==================== API预设配置说明 ====================
   {
-    key: "siliconflowHeader",
+    key: "presetConfigHeader",
     type: "heading",
-    title: "💎 硅基流动 / SiliconFlow",
-    description: "配置硅基流动 AI 服务的连接参数",
+    title: "📋 配置参考 / Configuration Reference",
+    description: "常用API服务配置参考",
     default: ""
   },
   {
-    key: "siliconflowApiKey",
+    key: "configReference",
     type: "string",
-    title: "🔐 API Key",
-    description: "输入硅基流动 API 的密钥\nEnter the API key for SiliconFlow API",
-    default: ""
-  },
-  {
-    key: "siliconflowBaseUrl",
-    type: "string",
-    title: "🔗 Base URL",
-    description: "输入硅基流动 API 的base_url\nEnter the base URL for SiliconFlow API",
-    default: "https://api.siliconflow.cn/v1"
-  },
-  {
-    key: "siliconflowModel",
-    type: "string",
-    title: "🤖 模型名称 / Model Name",
-    description: "输入要使用的硅基流动模型名称（如：Qwen/Qwen2.5-7B-Instruct）\nEnter the SiliconFlow model name (e.g., Qwen/Qwen2.5-7B-Instruct)",
-    default: "Qwen/Qwen2.5-7B-Instruct"
+    title: "📖 配置参考 / Configuration Reference",
+    description: `常用API服务配置参考：
+    
+🧠 智谱清言 / Zhipu AI:
+• API URL: https://open.bigmodel.cn/api/paas/v4/chat/completions
+• 推荐模型: GLM-4-Flash-250414 (免费), glm-4-plus, glm-4-0520
+
+🤖 硅基流动 / SiliconFlow:
+• API URL: https://api.siliconflow.cn/v1/chat/completions
+• 推荐模型: Qwen/Qwen2.5-7B-Instruct, deepseek-ai/DeepSeek-R1
+
+🤖 OpenAI:
+• API URL: https://api.openai.com/v1/chat/completions
+• 推荐模型: gpt-4o-mini, gpt-4o, gpt-3.5-turbo
+
+🎭 Anthropic:
+• API URL: https://api.anthropic.com/v1/messages
+• 推荐模型: claude-3-5-sonnet-20241022, claude-3-haiku-20240307
+
+🔧 其他兼容OpenAI格式的API服务也可使用`,
+    default: "",
+    inputAs: "textarea"
   },
   
   // ==================== 搜索设置 ====================
@@ -184,29 +196,6 @@ const settings: SettingSchemaDesc[] = [
     default: false,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
-  },
-  
-  // ==================== MCP工具设置 ====================
-  {
-    key: "mcpToolsHeader",
-    type: "heading",
-    title: "🛠️ MCP 工具设置 / MCP Tools Settings",
-    description: "配置Model Control Protocol工具的启用状态",
-    default: ""
-  },
-  {
-    key: "enableTimeTools",
-    type: "boolean",
-    default: true,
-    title: "🕒 启用时间工具 / Enable Time Tools",
-    description: "启用时间相关查询的智能解析（如'今天做了什么'、'去年的今天'等）\nEnable intelligent parsing for time-related queries (e.g., 'what did I do today', 'this day last year', etc.)"
-  },
-  {
-    key: "timeToolsDebug",
-    type: "boolean",
-    default: false,
-    title: "🔍 时间工具调试模式 / Time Tools Debug Mode",
-    description: "显示详细的时间解析过程（开发调试用）\nShow detailed time parsing process (for development debugging)"
   }
 ];
 
@@ -258,6 +247,13 @@ function main() {
     }
   })
 }
+
+/**
+ * 根据API类型自动更新配置（已禁用，仅保留函数以防需要）
+ */
+// function updateApiConfig(apiType: string) {
+//   // 简化后只有Ollama和自定义API两个选项，不需要自动配置切换
+// }
 
 // 启动插件
 logseq.ready(main).catch(console.error);
