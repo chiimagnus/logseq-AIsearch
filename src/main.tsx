@@ -2,7 +2,7 @@ import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
-import { aiSearchCommand } from './main/commands';
+import { aiSearchCommand } from './services/commands';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
