@@ -12,7 +12,7 @@
 - 🔍 基于当前block内容的智能搜索
 - 📝 搜索结果的AI智能总结
 - 🔗 链接原始笔记
-- 支持ollama、智谱清言、硅基流动大模型
+- 🔧 支持自定义大模型API
 
 ## 🚀 快速开始
 
@@ -23,9 +23,11 @@
   - Windows: `Alt + Ctrl + A`
 
 ## 📸 功能展示
-[demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)
+- [demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)
 or
 [demo_bilibili](https://www.bilibili.com/video/BV1pC6wYXE93)
+
+- prompts位于[`src/prompts`](https://github.com/chiimagnus/logseq-AIsearch/tree/master/src/prompts)，由于本人提示词工程水平有限，恳请大家多多提交issue，我会认真考虑。
 
 ## 开发计划
 - [ ]实现AI意图识别、工具调用。
