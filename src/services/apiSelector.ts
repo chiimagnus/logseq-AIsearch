@@ -1,6 +1,6 @@
-import { ollamaGenerate } from './ollama';
-import { zhipuGenerate } from './zhipu';
-import { siliconflowGenerate } from './siliconflow';
+import { ollamaGenerate } from '../LLMs/ollama';
+import { zhipuGenerate } from '../LLMs/zhipu';
+import { siliconflowGenerate } from '../LLMs/siliconflow';
 import { extractKeywords, extractKeywordsWithTimeContext } from '../tools/keywordExtraction';
 import { semanticSearch, type SearchResult, detectLanguage, timeAwareSearch } from '../tools/utils';
 import { filterResultsByTimeRange, generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
