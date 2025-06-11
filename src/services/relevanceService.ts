@@ -4,7 +4,6 @@
  */
 
 import { generateResponse } from './apiService';
-import { detectLanguage } from '../tools/languageDetector';
 import { getRelevanceEvaluationPrompt } from '../prompts/relevanceEvaluation';
 
 /**
@@ -12,8 +11,7 @@ import { getRelevanceEvaluationPrompt } from '../prompts/relevanceEvaluation';
  * Single Content Relevance Evaluation
  */
 export async function evaluateRelevance(query: string, content: string): Promise<number> {
-  const lang = detectLanguage(query);
-  const prompt = getRelevanceEvaluationPrompt(query, content, lang);
+  const prompt = getRelevanceEvaluationPrompt(query, content);
   
   const response = await generateResponse(prompt);
   const score = parseFloat(response) || 0;

@@ -1,33 +1,6 @@
-export function getRelevanceEvaluationPrompt(query: string, content: string, lang: 'zh' | 'en'): string {
-  return lang === 'en' ? `
-    As an assistant specializing in understanding personal notes, analyze the relevance between this note and the user's question. Pay special attention to the time dimension.
-
-Question: ${query}
-Note content: ${content}
-
-Scoring dimensions (Total 10 points):
-1. Content Relevance (0-4 points)
-- Does it touch the core question, even if briefly
-- Contains personal insights or thoughts
-- Time relevance of note creation/update
-
-2. Time Dimension (0-3 points)
-- Specific time points mentioned
-- Time sequence and development
-- Note creation time relevance
-
-3. Personal Significance (0-3 points)
-- Helps understand user's thoughts
-- Timeline continuity and changes
-- Experience accumulation span
-
-Please understand:
-1. Timestamp at start indicates creation/update time
-2. Content may include various time expressions
-3. Even brief content can be valuable if time-relevant
-
-Return only a score from 0-10, no explanation.` : `
-    作为一个善于理解个人笔记的助手，请深入分析这条笔记与用户问题的关联度。请特别注意时间维度的分析。
+export function getRelevanceEvaluationPrompt(query: string, content: string): string {
+  return `
+作为一个善于理解个人笔记的助手，请深入分析这条笔记与用户问题的关联度。请特别注意时间维度的分析。
 
 问题：${query}
 笔记内容：${content}

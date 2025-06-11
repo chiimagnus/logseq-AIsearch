@@ -9,16 +9,7 @@ import { timeAwareSearch } from '../tools/searchTools';
 import { generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
 import { batchEvaluateRelevance } from './batchProcessor';
 import { generateResponse } from './apiService';
-import { detectLanguage } from '../tools/languageDetector';
-import { getSummaryPrompt as getSummaryPromptTemplate } from '../prompts/summaryGeneration';
-
-/**
- * 构建AI总结的prompt
- */
-function getSummaryPrompt(query: string, content: string, timeContextInfo?: string): string {
-  const lang = detectLanguage(query);
-  return getSummaryPromptTemplate(query, content, lang, timeContextInfo);
-}
+import { getSummaryPrompt } from '../prompts/summaryGeneration';
 
 /**
  * AI 搜索的核心编排逻辑 - Agent 决策层
