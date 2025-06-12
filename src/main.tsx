@@ -19,7 +19,7 @@ const settings: SettingSchemaDesc[] = [
     title: "🔧 大模型服务商 / LLM Provider",
     description: "",
     enumChoices: ["Ollama", "Custom LLM API"],
-    default: "Ollama"
+    default: "Custom LLM API"
   },
   {
     key: "shortcut",
@@ -119,28 +119,28 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "includeParent",
     type: "boolean",
-    default: false,
+    default: true,
     title: "👆 包含父块 / Include Parent",
     description: "搜索结果是否包含父块内容\nWhether to include parent block content in search results"
   },
   {
     key: "includeSiblings",
     type: "boolean",
-    default: false,
+    default: true,
     title: "👥 包含兄弟块 / Include Siblings",
     description: "搜索结果是否包含兄弟块内容\nWhether to include sibling block content in search results"
   },
   {
     key: "includeChildren",
     type: "boolean",
-    default: false,
+    default: true,
     title: "👇 包含子块 / Include Children",
     description: "搜索结果是否包含子块内容\nWhether to include child block content in search results"
   },
   {
     key: "enableAISummary",
     type: "boolean",
-    default: false,
+    default: true,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
   }
@@ -194,13 +194,6 @@ function main() {
     }
   })
 }
-
-/**
- * 根据API类型自动更新配置（已禁用，仅保留函数以防需要）
- */
-// function updateApiConfig(apiType: string) {
-//   // 简化后只有Ollama和自定义API两个选项，不需要自动配置切换
-// }
 
 // 启动插件
 logseq.ready(main).catch(console.error);
