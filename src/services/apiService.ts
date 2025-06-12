@@ -3,10 +3,6 @@
 import { ollamaGenerate } from '../LLMs/ollama';
 import { unifiedApiGenerate } from '../LLMs/unifiedApi';
 
-/**
- * 统一的AI模型调用接口
- * Unified AI Model Call Interface
- */
 export async function generateResponse(prompt: string): Promise<string> {
   const apiType = logseq.settings?.apiType as string;
     

@@ -3,10 +3,6 @@
 import { SearchResult } from '../types/search';
 import { evaluateRelevance } from './relevanceService';
 
-/**
- * 批量相关性评估
- * Batch Relevance Evaluation
- */
 export async function batchEvaluateRelevance(query: string, results: SearchResult[]): Promise<SearchResult[]> {
   const batchSize: number = typeof logseq.settings?.batchSize === 'number' 
     ? logseq.settings.batchSize 
