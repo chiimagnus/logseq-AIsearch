@@ -2,5 +2,5 @@
 logo.svg
 dev_doc.md
 public/
-dist/
+# dist/
 node_modules/
