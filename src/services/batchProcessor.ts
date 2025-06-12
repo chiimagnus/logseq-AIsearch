@@ -1,7 +1,4 @@
-/**
- * 批处理服务模块
- * Batch Processing Service Module
- */
+// 批处理服务模块
 
 import { SearchResult } from '../types/search';
 import { evaluateRelevance } from './relevanceService';

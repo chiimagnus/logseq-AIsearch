@@ -1,7 +1,5 @@
-/**
- * 时间工具模块 - Time Tools Module
- * 实现MCP风格的时间工具，用于解析用户的时间相关查询
- */
+// 时间工具模块 - Time Tools Module
+// 实现MCP风格的时间工具，用于解析用户的时间相关查询
 
 export interface TimeRange {
   start?: Date;

@@ -1,7 +1,4 @@
-/**
- * API 服务模块 - 纯 API 调用服务
- * API Service Module - Pure API Call Service
- */
+// API 服务模块 - 纯 API 调用服务
 
 import { ollamaGenerate } from '../LLMs/ollama';
 import { unifiedApiGenerate } from '../LLMs/unifiedApi';

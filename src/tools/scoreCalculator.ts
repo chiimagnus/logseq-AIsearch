@@ -1,7 +1,4 @@
-/**
- * 相关性评分算法工具
- * Relevance Score Calculator Tool
- */
+// 相关性评分算法工具
 
 export function calculateRelevanceScore(block: any, keywords: string[], importantKeywords: string[]): number {
   const content = block.content.toLowerCase();

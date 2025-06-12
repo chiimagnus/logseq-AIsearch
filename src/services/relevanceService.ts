@@ -1,7 +1,4 @@
-/**
- * 相关性评估服务模块
- * Relevance Evaluation Service Module
- */
+// 相关性评估服务模块
 
 import { generateResponse } from './apiService';
 import { getRelevanceEvaluationPrompt } from '../prompts/relevanceEvaluation';

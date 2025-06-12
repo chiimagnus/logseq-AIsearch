@@ -1,7 +1,4 @@
-/**
- * 搜索编排器 - AI Agent 核心决策层
- * Search Orchestrator - AI Agent Core Decision Layer
- */
+// 搜索编排器 - AI Agent 核心决策层
 
 import { SearchResponse } from '../types/search';
 import { extractKeywordsWithTimeContext } from '../tools/keywordExtraction';

@@ -1,7 +1,4 @@
-/**
- * 搜索工具模块
- * Search Tools Module
- */
+// 搜索工具模块
 
 import { SearchResult } from '../types/search';
 import { calculateRelevanceScore } from './scoreCalculator';
