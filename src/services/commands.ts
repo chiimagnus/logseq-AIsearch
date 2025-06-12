@@ -1,3 +1,11 @@
+// 本文件实现了 Logseq 的 AI 搜索命令功能。
+// 主函数 `aiSearchCommand` 执行以下操作：
+// 1. 从 Logseq 获取当前块内容
+// 2. 调用 AI 搜索服务查找相关笔记
+// 3. 将搜索结果作为块引用插入到可折叠的父块下方
+// 4. （可选）可以生成搜索结果的 AI 摘要
+// 该命令集成了 Logseq 的插件 API，用于与编辑器交互并向用户显示消息。
+
 import { aiSearch } from './searchOrchestrator';
 
 export async function aiSearchCommand() {
