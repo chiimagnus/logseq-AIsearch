@@ -1,8 +1,21 @@
-// 批处理服务模块
+// 相关性分数计算服务模块
 
 import { SearchResult } from '../types/search';
-import { evaluateRelevance } from './relevanceService';
+import { generateResponse } from './apiService';
+import { getRelevanceEvaluationPrompt } from '../prompts/relevanceEvaluation';
 
+
+// 单个内容的相关性评估
+async function evaluateRelevance(query: string, content: string): Promise<number> {
+  const prompt = getRelevanceEvaluationPrompt(query, content);
+  
+  const response = await generateResponse(prompt);
+  const score = parseFloat(response) || 0;
+  
+  return score;
+}
+
+// 批处理与相关性评估
 export async function batchEvaluateRelevance(query: string, results: SearchResult[]): Promise<SearchResult[]> {
   const batchSize: number = typeof logseq.settings?.batchSize === 'number' 
     ? logseq.settings.batchSize 

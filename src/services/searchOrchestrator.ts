@@ -4,7 +4,7 @@ import { SearchResponse } from '../types/search';
 import { extractKeywordsWithTimeContext } from '../tools/keywordExtraction';
 import { timeAwareSearch } from '../tools/searchTools';
 import { generateTimeContextSummary, generateTimeBasedKeywords, type TimeToolsResult } from '../tools/timeTools';
-import { batchEvaluateRelevance } from './batchProcessor';
+import { batchEvaluateRelevance } from './relevance';
 import { generateResponse } from './apiService';
 import { getSummaryPrompt } from '../prompts/summaryGeneration';
 
