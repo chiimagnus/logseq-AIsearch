@@ -2,14 +2,14 @@ import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
-import { aiSearchCommand } from './services/commands';
+import { aiSearchCommand, aiResponseCommand } from './services/commands';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
   {
     key: "globalSettingsHeader",
     type: "heading",
-    title: "🌐 全局设置 / Global Settings",
+    title: "🌐 AI搜索设置 / AI Search Settings",
     description: "",
     default: ""
   },
@@ -24,7 +24,7 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "shortcut",
     type: "string",
-    title: "⌨️ 快捷键 / Shortcut",
+    title: "⌨️ AI搜索快捷键 / AI Search Shortcut",
     description: "",
     default: "alt+mod+a"
   },
@@ -143,6 +143,36 @@ const settings: SettingSchemaDesc[] = [
     default: true,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+  },
+  
+  // ==================== AI回应设置 ====================
+  {
+    key: "aiResponseHeader",
+    type: "heading",
+    title: "💬 新功能：AI回应 / New Feature: AI Response",
+    description: "",
+    default: ""
+  },
+  {
+    key: "responseShortcut",
+    type: "string",
+    title: "⌨️ AI回应快捷键 / AI Response Shortcut",
+    description: "",
+    default: "alt+mod+r"
+  },
+  {
+    key: "aiResponseStyle",
+    type: "enum",
+    title: "🎭 AI回应风格 / AI Response Style",
+    description: "选择AI回应的默认风格\nSelect the default style for AI responses",
+    enumChoices: [
+      "💖 温暖回应 - 给予理解、支持和鼓励",
+      "🎯 一针见血 - 直接指出核心问题或洞察", 
+      "💭 激发思考 - 提出深度问题引导进一步思考",
+      "🔄 新角度 - 从不同视角重新审视问题",
+      "🌌 宇宙视角 - 从更宏大的时空维度思考"
+    ],
+    default: "💖 温暖回应 - 给予理解、支持和鼓励"
   }
 ];
 
@@ -152,7 +182,7 @@ function main() {
   // 注册设置
   logseq.useSettingsSchema(settings);
 
-  // 注册快捷键
+  // 注册AI搜索快捷键
   logseq.App.registerCommandShortcut(
     { 
       binding: logseq.settings?.shortcut || "alt+mod+a",
@@ -161,8 +191,20 @@ function main() {
     aiSearchCommand
   );
 
+  // 注册AI回应快捷键
+  logseq.App.registerCommandShortcut(
+    { 
+      binding: logseq.settings?.responseShortcut || "alt+mod+r",
+      mode: "non-editing"
+    } as any,
+    aiResponseCommand
+  );
+
   // 注册一个反斜杠命令，名为 AI-Search
   logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
+
+  // 注册一个反斜杠命令，名为 AI-Response
+  logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {

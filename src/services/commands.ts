@@ -1,12 +1,19 @@
-// 本文件实现了 Logseq 的 AI 搜索命令功能。
+// 本文件实现了 Logseq 的 AI 搜索和AI回应命令功能。
 // 主函数 `aiSearchCommand` 执行以下操作：
 // 1. 从 Logseq 获取当前块内容
 // 2. 调用 AI 搜索服务查找相关笔记
 // 3. 将搜索结果作为块引用插入到可折叠的父块下方
 // 4. （可选）可以生成搜索结果的 AI 摘要
+// 
+// 主函数 `aiResponseCommand` 执行以下操作：
+// 1. 获取用户选中的blocks内容
+// 2. 调用AI生成5种风格的回应（温暖、一针见血、激发思考、新角度、宇宙视角）
+// 3. 将AI回应保存到AIResponse页面
+// 4. 在原始blocks旁边插入AI回应的引用
 // 该命令集成了 Logseq 的插件 API，用于与编辑器交互并向用户显示消息。
 
 import { aiSearch } from './searchOrchestrator';
+import { generateAIResponse } from './aiResponseService';
 
 export async function aiSearchCommand() {
   try {
@@ -70,5 +77,14 @@ export async function aiSearchCommand() {
   } catch (error) {
     console.error("AI-Search 命令执行失败 | AI-Search command execution failed:", error);
     await logseq.UI.showMsg("搜索执行失败，请重试 | Search execution failed, please try again", "error");
+  }
+}
+
+export async function aiResponseCommand() {
+  try {
+    await generateAIResponse();
+  } catch (error) {
+    console.error("AI-Response 命令执行失败 | AI-Response command execution failed:", error);
+    await logseq.UI.showMsg("AI回应生成失败，请重试 | AI response generation failed, please try again", "error");
   }
 } 
