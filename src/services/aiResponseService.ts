@@ -67,49 +67,27 @@ async function ensureAIResponsePage(): Promise<string> {
 }
 
 /**
- * 显示风格选择对话框
+ * 从设置选项字符串转换为风格键
  */
-async function showStyleSelectionDialog(): Promise<keyof typeof AI_RESPONSE_STYLES | null> {
-  return new Promise((resolve) => {
-    // 创建选择项列表
-    const styleOptions = Object.entries(AI_RESPONSE_STYLES).map(([key, value]) => ({
-      key,
-      label: `${value.name} - ${value.description}`
-    }));
+function getStyleKeyFromSetting(settingValue: string): keyof typeof AI_RESPONSE_STYLES {
+  if (settingValue.includes("温暖回应")) return "warm";
+  if (settingValue.includes("一针见血")) return "sharp";
+  if (settingValue.includes("激发思考")) return "thoughtProvoking";
+  if (settingValue.includes("新角度")) return "newPerspective";
+  if (settingValue.includes("宇宙视角")) return "cosmic";
+  
+  // 默认返回温暖回应
+  return "warm";
+}
 
-    // 构建选择提示消息
-    const message = `请选择AI回应风格：\n\n${styleOptions.map((option, index) => 
-      `${index + 1}. ${option.label}`
-    ).join('\n')}`;
-
-    // 使用简单的prompt作为选择界面
-    setTimeout(async () => {
-      try {
-        const input = prompt(message + '\n\n请输入数字 (1-5):');
-        if (input === null) {
-          resolve(null); // 用户取消
-          return;
-        }
-
-        const choice = parseInt(input);
-        if (choice >= 1 && choice <= styleOptions.length) {
-          const selectedKey = styleOptions[choice - 1].key;
-          // 确保类型安全
-          if (selectedKey in AI_RESPONSE_STYLES) {
-            resolve(selectedKey as keyof typeof AI_RESPONSE_STYLES);
-          } else {
-            resolve(null);
-          }
-        } else {
-          await logseq.UI.showMsg(`请输入 1-${styleOptions.length} 之间的数字`, "warning");
-          resolve(null);
-        }
-      } catch (error) {
-        console.error("风格选择错误:", error);
-        resolve(null);
-      }
-    }, 100);
-  });
+/**
+ * 获取用户选择的AI回应风格
+ */
+function getSelectedStyle(): keyof typeof AI_RESPONSE_STYLES {
+  const settingValue = logseq.settings?.aiResponseStyle as string;
+  
+  // 直接从设置中获取风格
+  return getStyleKeyFromSetting(settingValue || "");
 }
 
 /**
@@ -190,13 +168,8 @@ export async function generateAIResponse(): Promise<void> {
       return;
     }
 
-    // 2. 显示风格选择对话框
-    const selectedStyle = await showStyleSelectionDialog();
-    
-    if (!selectedStyle) {
-      await logseq.UI.showMsg("已取消AI回应生成", "info");
-      return;
-    }
+    // 2. 获取AI回应风格
+    const selectedStyle = getSelectedStyle();
 
     // 显示开始生成消息
     const styleInfo = AI_RESPONSE_STYLES[selectedStyle];

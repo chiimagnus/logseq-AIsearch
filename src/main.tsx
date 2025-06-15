@@ -150,6 +150,20 @@ const settings: SettingSchemaDesc[] = [
     default: true,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+  },
+  {
+    key: "aiResponseStyle",
+    type: "enum",
+    title: "🎭 AI回应风格 / AI Response Style",
+    description: "选择AI回应的默认风格\nSelect the default style for AI responses",
+    enumChoices: [
+      "💖 温暖回应 - 给予理解、支持和鼓励",
+      "🎯 一针见血 - 直接指出核心问题或洞察", 
+      "💭 激发思考 - 提出深度问题引导进一步思考",
+      "🔄 新角度 - 从不同视角重新审视问题",
+      "🌌 宇宙视角 - 从更宏大的时空维度思考"
+    ],
+    default: "💖 温暖回应 - 给予理解、支持和鼓励"
   }
 ];
 
