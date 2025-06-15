@@ -9,18 +9,37 @@
 一款基于AI的Logseq智能搜索插件，可以根据当前block内容进行全局文档搜索，并提供AI智能总结功能。
 
 ## ✨ 主要功能
-- 🔍 基于当前block内容的智能搜索
-- 📝 搜索结果的AI智能总结
-- 🔗 链接原始笔记
-- 🔧 支持自定义大模型API
+
+### 🔍 AI智能搜索
+- 基于当前block内容的智能搜索
+- 搜索结果的AI智能总结
+- 链接原始笔记
+- 支持自定义大模型API
+
+### 🤖 AI多风格回应
+- 温暖回应：给予理解、支持和鼓励
+- 一针见血：直接指出核心问题或洞察
+- 激发思考：提出深度问题引导进一步思考
+- 新角度：从不同视角重新审视问题
+- 宇宙视角：从更宏大的时空维度思考
 
 ## 🚀 快速开始
 
-### 使用方法
+### AI搜索使用方法
 - 命令方式：输入 `/AI-Search`
 - 快捷键：`alt+mod+a`
   - Mac: `⌥ + ⌘ + A` (Alt + Command + A)
   - Windows: `Alt + Ctrl + A`
+
+### AI回应使用方法
+1. 选中一个或多个blocks（或者光标停留在某个block上）
+2. 使用以下方式触发AI回应：
+   - 命令方式：输入 `/AI-Response`
+   - 快捷键：`alt+mod+r`
+     - Mac: `⌥ + ⌘ + R` (Alt + Command + R)
+     - Windows: `Alt + Ctrl + R`
+3. AI会生成5种不同风格的回应，保存到"AIResponse"页面
+4. 在原始blocks旁边会自动插入AI回应的引用链接
 
 ## 📸 功能展示
 - [demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)

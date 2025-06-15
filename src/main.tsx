@@ -2,7 +2,7 @@ import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
-import { aiSearchCommand } from './services/commands';
+import { aiSearchCommand, aiResponseCommand } from './services/commands';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
@@ -24,9 +24,16 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "shortcut",
     type: "string",
-    title: "⌨️ 快捷键 / Shortcut",
+    title: "⌨️ AI搜索快捷键 / AI Search Shortcut",
     description: "",
     default: "alt+mod+a"
+  },
+  {
+    key: "responseShortcut",
+    type: "string",
+    title: "🤖 AI回应快捷键 / AI Response Shortcut",
+    description: "",
+    default: "alt+mod+r"
   },
   
   // ==================== Ollama 本地部署 ====================
@@ -152,7 +159,7 @@ function main() {
   // 注册设置
   logseq.useSettingsSchema(settings);
 
-  // 注册快捷键
+  // 注册AI搜索快捷键
   logseq.App.registerCommandShortcut(
     { 
       binding: logseq.settings?.shortcut || "alt+mod+a",
@@ -161,8 +168,20 @@ function main() {
     aiSearchCommand
   );
 
+  // 注册AI回应快捷键
+  logseq.App.registerCommandShortcut(
+    { 
+      binding: logseq.settings?.responseShortcut || "alt+mod+r",
+      mode: "non-editing"
+    } as any,
+    aiResponseCommand
+  );
+
   // 注册一个反斜杠命令，名为 AI-Search
   logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
+
+  // 注册一个反斜杠命令，名为 AI-Response
+  logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
