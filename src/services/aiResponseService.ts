@@ -2,7 +2,7 @@
 // 处理用户选中内容的AI回应生成和保存逻辑
 
 import { generateResponse } from './apiService';
-import { generateAIResponsePrompt } from '../prompts/aiResponse';
+import { generateAIResponsePrompt, AI_RESPONSE_STYLES } from '../prompts/aiResponse';
 
 /**
  * 获取用户选中的blocks内容
@@ -67,9 +67,55 @@ async function ensureAIResponsePage(): Promise<string> {
 }
 
 /**
+ * 显示风格选择对话框
+ */
+async function showStyleSelectionDialog(): Promise<keyof typeof AI_RESPONSE_STYLES | null> {
+  return new Promise((resolve) => {
+    // 创建选择项列表
+    const styleOptions = Object.entries(AI_RESPONSE_STYLES).map(([key, value]) => ({
+      key,
+      label: `${value.name} - ${value.description}`
+    }));
+
+    // 构建选择提示消息
+    const message = `请选择AI回应风格：\n\n${styleOptions.map((option, index) => 
+      `${index + 1}. ${option.label}`
+    ).join('\n')}`;
+
+    // 使用简单的prompt作为选择界面
+    setTimeout(async () => {
+      try {
+        const input = prompt(message + '\n\n请输入数字 (1-5):');
+        if (input === null) {
+          resolve(null); // 用户取消
+          return;
+        }
+
+        const choice = parseInt(input);
+        if (choice >= 1 && choice <= styleOptions.length) {
+          const selectedKey = styleOptions[choice - 1].key;
+          // 确保类型安全
+          if (selectedKey in AI_RESPONSE_STYLES) {
+            resolve(selectedKey as keyof typeof AI_RESPONSE_STYLES);
+          } else {
+            resolve(null);
+          }
+        } else {
+          await logseq.UI.showMsg(`请输入 1-${styleOptions.length} 之间的数字`, "warning");
+          resolve(null);
+        }
+      } catch (error) {
+        console.error("风格选择错误:", error);
+        resolve(null);
+      }
+    }, 100);
+  });
+}
+
+/**
  * 保存AI回应到AIResponse页面
  */
-async function saveAIResponseToPage(content: string, aiResponse: string): Promise<string> {
+async function saveAIResponseToPage(aiResponse: string, selectedStyle: keyof typeof AI_RESPONSE_STYLES): Promise<string> {
   const pageName = await ensureAIResponsePage();
   
   // 获取当前时间戳
@@ -82,11 +128,10 @@ async function saveAIResponseToPage(content: string, aiResponse: string): Promis
     second: '2-digit'
   });
 
-  // 构建保存的内容
-  const responseContent = `## 📝 用户内容 (${timestamp})
-${content}
-
----
+  const styleInfo = AI_RESPONSE_STYLES[selectedStyle];
+  
+  // 构建保存的内容（只包含AI回应，不包含用户原始内容）
+  const responseContent = `## ${styleInfo.name} (${timestamp})
 
 ${aiResponse}
 
@@ -125,7 +170,7 @@ async function insertAIResponseReference(selectedBlocks: any[], responseBlockUui
   // 在最后一个选中block的后面插入引用
   const lastBlock = selectedBlocks[selectedBlocks.length - 1];
   
-  const referenceContent = `🤖 **AI回应**: ((${responseBlockUuid}))`;
+  const referenceContent = `((${responseBlockUuid}))`;
   
   await logseq.Editor.insertBlock(lastBlock.uuid, referenceContent, {
     sibling: true
@@ -137,9 +182,6 @@ async function insertAIResponseReference(selectedBlocks: any[], responseBlockUui
  */
 export async function generateAIResponse(): Promise<void> {
   try {
-    // 显示开始消息
-    await logseq.UI.showMsg("🤖 正在生成AI回应...", "info");
-
     // 1. 获取选中的内容
     const { content, selectedBlocks } = await getSelectedBlocksContent();
 
@@ -148,10 +190,22 @@ export async function generateAIResponse(): Promise<void> {
       return;
     }
 
-    // 2. 生成AI回应提示词
-    const prompt = generateAIResponsePrompt(content);
+    // 2. 显示风格选择对话框
+    const selectedStyle = await showStyleSelectionDialog();
+    
+    if (!selectedStyle) {
+      await logseq.UI.showMsg("已取消AI回应生成", "info");
+      return;
+    }
 
-    // 3. 调用AI API生成回应
+    // 显示开始生成消息
+    const styleInfo = AI_RESPONSE_STYLES[selectedStyle];
+    await logseq.UI.showMsg(`🤖 正在生成${styleInfo.name}...`, "info");
+
+    // 3. 生成AI回应提示词
+    const prompt = generateAIResponsePrompt(content, selectedStyle);
+
+    // 4. 调用AI API生成回应
     const aiResponse = await generateResponse(prompt);
 
     if (!aiResponse) {
@@ -159,14 +213,14 @@ export async function generateAIResponse(): Promise<void> {
       return;
     }
 
-    // 4. 保存AI回应到AIResponse页面
-    const responseBlockUuid = await saveAIResponseToPage(content, aiResponse);
+    // 5. 保存AI回应到AIResponse页面
+    const responseBlockUuid = await saveAIResponseToPage(aiResponse, selectedStyle);
 
-    // 5. 在原始blocks旁边插入引用
+    // 6. 在原始blocks旁边插入引用
     await insertAIResponseReference(selectedBlocks, responseBlockUuid);
 
-    // 6. 显示成功消息
-    await logseq.UI.showMsg("✨ AI回应已生成并保存！", "success");
+    // 7. 显示成功消息
+    await logseq.UI.showMsg(`✨ ${styleInfo.name}已生成并保存！`, "success");
 
   } catch (error) {
     console.error("AI回应生成失败:", error);

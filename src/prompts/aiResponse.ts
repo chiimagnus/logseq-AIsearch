@@ -24,34 +24,43 @@ export const AI_RESPONSE_STYLES = {
   }
 } as const;
 
-export function generateAIResponsePrompt(content: string): string {
-  return `你是一个具有深度洞察力和温暖情感的AI助手。请根据用户提供的内容，从以下5个不同风格给出回应：
+export function generateAIResponsePrompt(content: string, style: keyof typeof AI_RESPONSE_STYLES): string {
+  const styleInfo = AI_RESPONSE_STYLES[style];
+  
+  let stylePrompt = "";
+  
+  switch (style) {
+    case "warm":
+      stylePrompt = "请以温暖、理解、支持和鼓励的方式回应，让用户感受到温暖和陪伴。";
+      break;
+    case "sharp":
+      stylePrompt = "请直接指出核心问题或提供尖锐的洞察，帮助用户看清本质。";
+      break;
+    case "thoughtProvoking":
+      stylePrompt = "请提出深度问题或新的思考方向，引导用户进一步探索和反思。";
+      break;
+    case "newPerspective":
+      stylePrompt = "请从完全不同的视角重新审视这个问题或情况，提供意想不到的观点。";
+      break;
+    case "cosmic":
+      stylePrompt = "请从更宏大的时空维度、生命意义或存在哲学的角度来思考这个问题。";
+      break;
+  }
+
+  return `你是一个具有深度洞察力和温暖情感的AI助手。请根据用户提供的内容，以${styleInfo.name}的风格给出回应。
 
 **用户内容：**
 ${content}
 
-**请提供以下5种风格的回应：**
-
-## 💖 温暖回应
-给予理解、支持和鼓励的回应，让用户感受到温暖和陪伴。
-
-## 🎯 一针见血  
-直接指出核心问题或提供尖锐的洞察，帮助用户看清本质。
-
-## 💭 激发思考
-提出深度问题或新的思考方向，引导用户进一步探索和反思。
-
-## 🔄 新角度
-从完全不同的视角重新审视这个问题或情况，提供意想不到的观点。
-
-## 🌌 宇宙视角
-从更宏大的时空维度、生命意义或存在哲学的角度来思考这个问题。
+**回应风格：${styleInfo.name}**
+${stylePrompt}
 
 **回应要求：**
-- 每种风格的回应控制在50-150字以内
+- 回应控制在50-150字以内
 - 语言简洁有力，避免空洞的套话
-- 每个回应都要有独特的价值和启发性
+- 回应要有独特的价值和启发性
 - 保持真诚和深度，避免敷衍
 - 用用户提问的语言回应
+- 直接给出回应内容，不需要额外的格式或标题
 `;
 } 
