@@ -64,7 +64,7 @@ function getStyleKeyFromSetting(settingValue: string): keyof typeof AI_RESPONSE_
   if (settingValue.includes("温暖回应")) return "warm";
   if (settingValue.includes("一针见血")) return "sharp";
   if (settingValue.includes("激发思考")) return "thoughtProvoking";
-  if (settingValue.includes("新角度")) return "newPerspective";
+  if (settingValue.includes("灵感火花")) return "sparks";
   if (settingValue.includes("宇宙视角")) return "cosmic";
   
   // 默认返回温暖回应
@@ -168,7 +168,7 @@ export async function generateAIResponse(): Promise<void> {
     await insertAIResponseReference(selectedBlocks, responseBlockUuid);
 
     // 7. 显示成功消息
-    await logseq.UI.showMsg(`✨ ${styleInfo.name}已生成并保存！`, "success");
+    await logseq.UI.showMsg(`✨ ${styleInfo.name}已生成！`, "success");
 
   } catch (error) {
     console.error("AI回应生成失败:", error);

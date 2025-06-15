@@ -1,5 +1,5 @@
 // AI 回应提示词模块
-// 提供5种不同风格的AI回应：温暖、一针见血、激发思考、站在新角度、宇宙视角
+// 提供5种不同风格的AI回应：温暖、一针见血、激发思考、灵感火花、宇宙视角
 
 export const AI_RESPONSE_STYLES = {
   warm: {
@@ -14,9 +14,9 @@ export const AI_RESPONSE_STYLES = {
     name: "💭 激发思考",
     description: "提出深度问题引导进一步思考"
   },
-  newPerspective: {
-    name: "🔄 新角度",
-    description: "从不同视角重新审视问题"
+  sparks: {
+    name: "✨ 灵感火花",
+    description: "从不同视角重新审视问题，激发创意和新的可能性"
   },
   cosmic: {
     name: "🌌 宇宙视角",
@@ -39,8 +39,8 @@ export function generateAIResponsePrompt(content: string, style: keyof typeof AI
     case "thoughtProvoking":
       stylePrompt = "请提出深度问题或新的思考方向，引导用户进一步探索和反思。";
       break;
-    case "newPerspective":
-      stylePrompt = "请从完全不同的视角重新审视这个问题或情况，提供意想不到的观点。";
+    case "sparks":
+      stylePrompt = "请从完全不同的视角重新审视这个问题或情况，提供意想不到的观点，激发创意和新的可能性。";
       break;
     case "cosmic":
       stylePrompt = "要知道人类只是宇宙中微不足道的一部分，请从更宏大的时空维度、生命意义或存在哲学的角度来思考这个问题。";
