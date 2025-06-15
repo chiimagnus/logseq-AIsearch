@@ -32,14 +32,24 @@
   - Windows: `Alt + Ctrl + A`
 
 ### AI回应使用方法
-1. 选中一个或多个blocks（或者光标停留在某个block上）
-2. 使用以下方式触发AI回应：
-   - 命令方式：输入 `/AI-Response`
-   - 快捷键：`alt+mod+r`
-     - Mac: `⌥ + ⌘ + R` (Alt + Command + R)
-     - Windows: `Alt + Ctrl + R`
-3. AI会生成5种不同风格的回应，保存到"AIResponse"页面
-4. 在原始blocks旁边会自动插入AI回应的引用链接
+1. **配置回应风格**：在插件设置中选择您喜欢的AI回应风格：
+   - 💖 温暖回应 - 给予理解、支持和鼓励
+   - 🎯 一针见血 - 直接指出核心问题或洞察  
+   - 💭 激发思考 - 提出深度问题引导进一步思考
+   - 🔄 新角度 - 从不同视角重新审视问题
+   - 🌌 宇宙视角 - 从更宏大的时空维度思考
+
+2. **使用AI回应**：
+   - 选中一个或多个blocks（或者光标停留在某个block上）
+   - 使用以下方式触发AI回应：
+     - 命令方式：输入 `/AI-Response`
+     - 快捷键：`alt+mod+r`
+       - Mac: `⌥ + ⌘ + R` (Alt + Command + R)
+       - Windows: `Alt + Ctrl + R`
+
+3. **查看结果**：
+   - AI会根据您设置的风格生成回应，保存到"AIResponse"页面
+   - 在原始blocks旁边会自动插入AI回应的引用链接
 
 ## 📸 功能展示
 - [demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)
