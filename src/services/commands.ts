@@ -32,7 +32,7 @@ export async function aiSearchCommand() {
     // 先插入笔记来源块
     const notesBlock = await logseq.Editor.insertBlock(
       currentBlock.uuid,
-      `Note sources (${results.length} related notes)`,
+      `${results.length} related notes`,
       {
         sibling: false,
       }
