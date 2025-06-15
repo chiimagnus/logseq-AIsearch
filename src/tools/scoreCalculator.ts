@@ -1,4 +1,4 @@
-// 相关性评分算法工具
+// 相关性评分算法工具（一），硬性计算，非AI计算
 
 export function calculateRelevanceScore(block: any, keywords: string[], importantKeywords: string[]): number {
   const content = block.content.toLowerCase();
