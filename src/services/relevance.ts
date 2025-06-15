@@ -46,8 +46,6 @@ export async function batchEvaluateRelevance(query: string, results: SearchResul
     // 显示处理进度
     await logseq.UI.showMsg(`正在分析第 ${currentBatch}/${totalBatches} 批内容... | Analyzing batch ${currentBatch}/${totalBatches}...`, 'info');
     
-    const batchStartTime = Date.now();
-    
     // 并行处理当前批次
     const batchPromises = batch.map(async (result) => {
       const relevanceScore = await evaluateRelevance(query, result.block.content);
@@ -64,10 +62,7 @@ export async function batchEvaluateRelevance(query: string, results: SearchResul
     const validResults = batchResults.filter((r): r is SearchResult => r !== null);
     refinedResults.push(...validResults);
     
-    const batchEndTime = Date.now();
-    const batchDuration = batchEndTime - batchStartTime;
-    
-    console.log(`⚡ [批处理] 第${currentBatch}批处理完成，耗时: ${batchDuration}ms，有效结果: ${validResults.length}个`);
+    console.log(`⚡ [批处理] 第${currentBatch}批处理完成，有效结果: ${validResults.length}个`);
   }
 
   // 按分数降序返回结果

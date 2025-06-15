@@ -32,7 +32,7 @@ export async function unifiedApiGenerate(prompt: string): Promise<string> {
       stream: false
     };
 
-    console.log(`🛠️ [${apiType}] 请求参数: ${apiUrl}, 模型: ${model}`);
+    // console.log(`🛠️ [${apiType}] 请求参数: ${apiUrl}, 模型: ${model}`);
 
     // 创建AbortController来处理超时
     const controller = new AbortController();
