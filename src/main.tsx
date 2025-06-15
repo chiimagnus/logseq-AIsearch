@@ -9,7 +9,7 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "globalSettingsHeader",
     type: "heading",
-    title: "🌐 全局设置 / Global Settings",
+    title: "🌐 AI搜索设置 / AI Search Settings",
     description: "",
     default: ""
   },
@@ -27,13 +27,6 @@ const settings: SettingSchemaDesc[] = [
     title: "⌨️ AI搜索快捷键 / AI Search Shortcut",
     description: "",
     default: "alt+mod+a"
-  },
-  {
-    key: "responseShortcut",
-    type: "string",
-    title: "🤖 AI回应快捷键 / AI Response Shortcut",
-    description: "",
-    default: "alt+mod+r"
   },
   
   // ==================== Ollama 本地部署 ====================
@@ -150,6 +143,22 @@ const settings: SettingSchemaDesc[] = [
     default: true,
     title: "🤖 启用AI总结 / Enable AI Summary",
     description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+  },
+  
+  // ==================== AI回应设置 ====================
+  {
+    key: "aiResponseHeader",
+    type: "heading",
+    title: "💬 新功能：AI回应 / New Feature: AI Response",
+    description: "",
+    default: ""
+  },
+  {
+    key: "responseShortcut",
+    type: "string",
+    title: "⌨️ AI回应快捷键 / AI Response Shortcut",
+    description: "",
+    default: "alt+mod+r"
   },
   {
     key: "aiResponseStyle",
