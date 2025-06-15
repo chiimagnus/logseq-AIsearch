@@ -43,16 +43,15 @@ export function generateAIResponsePrompt(content: string, style: keyof typeof AI
       stylePrompt = "请从完全不同的视角重新审视这个问题或情况，提供意想不到的观点。";
       break;
     case "cosmic":
-      stylePrompt = "请从更宏大的时空维度、生命意义或存在哲学的角度来思考这个问题。";
+      stylePrompt = "要知道人类只是宇宙中微不足道的一部分，请从更宏大的时空维度、生命意义或存在哲学的角度来思考这个问题。";
       break;
   }
 
-  return `你是一个具有深度洞察力和温暖情感的AI助手。请根据用户提供的内容，以${styleInfo.name}的风格给出回应。
+  return `你是一个具有深度洞察力和温暖情感的AI助手。请根据用户提供的内容，以指定的风格给出回应。
 
 **用户内容：**
 ${content}
 
-**回应风格：${styleInfo.name}**
 ${stylePrompt}
 
 **回应要求：**

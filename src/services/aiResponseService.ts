@@ -148,7 +148,7 @@ export async function generateAIResponse(): Promise<void> {
 
     // 显示开始生成消息
     const styleInfo = AI_RESPONSE_STYLES[selectedStyle];
-    await logseq.UI.showMsg(`🤖 正在生成${styleInfo.name}...`, "info");
+    await logseq.UI.showMsg(`${styleInfo.name}的AI回应...`, "info");
 
     // 3. 生成AI回应提示词
     const prompt = generateAIResponsePrompt(content, selectedStyle);
