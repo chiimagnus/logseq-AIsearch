@@ -8,10 +8,7 @@ import { batchEvaluateRelevance } from './relevance';
 import { generateResponse } from './apiService';
 import { getSummaryPrompt } from '../prompts/summaryGeneration';
 
-/**
- * AI 搜索的核心编排逻辑 - Agent 决策层
- * AI Search Core Orchestration Logic - Agent Decision Layer
- */
+// AI 搜索的核心编排逻辑 - Agent 决策层
 export async function aiSearch(query: string): Promise<SearchResponse> {
   try {
     console.log("🧠 [Agent决策层] 开始分析用户输入:", query);
