@@ -39,7 +39,6 @@ async function ensureAIResponsePage(): Promise<string> {
   const pageName = "AIResponse";
   
   try {
-    // 尝试获取AIResponse页面
     const page = await logseq.Editor.getPage(pageName);
     if (page) {
       return pageName;
@@ -48,20 +47,12 @@ async function ensureAIResponsePage(): Promise<string> {
     // 页面不存在，继续创建
   }
 
-  // 创建AIResponse页面
+  // 创建AIResponse页面（不添加任何初始内容）
   await logseq.Editor.createPage(pageName, {
     redirect: false,
-    createFirstBlock: true,
+    createFirstBlock: false,  // 改为false，不创建第一个block
     format: "markdown"
   });
-
-  // 在页面首行添加说明
-  const pageBlocks = await logseq.Editor.getPageBlocksTree(pageName);
-  if (pageBlocks && pageBlocks.length > 0) {
-    await logseq.Editor.updateBlock(pageBlocks[0].uuid, 
-      "# AI 回应记录\n这里保存了所有AI对您思考的回应，每个回应都有独特的视角和洞察。"
-    );
-  }
 
   return pageName;
 }
@@ -96,24 +87,8 @@ function getSelectedStyle(): keyof typeof AI_RESPONSE_STYLES {
 async function saveAIResponseToPage(aiResponse: string, selectedStyle: keyof typeof AI_RESPONSE_STYLES): Promise<string> {
   const pageName = await ensureAIResponsePage();
   
-  // 获取当前时间戳
-  const timestamp = new Date().toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-
-  const styleInfo = AI_RESPONSE_STYLES[selectedStyle];
-  
-  // 构建保存的内容（只包含AI回应，不包含用户原始内容）
-  const responseContent = `## ${styleInfo.name} (${timestamp})
-
-${aiResponse}
-
----`;
+  // 直接使用AI回应的原始内容
+  const responseContent = aiResponse;
 
   // 在AIResponse页面的最后插入新的回应
   const pageBlocks = await logseq.Editor.getPageBlocksTree(pageName);
