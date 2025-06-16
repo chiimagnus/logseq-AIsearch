@@ -8,6 +8,8 @@ import { calculateRelevanceScore } from './scoreCalculator';
  */
 export async function semanticSearch(keywords: string[]): Promise<SearchResult[]> {
   try {
+    console.log("🚀 [DEBUG] 开始语义搜索, 关键词:", keywords);
+    
     const results: SearchResult[] = [];
     // 获取用户设置的最大结果数，如果没有设置则使用默认值 50
     const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
@@ -18,8 +20,17 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     const includeParent = logseq.settings?.includeParent ?? true;
     const includeSiblings = logseq.settings?.includeSiblings ?? true;
     const includeChildren = logseq.settings?.includeChildren ?? true;
+    
+    console.log("⚙️ [DEBUG] 搜索配置:", {
+      maxResults,
+      includeParent,
+      includeSiblings, 
+      includeChildren
+    });
 
     for (const keyword of keywords) {
+      console.log(`🔍 [DEBUG] 搜索关键词: "${keyword}"`);
+      
       const query = `
         [:find (pull ?b [* {:block/page [:block/name :block/journal-day]}])
          :where
@@ -28,6 +39,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       `;
 
       const searchResults = await logseq.DB.datascriptQuery(query);
+      console.log(`📈 [DEBUG] 关键词 "${keyword}" 找到 ${searchResults?.length || 0} 个匹配块`);
       
       if (searchResults) {
         for (const result of searchResults) {
@@ -109,9 +121,28 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
 
           fullContent += contentParts.join("\n");
 
-          // 6. 计算相关性分数
+          // 6. 添加调试信息
+          console.log("🔍 [DEBUG] 找到匹配块:", {
+            blockUuid: block.uuid,
+            pageName: pageName,
+            originalContent: block.content?.substring(0, 100) + (block.content?.length > 100 ? "..." : ""),
+            parentContent: parentContent ? parentContent.substring(0, 50) + (parentContent.length > 50 ? "..." : "") : "无",
+            childrenCount: childrenContent ? childrenContent.split('\n').filter(c => c.trim()).length : 0,
+            siblingsCount: siblingsContent ? siblingsContent.split('\n').filter(c => c.trim()).length : 0
+          });
+          
+          console.log("📄 [DEBUG] 构建的fullContent:");
+          console.log("=" + "=".repeat(80));
+          console.log(fullContent);
+          console.log("=" + "=".repeat(80));
+
+          // 7. 计算相关性分数
           const importantKeywords = keywords.slice(0, 3);
           const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords, importantKeywords);
+          
+          console.log("⭐ [DEBUG] 相关性分数:", score, score > 2 ? "(通过)" : "(过滤)");
+          console.log("-".repeat(100));
+          
           if (score > 2) {
             results.push({
               block: { ...block, content: fullContent },
@@ -123,12 +154,22 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     }
 
     // 按相关度排序并去重
-    return Array.from(new Map(
+    const finalResults = Array.from(new Map(
       results
         .sort((a, b) => b.score - a.score)
         .slice(0, maxResults) // 使用用户设置的 maxResults
         .map(item => [item.block.uuid, item])
     ).values());
+    
+    console.log("✅ [DEBUG] 语义搜索完成:");
+    console.log(`📊 总共找到 ${results.length} 个原始匹配，经过评分筛选后保留 ${finalResults.length} 个结果`);
+    console.log("🏆 [DEBUG] 最终结果排序:");
+    finalResults.forEach((result, index) => {
+      console.log(`${index + 1}. [分数:${result.score.toFixed(2)}] ${result.block.content.substring(0, 50)}...`);
+    });
+    console.log("=" + "=".repeat(100));
+    
+    return finalResults;
   } catch (error) {
     console.error("语义搜索失败:", error);
     return [];
