@@ -13,7 +13,7 @@
 // 该命令集成了 Logseq 的插件 API，用于与编辑器交互并向用户显示消息。
 
 import { aiSearch } from './searchOrchestrator';
-import { generateAIResponse } from './aiResponseService';
+import { generateAIResponse } from './aiResponse';
 
 export async function aiSearchCommand() {
   try {
