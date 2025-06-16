@@ -47,10 +47,10 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           
           // 构建完整内容fullContent，按顺序：页面信息 -> 父块 -> 原块 -> 子块 -> 兄弟块
           let fullContent = '';
-          const pageName = block.page?.name || '未知页面';
+          const pageName = block.page?.name || '';
           
           // 1. 添加页面信息和提示语
-          fullContent += `这是pagename，如果是时间词，那么就表示这个这个page包含的block内容都是此时间创建的：${pageName}\n`;
+          fullContent += `这是pagename，如果是时间词，那么就表示这个这个page包含的block内容都是此时间创建的，pagename:${pageName}\n`;
 
           // 2. 获取父块内容
           let parentContent = '';
