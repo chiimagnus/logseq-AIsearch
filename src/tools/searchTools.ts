@@ -33,14 +33,15 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
         for (const result of searchResults) {
           const block = result[0];
           
-          // 初始化时，获取页面信息并添加到内容前面
-          let fullContent = block.content;
+          // 构建完整内容fullContent，按顺序：页面信息 -> 父块 -> 原块 -> 子块 -> 兄弟块
+          let fullContent = '';
           const pageName = block.page?.name || '未知页面';
           
-          // 在内容前添加页面信息
-          fullContent = `*${pageName}*\n${fullContent}`;
+          // 1. 添加页面信息和提示语
+          fullContent += `这是pagename，如果是时间词，那么就表示这个这个page包含的block内容都是此时间创建的：${pageName}\n`;
 
-          // 根据用户设置获取父块内容
+          // 2. 获取父块内容
+          let parentContent = '';
           if (block.parent && includeParent) {
             try {
               const parentQuery = `
@@ -49,32 +50,15 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
               `;
               const parentBlock = await logseq.DB.datascriptQuery(parentQuery);
               if (parentBlock && parentBlock.length > 0) {
-                fullContent = parentBlock[0][0].content + "\n" + fullContent;
-              }
-
-              // 根据用户设置获取兄弟块内容
-              if (includeSiblings) {
-                const siblingsQuery = `
-                  [:find (pull ?b [*])
-                   :where 
-                   [?b :block/parent ?parent]
-                   [?parent :block/uuid "${block.parent}"]
-                   [(not= ?b :block/uuid "${block.uuid}")]]
-                `;
-                const siblings = await logseq.DB.datascriptQuery(siblingsQuery);
-                if (siblings && siblings.length > 0) {
-                  const siblingsContent = siblings
-                    .map((sibling: any) => sibling[0].content)
-                    .join("\n");
-                  fullContent = fullContent + "\n--- 相关内容 ---\n" + siblingsContent;
-                }
+                parentContent = parentBlock[0][0].content;
               }
             } catch (error) {
-              console.error("父块或兄弟块查询失败:", error);
+              console.error("父块查询失败:", error);
             }
           }
 
-          // 根据用户设置获取子块内容
+          // 3. 获取子块内容
+          let childrenContent = '';
           if (includeChildren) {
             try {
               const childrenQuery = `
@@ -84,18 +68,49 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
               `;
               const children = await logseq.DB.datascriptQuery(childrenQuery);
               if (children && children.length > 0) {
-                const childrenContent = children
+                childrenContent = children
                   .map((child: any) => child[0].content)
                   .join("\n");
-                fullContent += "\n" + childrenContent;
               }
             } catch (error) {
               console.error("子块查询失败:", error);
             }
           }
 
-          // 4. 计算相关性分数
-          const importantKeywords = keywords.slice(0, 3); // 假设你已经在某处提取了重要关键词
+          // 4. 获取兄弟块内容（只要兄弟块本身，不包含其子块）
+          let siblingsContent = '';
+          if (block.parent && includeSiblings) {
+            try {
+              const siblingsQuery = `
+                [:find (pull ?b [*])
+                 :where 
+                 [?b :block/parent ?parent]
+                 [?parent :block/uuid "${block.parent}"]
+                 [(not= ?b :block/uuid "${block.uuid}")]]
+              `;
+              const siblings = await logseq.DB.datascriptQuery(siblingsQuery);
+              if (siblings && siblings.length > 0) {
+                siblingsContent = siblings
+                  .map((sibling: any) => sibling[0].content)
+                  .join("\n");
+              }
+            } catch (error) {
+              console.error("兄弟块查询失败:", error);
+            }
+          }
+
+          // 5. 按顺序组装内容：父块 -> 原块 -> 子块 -> 兄弟块
+          const contentParts = [
+            parentContent,
+            block.content,
+            childrenContent,
+            siblingsContent
+          ].filter(part => part.trim()); // 过滤空内容
+
+          fullContent += contentParts.join("\n");
+
+          // 6. 计算相关性分数
+          const importantKeywords = keywords.slice(0, 3);
           const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords, importantKeywords);
           if (score > 2) {
             results.push({
