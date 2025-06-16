@@ -165,7 +165,10 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
     console.log(`📊 总共找到 ${results.length} 个原始匹配，经过评分筛选后保留 ${finalResults.length} 个结果`);
     console.log("🏆 [DEBUG] 最终结果排序:");
     finalResults.forEach((result, index) => {
-      console.log(`${index + 1}. [分数:${result.score.toFixed(2)}] ${result.block.content.substring(0, 50)}...`);
+      // 跳过页面信息行，显示实际内容
+      const contentLines = result.block.content.split('\n');
+      const actualContent = contentLines.length > 1 ? contentLines.slice(1).join('\n') : result.block.content;
+      console.log(`${index + 1}. [分数:${result.score.toFixed(2)}] ${actualContent.substring(0, 100)}...`);
     });
     console.log("=" + "=".repeat(100));
     
