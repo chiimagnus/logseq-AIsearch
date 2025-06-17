@@ -123,27 +123,7 @@ const settings: SettingSchemaDesc[] = [
     title: "⚡ 批处理大小 / Batch Size",
     description: "设置并行处理相关性得分的批处理大小\nSet the batch size for parallel relevance score processing"
   },
-  {
-    key: "includeParent",
-    type: "boolean",
-    default: true,
-    title: "👆 包含父块 / Include Parent",
-    description: "搜索结果是否包含父块内容\nWhether to include parent block content in search results"
-  },
-  {
-    key: "includeSiblings",
-    type: "boolean",
-    default: true,
-    title: "👥 包含兄弟块 / Include Siblings",
-    description: "搜索结果是否包含兄弟块内容\nWhether to include sibling block content in search results"
-  },
-  {
-    key: "includeChildren",
-    type: "boolean",
-    default: true,
-    title: "👇 包含子块 / Include Children",
-    description: "搜索结果是否包含子块内容\nWhether to include child block content in search results"
-  },
+
   {
     key: "enableAISummary",
     type: "boolean",
