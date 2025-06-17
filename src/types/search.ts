@@ -15,9 +15,6 @@ export interface SearchConfig {
   maxResults: number;
   minScore: number;
   batchSize: number;
-  includeParent: boolean;
-  includeSiblings: boolean;
-  includeChildren: boolean;
   enableAISummary: boolean;
   enableTimeTools: boolean;
 }

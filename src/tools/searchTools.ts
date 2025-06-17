@@ -16,16 +16,11 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       ? logseq.settings.maxResults 
       : 50;
     
-    // 获取用户设置
-    const includeParent = logseq.settings?.includeParent ?? true;
-    const includeSiblings = logseq.settings?.includeSiblings ?? true;
-    const includeChildren = logseq.settings?.includeChildren ?? true;
-    
     console.log("⚙️ [DEBUG] 搜索配置:", {
       maxResults,
-      includeParent,
-      includeSiblings, 
-      includeChildren
+      includeParent: true,
+      includeSiblings: true, 
+      includeChildren: true
     });
 
     for (const keyword of keywords) {
@@ -54,7 +49,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
 
           // 2. 获取父块内容
           let parentContent = '';
-          if (block.parent && includeParent) {
+          if (block.parent) {
             try {
               const parentQuery = `
                 [:find (pull ?b [*])
@@ -71,27 +66,25 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
 
           // 3. 获取子块内容
           let childrenContent = '';
-          if (includeChildren) {
-            try {
-              const childrenQuery = `
-                [:find (pull ?b [*])
-                 :where [?b :block/parent ?parent]
-                 [?parent :block/uuid "${block.uuid}"]]
-              `;
-              const children = await logseq.DB.datascriptQuery(childrenQuery);
-              if (children && children.length > 0) {
-                childrenContent = children
-                  .map((child: any) => child[0].content)
-                  .join("\n");
-              }
-            } catch (error) {
-              console.error("子块查询失败:", error);
+          try {
+            const childrenQuery = `
+              [:find (pull ?b [*])
+               :where [?b :block/parent ?parent]
+               [?parent :block/uuid "${block.uuid}"]]
+            `;
+            const children = await logseq.DB.datascriptQuery(childrenQuery);
+            if (children && children.length > 0) {
+              childrenContent = children
+                .map((child: any) => child[0].content)
+                .join("\n");
             }
+          } catch (error) {
+            console.error("子块查询失败:", error);
           }
 
           // 4. 获取兄弟块内容（只要兄弟块本身，不包含其子块）
           let siblingsContent = '';
-          if (block.parent && includeSiblings) {
+          if (block.parent) {
             try {
               const siblingsQuery = `
                 [:find (pull ?b [*])
