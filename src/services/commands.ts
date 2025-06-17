@@ -12,7 +12,7 @@
 // 4. 在原始blocks旁边插入AI回应的引用
 // 该命令集成了 Logseq 的插件 API，用于与编辑器交互并向用户显示消息。
 
-import { aiSearchWithProgressiveResults } from './searchOrchestrator';
+import { aiSearch } from './searchOrchestrator';
 import { generateAIResponse } from './aiResponse';
 
 export async function aiSearchCommand() {
@@ -34,7 +34,7 @@ export async function aiSearchCommand() {
     await logseq.UI.showMsg("开始搜索... | Starting search...", "info");
 
     // 调用优化版搜索API，获取渐进式结果
-    const { results, generateSummary } = await aiSearchWithProgressiveResults(blockContent);
+    const { results, generateSummary } = await aiSearch(blockContent);
 
     // === 第一阶段：立即插入搜索结果和引用 ===
     if (results.length > 0) {
