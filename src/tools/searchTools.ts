@@ -111,15 +111,19 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
             }
           }
 
-          // 5. 按顺序组装内容：父块 -> 原块 -> 子块 -> 兄弟块
-          const contentParts = [
-            parentContent,
-            block.content,
-            childrenContent,
-            siblingsContent
-          ].filter(part => part.trim()); // 过滤空内容
-
-          fullContent += contentParts.join("\n");
+          // 5. 按结构化格式组装内容：原块 -> 上下文
+          // 原始块内容
+          fullContent += block.content;
+          
+          // 添加上下文内容（如果存在）
+          const contextParts = [];
+          if (parentContent) contextParts.push(`**父块内容：**\n${parentContent}`);
+          if (siblingsContent) contextParts.push(`**兄弟块内容：**\n${siblingsContent}`);
+          if (childrenContent) contextParts.push(`**子块内容：**\n${childrenContent}`);
+          
+          if (contextParts.length > 0) {
+            fullContent += `\n\n--- 相关内容 ---\n${contextParts.join('\n\n')}`;
+          }
 
           // 6. 添加调试信息
           console.log("🔍 [DEBUG] 找到匹配块:", {
