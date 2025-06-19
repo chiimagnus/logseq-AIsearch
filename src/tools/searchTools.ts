@@ -25,6 +25,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       `;
 
       const searchResults = await logseq.DB.datascriptQuery(query);
+      console.log("-".repeat(100));
       console.log(`📈 [DEBUG] 关键词 "${keyword}" 找到 ${searchResults?.length || 0} 个匹配块`);
       
       if (searchResults) {
@@ -127,7 +128,6 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           const score = calculateRelevanceScore({ ...block, content: fullContent }, keywords, importantKeywords);
           
           console.log("⭐ [DEBUG] 相关性分数:", score, score > 2 ? "(通过)" : "(过滤)");
-          console.log("-".repeat(100));
           
           if (score > 2) {
             results.push({
