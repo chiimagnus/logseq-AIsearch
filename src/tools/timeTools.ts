@@ -441,9 +441,8 @@ export async function parseTimeQuery(query: string): Promise<TimeToolsResult> {
   };
 }
 
-/**
- * 获取一周的开始时间（周一）
- */
+
+// 获取一周的开始时间（周一）
 function getStartOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -451,9 +450,8 @@ function getStartOfWeek(date: Date): Date {
   return new Date(d.setDate(diff));
 }
 
-/**
- * 获取一周的结束时间（周日）
- */
+
+// 获取一周的结束时间（周日）
 function getEndOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -461,9 +459,8 @@ function getEndOfWeek(date: Date): Date {
   return new Date(d.setDate(diff));
 }
 
-/**
- * 生成时间相关的搜索关键词
- */
+
+// 生成时间相关的搜索关键词
 export function generateTimeBasedKeywords(timeResult: TimeToolsResult): string[] {
   const allKeywords = [...timeResult.keywords];
   
@@ -489,9 +486,8 @@ export function generateTimeBasedKeywords(timeResult: TimeToolsResult): string[]
   return finalKeywords;
 }
 
-/**
- * 根据时间范围过滤搜索结果
- */
+
+// 根据时间范围过滤搜索结果
 export function filterResultsByTimeRange(
   results: any[], 
   timeRanges: TimeRange[]
@@ -558,9 +554,8 @@ export function filterResultsByTimeRange(
   });
 }
 
-/**
- * 生成时间上下文的总结
- */
+
+// 生成时间上下文的总结
 export function generateTimeContextSummary(timeResult: TimeToolsResult): string {
   if (!timeResult.hasTimeContext || timeResult.timeRanges.length === 0) {
     return "";
