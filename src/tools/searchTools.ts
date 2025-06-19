@@ -8,7 +8,6 @@ import { calculateRelevanceScore } from './scoreCalculator';
  */
 export async function semanticSearch(keywords: string[]): Promise<SearchResult[]> {
   try {
-    console.log("🚀 [DEBUG] 开始语义搜索, 关键词:", keywords);
     
     const results: SearchResult[] = [];
     // 获取用户设置的最大结果数，如果没有设置则使用默认值 50
@@ -16,15 +15,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
       ? logseq.settings.maxResults 
       : 50;
     
-    console.log("⚙️ [DEBUG] 搜索配置:", {
-      maxResults,
-      includeParent: true,
-      includeSiblings: true, 
-      includeChildren: true
-    });
-
     for (const keyword of keywords) {
-      console.log(`🔍 [DEBUG] 搜索关键词: "${keyword}"`);
       
       const query = `
         [:find (pull ?b [* {:block/page [:block/name :block/journal-day]}])
@@ -129,9 +120,7 @@ export async function semanticSearch(keywords: string[]): Promise<SearchResult[]
           });
           
           console.log("📄 [DEBUG] 构建的fullContent:");
-          console.log("=" + "=".repeat(80));
           console.log(fullContent);
-          console.log("=" + "=".repeat(80));
 
           // 7. 计算相关性分数
           const importantKeywords = keywords.slice(0, 3);
@@ -388,7 +377,6 @@ export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string
       console.log("📍 [阶段2] 无时间关键词，直接使用AI关键词搜索blocks...");
       const aiBlockResults = await semanticSearch(aiKeywords);
       finalResults = aiBlockResults;
-      console.log("📊 AI关键词搜索结果:", finalResults.length, "个（仅blocks）");
     }
     
     // 最终去重和排序
