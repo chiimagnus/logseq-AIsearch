@@ -107,14 +107,26 @@ const settings: SettingSchemaDesc[] = [
 • 以block为单位建立索引，支持精确定位
 
 📋 使用步骤 / Usage Steps:
-1. 启用向量搜索功能
-2. 使用快捷键重建索引（首次使用必须）
-3. 使用AI搜索命令进行智能搜索
+1. 选择embedding模型类型（Ollama本地 或 云端API）
+2. 配置相应的模型参数（地址、密钥等）
+3. 启用向量搜索功能  
+4. 使用快捷键重建索引（首次使用必须）
+5. 使用AI搜索命令进行智能搜索
+
+🖥️ Ollama本地模型配置:
+• 先下载模型: ollama pull nomic-embed-text
+• 确保Ollama服务运行在 http://localhost:11434
+
+☁️ 云端API配置示例:
+• 硅基流动: https://api.siliconflow.cn/v1/embeddings
+• 模型: BAAI/bge-m3
+• 需要提供有效的API密钥
 
 ⚠️ 注意事项 / Notes:
-• 首次索引建立需要下载AI模型，请保持网络连接
+• 测试时可设置Block限制（如100）来快速验证
 • 索引建立时间取决于笔记数量，请耐心等待
 • 建议在笔记内容有大量更新后重建索引
+• 向量数据库存储在插件目录/.lancedb文件夹
 `,
     default: ""
   },
@@ -344,8 +356,9 @@ async function main() {
         await logseq.UI.showMsg(
           `📊 向量数据库统计:\n` +
           `• 总Block数: ${stats.totalBlocks || 0}\n` +
-          `• 模型: ${stats.modelInfo?.name || 'Unknown'}\n` +
+          `• 服务类型: ${stats.modelInfo?.serviceType === 'ollama' ? 'Ollama本地' : '云端API'}\n` +
           `• 向量维度: ${stats.modelInfo?.dimension || 'Unknown'}\n` +
+          `• 测试模式限制: ${stats.indexInfo?.testModeLimit || '无限制'}\n` +
           `• 详细信息请查看控制台`, 
           "success", 
           { timeout: 8000 }
