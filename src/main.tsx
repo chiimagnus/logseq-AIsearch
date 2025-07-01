@@ -3,6 +3,7 @@ import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 import { aiSearchCommand, aiResponseCommand } from './services/commands';
+import { initializeVectorStore, indexAllPages } from './services/vectorService';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
@@ -156,8 +157,11 @@ const settings: SettingSchemaDesc[] = [
   }
 ];
 
-function main() {
+async function main() {
   console.info("AI-Search Plugin Loaded");
+
+  // 初始化向量数据库
+  await initializeVectorStore();
 
   // 注册设置
   logseq.useSettingsSchema(settings);
@@ -185,6 +189,21 @@ function main() {
 
   // 注册一个反斜杠命令，名为 AI-Response
   logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
+
+  // 注册一个用于重建索引的命令
+  logseq.App.registerCommandPalette({
+    key: "rebuild-ai-index",
+    label: "Re-build AI search index",
+    keybinding: {
+      binding: "alt+mod+i",
+      mode: "non-editing",
+    },
+  }, async () => {
+    await indexAllPages();
+  });
+  logseq.Editor.registerSlashCommand("Re-build AI search index", async () => {
+    await indexAllPages();
+  });
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
