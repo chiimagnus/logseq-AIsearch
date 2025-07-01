@@ -116,4 +116,10 @@ async function searchBlocks(queryText: string) {
 await table.createIndex();
 ```
 
-这将显著提升查询性能。
+## 参考资源
+- [LanceDB 快速入门](https://lancedb.github.io/lancedb/basic/) - 了解LanceDB的核心功能和API
+- [LanceDB向量搜索](https://lancedb.github.io/lancedb/concepts/vector_search/) - 了解LanceDB的向量搜索
+- [LanceDB索引概念](https://lancedb.github.io/lancedb/concepts/index_ivfpq/) - 了解LanceDB的索引概念
+- [LanceDB索引概念](https://lancedb.github.io/lancedb/concepts/index_hnsw/) - 了解LanceDB的索引概念
+- [LanceDB存储概念](https://lancedb.github.io/lancedb/concepts/storage/) - 了解LanceDB的存储概念
+- [LanceDB数据管理](https://lancedb.github.io/lancedb/concepts/data_management/) - 了解LanceDB的数据管理

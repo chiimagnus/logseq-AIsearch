@@ -32,3 +32,7 @@ alwaysApply: false
 - [tsconfig.json](mdc:tsconfig.json) - TypeScript配置
 - [tailwind.config.js](mdc:tailwind.config.js) - 样式配置
 - [postcss.config.js](mdc:postcss.config.js) - CSS处理配置
+
+## 参考资源
+- [Logseq官方文档](https://docs.logseq.com) - 了解Logseq的核心功能和API
+
