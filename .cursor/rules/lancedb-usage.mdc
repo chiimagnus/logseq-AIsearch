@@ -1,0 +1,119 @@
+---
+description: 本指南用于在 Logseq AI 搜索插件中集成和使用 LanceDB 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
+globs: 
+alwaysApply: false
+---
+# LanceDB 使用指南
+
+本指南用于在 Logseq AI 搜索插件中集成和使用 LanceDB 向量数据库。我们的目标是实现基于本地 embedding 的、以 block 为单位的向量搜索功能。
+
+我们将遵循官方文档的指导：[LanceDB Quickstart](https://lancedb.github.io/lancedb/basic/)
+
+## 核心依赖
+
+为了实现此功能，我们需要以下核心库：
+
+-   `@lancedb/lancedb`: LanceDB 的官方 TypeScript/JavaScript 客户端。
+-   `@xenova/transformers`: 用于在本地生成文本 embedding 的库。
+-   `apache-arrow`: LanceDB 的依赖库。
+
+## 核心实现步骤
+
+### 1. 初始化 Embedding 模型
+
+我们使用 `@xenova/transformers` 来加载本地 embedding 模型。我们将创建一个用于“特征提取”的 pipeline。
+
+```typescript
+import { pipeline, env } from '@xenova/transformers';
+
+// 可选：指定本地模型路径，避免每次都从网络下载
+// env.localModelPath = '/path/to/models';
+// env.allowRemoteModels = false;
+
+// 创建一个特征提取 pipeline
+// `all-MiniLM-L6-v2` 是一个轻量且高效的模型
+const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+```
+
+### 2. 初始化数据库和数据表
+
+连接到 LanceDB 数据库并定义数据表。由于我们手动生成 embedding，schema 中需要直接定义 vector 字段。`all-MiniLM-L6-v2` 模型输出的向量维度是 384。
+
+```typescript
+import * as lancedb from "@lancedb/lancedb";
+
+// 在插件的数据目录中指定数据库路径
+const dbPath = "/path/to/plugin/data/lancedb";
+const db = await lancedb.connect(dbPath);
+
+// 通过一条虚拟数据来创建或打开一个表，LanceDB 会自动推断 Schema
+// 这是确保表结构正确的一种简单方式
+const dummyData = [{
+    vector: Array(384).fill(0),
+    blockId: "dummy",
+    pageName: "dummy",
+    blockContent: "dummy"
+}];
+const table = await db.createTable("logseq_blocks", dummyData, { mode: "overwrite" });
+```
+
+### 3. 索引数据
+
+遍历 Logseq 的所有 block，为每个 block 生成 embedding，然后存入 LanceDB。
+
+```typescript
+// 假设我们有一个函数 `getAllLogseqBlocks` 可以获取所有 block
+const blocks = await getAllLogseqBlocks(); // [{ id: "...", content: "...", page: { "original-name": "..." } }]
+
+for (const block of blocks) {
+  if (!block.content.trim()) continue; // 跳过空 block
+
+  // 1. 生成 embedding
+  const result = await extractor(block.content, { pooling: 'mean', normalize: true });
+
+  // 2. 准备数据
+  const data = {
+    vector: Array.from(result.data), // 从 Float32Array 转换成普通数组
+    blockId: block.id.toString(),
+    pageName: block.page['original-name'],
+    blockContent: block.content
+  };
+
+  // 3. 添加到表中
+  await table.add([data]);
+}
+```
+
+### 4. 执行向量搜索
+
+当用户输入查询时，我们先为查询文本生成 embedding，然后用这个 embedding 向量在 LanceDB 中进行搜索。
+
+```typescript
+async function searchBlocks(queryText: string) {
+  if (!table) return [];
+
+  // 1. 为查询文本生成 embedding
+  const result = await extractor(queryText, { pooling: 'mean', normalize: true });
+  const queryVector = Array.from(result.data);
+
+  // 2. 执行搜索
+  const results = await table
+    .search(queryVector)
+    .limit(10)
+    .toArray();
+
+  // `results` 将会是一个包含最相关 block 数据的数组
+  // [{ vector: [...], blockId: "...", pageName: "...", blockContent: "...", _score: 0.8... }]
+  return results;
+}
+```
+
+## 性能优化
+
+对于大量的 block，为了加速搜索，我们可以在数据全部添加完毕后创建向量索引。
+
+```typescript
+await table.createIndex();
+```
+
+这将显著提升查询性能。
