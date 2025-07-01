@@ -10,7 +10,20 @@ let table: lancedb.Table;
 let extractor: any;
 let isInitialized = false;
 
-const BATCH_SIZE = 100; // 每批处理100个block
+// 动态获取批处理大小
+function getBatchSize(): number {
+  return Number(logseq.settings?.vectorBatchSize) || 100;
+}
+
+// 动态获取embedding模型名称
+function getEmbeddingModelName(): string {
+  const selected = String(logseq.settings?.embeddingModel || "Xenova/all-MiniLM-L6-v2 (推荐/Recommended)");
+  // 提取实际的模型名称
+  if (selected.includes("all-MiniLM-L6-v2")) return "Xenova/all-MiniLM-L6-v2";
+  if (selected.includes("all-distilroberta-v1")) return "Xenova/all-distilroberta-v1";
+  if (selected.includes("multi-qa-MiniLM-L6-cos-v1")) return "Xenova/multi-qa-MiniLM-L6-cos-v1";
+  return "Xenova/all-MiniLM-L6-v2"; // 默认值
+}
 const VECTOR_DIMENSION = 384; // all-MiniLM-L6-v2 模型的维度
 
 // 2. 初始化函数
@@ -26,7 +39,8 @@ export async function initializeVectorStore() {
     if (!extractor) {
         logseq.UI.showMsg("开始加载AI模型，请稍候...", "success", { timeout: 3000 });
         env.cacheDir = `${logseq.settings!.pluginDir}/.cache`;
-        extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+        const modelName = getEmbeddingModelName();
+        extractor = await pipeline('feature-extraction', modelName, {
             progress_callback: (progress: any) => {
                 console.log("Model loading progress:", progress);
                 if (progress.status === 'progress') {
@@ -99,8 +113,9 @@ export async function indexAllPages() {
     console.log("Old table dropped and new table created for re-indexing.");
 
     let indexedCount = 0;
-    for (let i = 0; i < allBlocks.length; i += BATCH_SIZE) {
-      const batch = allBlocks.slice(i, i + BATCH_SIZE);
+    const batchSize = getBatchSize();
+    for (let i = 0; i < allBlocks.length; i += batchSize) {
+      const batch = allBlocks.slice(i, i + batchSize);
       const contents = batch.map(b => b.content);
       
       const embeddings = await extractor(contents, { pooling: 'mean', normalize: true });
@@ -221,5 +236,72 @@ export async function search(queryText: string) {
     console.error("Search failed:", error);
     logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
     return [];
+  }
+}
+
+// 添加调试和统计功能
+export async function getVectorStoreStats() {
+  if (!isInitialized || !table) {
+    return {
+      error: "Vector store not initialized"
+    };
+  }
+
+  try {
+    const countResult = await table.countRows();
+    const sampleData = await table.search([0.1, 0.1, 0.1, ...Array(381).fill(0)]).limit(5).toArray();
+    
+    return {
+      totalBlocks: countResult,
+      modelInfo: {
+        name: getEmbeddingModelName(),
+        dimension: VECTOR_DIMENSION,
+        type: "Transformers.js based"
+      },
+      indexInfo: {
+        batchSize: getBatchSize(),
+        hasSearchIndex: true
+      },
+      sampleBlocks: sampleData.map(item => ({
+        blockUUID: item.blockUUID,
+        pageName: item.pageName,
+        contentPreview: item.blockContent.substring(0, 100) + "...",
+        vectorPreview: item.vector.slice(0, 5) // 只显示前5个维度
+      }))
+    };
+  } catch (error) {
+    return {
+      error: `Failed to get stats: ${error}`
+    };
+  }
+}
+
+// 添加相似度测试功能
+export async function testSimilarity(query1: string, query2: string) {
+  if (!extractor) {
+    return { error: "Extractor not initialized" };
+  }
+
+  try {
+    const result1: { data: Float32Array } = await extractor(query1, { pooling: 'mean', normalize: true });
+    const result2: { data: Float32Array } = await extractor(query2, { pooling: 'mean', normalize: true });
+    
+    const vector1 = Array.from(result1.data);
+    const vector2 = Array.from(result2.data);
+    
+    // 计算余弦相似度
+    const dotProduct = vector1.reduce((sum, a, i) => sum + a * vector2[i], 0);
+    const magnitude1 = Math.sqrt(vector1.reduce((sum, a) => sum + a * a, 0));
+    const magnitude2 = Math.sqrt(vector2.reduce((sum, a) => sum + a * a, 0));
+    const similarity = dotProduct / (magnitude1 * magnitude2);
+    
+    return {
+      query1,
+      query2,
+      similarity,
+      interpretation: similarity > 0.8 ? "很相似" : similarity > 0.6 ? "较相似" : similarity > 0.4 ? "有些相似" : "不太相似"
+    };
+  } catch (error) {
+    return { error: `Similarity test failed: ${error}` };
   }
 } 

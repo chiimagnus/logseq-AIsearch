@@ -132,6 +132,25 @@ const settings: SettingSchemaDesc[] = [
     description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
     default: "alt+mod+i"
   },
+  {
+    key: "vectorBatchSize",
+    type: "number",
+    default: 100,
+    title: "⚡ 向量化批处理大小 / Vector Batch Size",
+    description: "设置向量化处理的批处理大小，较大的值可能更快但消耗更多内存\nSet batch size for vectorization, larger values may be faster but use more memory"
+  },
+  {
+    key: "embeddingModel",
+    type: "enum",
+    title: "🤖 Embedding模型选择 / Embedding Model",
+    description: "选择用于向量化的模型\nSelect the model for vectorization",
+    enumChoices: [
+      "Xenova/all-MiniLM-L6-v2 (推荐/Recommended)",
+      "Xenova/all-distilroberta-v1", 
+      "Xenova/multi-qa-MiniLM-L6-cos-v1"
+    ],
+    default: "Xenova/all-MiniLM-L6-v2 (推荐/Recommended)"
+  },
 
   // ==================== 高级设置 ====================
   {
@@ -270,6 +289,55 @@ async function main() {
       await logseq.UI.showMsg("请先启用向量搜索功能 | Please enable vector search first", "warning");
     }
   });
+
+  // 注册调试命令
+  if (logseq.settings?.enableVectorSearch) {
+    const { getVectorStoreStats, testSimilarity } = await import('./services/vectorService');
+    
+    logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
+      const stats = await getVectorStoreStats();
+      console.log("Vector Store Stats:", stats);
+      if (stats.error) {
+        await logseq.UI.showMsg(`调试信息获取失败: ${stats.error}`, "error");
+      } else {
+        await logseq.UI.showMsg(
+          `📊 向量数据库统计:\n` +
+          `• 总Block数: ${stats.totalBlocks || 0}\n` +
+          `• 模型: ${stats.modelInfo?.name || 'Unknown'}\n` +
+          `• 向量维度: ${stats.modelInfo?.dimension || 'Unknown'}\n` +
+          `• 详细信息请查看控制台`, 
+          "success", 
+          { timeout: 8000 }
+        );
+      }
+    });
+
+    logseq.Editor.registerSlashCommand("Vector Debug: Test Similarity", async () => {
+      const query1 = window.prompt("输入第一个测试文本:");
+      if (!query1) return;
+      
+      const query2 = window.prompt("输入第二个测试文本:");
+      if (!query2) return;
+      
+      const result = await testSimilarity(query1, query2);
+      console.log("Similarity Test:", result);
+      
+      if (result.error) {
+        await logseq.UI.showMsg(`相似度测试失败: ${result.error}`, "error");
+      } else {
+        const similarity = result.similarity || 0;
+        await logseq.UI.showMsg(
+          `🔍 相似度测试结果:\n` +
+          `文本1: "${result.query1}"\n` +
+          `文本2: "${result.query2}"\n` +
+          `相似度: ${(similarity * 100).toFixed(2)}%\n` +
+          `结论: ${result.interpretation}`,
+          "info",
+          { timeout: 10000 }
+        );
+      }
+    });
+  }
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
