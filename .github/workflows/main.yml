@@ -1,39 +1,51 @@
-# This is a basic workflow to help you get started with Actions
+# .github/workflows/release.yml
 
-name: Releases
+name: Create Release and Package Plugin
 
-env:
-  PLUGIN_NAME: logseq-plugin-template-react
-
-# Controls when the action will run.
+# 当一个以 'v' 开头的标签被推送到仓库时触发
 on:
-  # push:
-  #   branches:
-  #     - "master"
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  release:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  build-and-release:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行环境
+    permissions:
+      contents: write # 授予工作流写入仓库内容的权限，用于创建 Release
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      # 第一步：检出你的代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          node-version: "16"
-      - uses: pnpm/action-setup@v2.4.0
+          fetch-depth: 0 # 获取所有提交历史，以便 semantic-release 分析
+
+      # 第二步：设置 Node.js 环境
+      # 分析 package.json 后，推荐使用 Node.js 20.x
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          version: 6.0.2
-      - run: pnpm install
-      - run: pnpm build
-      - name: Install zip
-        uses: montudor/action-zip@v1
-      - name: Release
-        run: npx semantic-release
+          node-version: '20.x'
+
+      # 第三步：设置 pnpm 包管理器
+      # 因为项目中包含 pnpm-lock.yaml，所以使用 pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9 # pnpm 版本，可根据需要调整
+          run_install: false
+
+      # 第四步：安装项目依赖和发布工具
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 第五步：构建插件
+      - name: Build plugin
+        run: pnpm build
+
+      # 第六步: 执行 semantic-release
+      - name: Run semantic-release
+        run: pnpm semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
