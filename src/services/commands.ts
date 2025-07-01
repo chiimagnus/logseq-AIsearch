@@ -14,6 +14,8 @@
 
 import { aiSearch } from './searchOrchestrator';
 import { generateAIResponse } from './aiResponse';
+import { search as vectorSearch, getInitializationStatus } from './vectorService';
+import { SearchResult } from '../types/search';
 
 export async function aiSearchCommand() {
   try {
@@ -33,8 +35,54 @@ export async function aiSearchCommand() {
 
     await logseq.UI.showMsg("开始搜索... | Starting search...", "info");
 
-    // 调用优化版搜索API，获取渐进式结果
-    const { results, generateSummary } = await aiSearch(blockContent);
+    // 根据用户设置选择搜索方式
+    const useVectorSearch = logseq.settings?.enableVectorSearch;
+    let results: SearchResult[] = [];
+    let generateSummary: () => Promise<string | null>;
+
+    if (useVectorSearch) {
+      // 检查向量搜索服务状态
+      const status = getInitializationStatus();
+      if (!status.isInitialized) {
+        await logseq.UI.showMsg("向量搜索未初始化，使用传统搜索 | Vector search not initialized, using traditional search", "warning");
+        // 回退到传统搜索
+        const searchResult = await aiSearch(blockContent);
+        results = searchResult.results;
+        generateSummary = searchResult.generateSummary;
+      } else {
+        // 使用向量搜索
+        const vectorResults = await vectorSearch(blockContent);
+        if (vectorResults && vectorResults.length > 0) {
+          // 将向量搜索结果转换为兼容格式
+          results = vectorResults.map((result: any) => ({
+            block: { 
+              uuid: result.blockUUID,
+              content: result.blockContent,
+              page: {
+                name: result.pageName
+              }
+            },
+            score: result._distance ? (1 - result._distance) * 10 : 5 // 将距离转换为分数
+          }));
+          
+          // 如果启用AI总结，使用传统方式生成总结
+          if (logseq.settings?.enableAISummary) {
+            const searchResult = await aiSearch(blockContent);
+            generateSummary = searchResult.generateSummary;
+          } else {
+            generateSummary = async () => null;
+          }
+        } else {
+          results = [];
+          generateSummary = async () => null;
+        }
+      }
+    } else {
+      // 使用传统搜索
+      const searchResult = await aiSearch(blockContent);
+      results = searchResult.results;
+      generateSummary = searchResult.generateSummary;
+    }
 
     // === 第一阶段：立即插入搜索结果和引用 ===
     if (results.length > 0) {
