@@ -1,39 +1,67 @@
-# This is a basic workflow to help you get started with Actions
+# .github/workflows/release.yml
 
-name: Releases
+name: Create Release and Package Plugin
 
-env:
-  PLUGIN_NAME: logseq-plugin-template-react
-
-# Controls when the action will run.
+# 当一个以 'v' 开头的标签被推送到仓库时触发
 on:
-  # push:
-  #   branches:
-  #     - "master"
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  release:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  build-and-release:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行环境
+    permissions:
+      contents: write # 授予工作流写入仓库内容的权限，用于创建 Release
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      # 第一步：检出你的代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 第二步：设置 Node.js 环境
+      # 分析 package.json 后，推荐使用 Node.js 20.x
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
-      - uses: pnpm/action-setup@v2.4.0
+          node-version: '20.x'
+
+      # 第三步：设置 pnpm 包管理器
+      # 因为项目中包含 pnpm-lock.yaml，所以使用 pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
         with:
-          version: 6.0.2
-      - run: pnpm install
-      - run: pnpm build
-      - name: Install zip
-        uses: montudor/action-zip@v1
-      - name: Release
-        run: npx semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version: 8 # pnpm 版本，可根据需要调整
+          run_install: false
+
+      # 第四步：安装项目依赖
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 第五步：构建插件
+      - name: Build plugin
+        run: pnpm build
+
+      # 第六步：准备打包文件
+      # 从 github.ref_name 获取标签名 (例如 v1.0.0)
+      # 从 github.repository 获取仓库名 (例如 chiimagnus/logseq-AIsearch)
+      # 并从中提取出插件名 logseq-AIsearch
+      - name: Prepare package assets
+        id: prep
+        run: |
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)
+          TAG_VERSION=${GITHUB_REF_NAME}
+          ZIP_FILENAME="${REPO_NAME}-${TAG_VERSION}.zip"
+          echo "ZIP_FILENAME=${ZIP_FILENAME}" >> $GITHUB_ENV
+          zip -r ${ZIP_FILENAME} dist package.json README.md icon.svg
+
+      # 第七步：创建 GitHub Release 并上传打包好的 zip 文件
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # 使用标签名作为 Release 的标题
+          name: Release ${{ github.ref_name }}
+          # 自动生成 Release notes，会包含从上个 tag 到当前 tag 之间的所有 commits
+          generate_release_notes: true
+          # 指定要上传的文件，即上一步创建的 zip 文件
+          files: ${{ env.ZIP_FILENAME }}
