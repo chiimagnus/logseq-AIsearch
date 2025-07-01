@@ -182,10 +182,22 @@ function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
   return flatBlocks;
 }
 
-// 4. 搜索函数
+// 4. 获取初始化状态
+export function getInitializationStatus() {
+  return {
+    isInitialized,
+    hasDatabase: !!db,
+    hasTable: !!table,
+    hasExtractor: !!extractor
+  };
+}
+
+// 5. 搜索函数
 export async function search(queryText: string) {
   if (!isInitialized || !table || !extractor) {
-    logseq.UI.showMsg("AI 服务未初始化，请稍后再试。", "error");
+    const status = getInitializationStatus();
+    console.error("Vector search service not properly initialized:", status);
+    logseq.UI.showMsg("向量搜索服务未初始化，请检查设置或重建索引 | Vector search service not initialized", "error");
     return [];
   }
 
