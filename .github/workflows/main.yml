@@ -31,7 +31,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8 # pnpm 版本，可根据需要调整
+          version: 9 # pnpm 版本，可根据需要调整
           run_install: false
 
       # 第四步：安装项目依赖
@@ -53,8 +53,7 @@ jobs:
           TAG_VERSION=${GITHUB_REF_NAME}
           ZIP_FILENAME="${REPO_NAME}-${TAG_VERSION}.zip"
           echo "ZIP_FILENAME=${ZIP_FILENAME}" >> $GITHUB_ENV
-          cp public/icon.svg .
-          zip -r ${ZIP_FILENAME} dist package.json README.md icon.svg
+          zip -r ${ZIP_FILENAME} dist package.json readme.md logo.svg
 
       # 第七步：创建 GitHub Release 并上传打包好的 zip 文件
       - name: Create GitHub Release
