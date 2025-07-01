@@ -95,6 +95,44 @@ const settings: SettingSchemaDesc[] = [
     default: "GLM-4-Flash-250414"
   },
   
+  // ==================== 向量数据库设置 ====================
+  {
+    key: "vectorSearchHeader",
+    type: "heading",
+    title: "🎯 向量数据库设置 / Vector Database Settings",
+    description: `
+✨ 向量搜索功能说明 / Vector Search Features:
+• 基于AI语义理解的智能搜索
+• 支持本地embedding模型，保护隐私
+• 以block为单位建立索引，支持精确定位
+
+📋 使用步骤 / Usage Steps:
+1. 启用向量搜索功能
+2. 使用快捷键重建索引（首次使用必须）
+3. 使用AI搜索命令进行智能搜索
+
+⚠️ 注意事项 / Notes:
+• 首次索引建立需要下载AI模型，请保持网络连接
+• 索引建立时间取决于笔记数量，请耐心等待
+• 建议在笔记内容有大量更新后重建索引
+`,
+    default: ""
+  },
+  {
+    key: "enableVectorSearch",
+    type: "boolean",
+    default: true,
+    title: "🚀 启用向量搜索 / Enable Vector Search",
+    description: "启用基于AI嵌入的向量搜索功能，提供更智能的语义搜索\nEnable AI embedding-based vector search for smarter semantic search"
+  },
+  {
+    key: "rebuildIndexShortcut",
+    type: "string",
+    title: "🔄 重建索引快捷键 / Rebuild Index Shortcut",
+    description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
+    default: "alt+mod+i"
+  },
+
   // ==================== 高级设置 ====================
   {
     key: "searchSettingsHeader",
@@ -160,11 +198,31 @@ const settings: SettingSchemaDesc[] = [
 async function main() {
   console.info("AI-Search Plugin Loaded");
 
-  // 初始化向量数据库
-  await initializeVectorStore();
+  // 根据用户设置初始化向量数据库
+  if (logseq.settings?.enableVectorSearch) {
+    await initializeVectorStore();
+  }
 
   // 注册设置
   logseq.useSettingsSchema(settings);
+
+  // 监听设置变更，动态初始化向量数据库
+  logseq.onSettingsChanged(async (newSettings, oldSettings) => {
+    const vectorSearchEnabled = newSettings.enableVectorSearch;
+    const wasVectorSearchEnabled = oldSettings?.enableVectorSearch;
+    
+    // 如果向量搜索从关闭变为开启
+    if (vectorSearchEnabled && !wasVectorSearchEnabled) {
+      await logseq.UI.showMsg("正在初始化向量数据库... | Initializing vector database...", "info");
+      await initializeVectorStore();
+      await logseq.UI.showMsg("向量数据库已初始化，请重建索引 | Vector database initialized, please rebuild index", "success");
+    }
+    
+    // 如果快捷键发生变更，提示用户重启插件
+    if (newSettings.rebuildIndexShortcut !== oldSettings?.rebuildIndexShortcut) {
+      await logseq.UI.showMsg("快捷键已更新，重启插件后生效 | Shortcut updated, restart plugin to take effect", "info");
+    }
+  });
 
   // 注册AI搜索快捷键
   logseq.App.registerCommandShortcut(
@@ -195,14 +253,22 @@ async function main() {
     key: "rebuild-ai-index",
     label: "Re-build AI search index",
     keybinding: {
-      binding: "alt+mod+i",
-      mode: "non-editing",
-    },
+      binding: logseq.settings?.rebuildIndexShortcut || "alt+mod+i",
+      mode: "non-editing"
+    } as any,
   }, async () => {
-    await indexAllPages();
+    if (logseq.settings?.enableVectorSearch) {
+      await indexAllPages();
+    } else {
+      await logseq.UI.showMsg("请先启用向量搜索功能 | Please enable vector search first", "warning");
+    }
   });
   logseq.Editor.registerSlashCommand("Re-build AI search index", async () => {
-    await indexAllPages();
+    if (logseq.settings?.enableVectorSearch) {
+      await indexAllPages();
+    } else {
+      await logseq.UI.showMsg("请先启用向量搜索功能 | Please enable vector search first", "warning");
+    }
   });
 
   // 修改顶栏按钮
