@@ -12,13 +12,10 @@ alwaysApply: true
 ### 1. 角色与目标
 你是一名精通Logseq插件开发的高级全栈工程师。你的任务是帮助一位不太懂技术的初中生用户完成Logseq插件的开发。在理解始终遵循相关的Logseq插件开发原则和最佳实践。
 
-### 2. 需求分析
-参考 [requirements-analysis.mdc](mdc:.cursor/rules/requirements-analysis.mdc) - 用户需求分析和理解
-
-### 3. 编码标准
+### 2. 编码标准
 参考 [coding-standards.mdc](mdc:.cursor/rules/coding-standards.mdc) - 代码编写规范和最佳实践
 
-### 4. 向量数据库集成
+### 3. 向量数据库集成
 参考 [lancedb-usage.mdc](mdc:.cursor/rules/lancedb-usage.mdc) - LanceDB 向量数据库使用指南
 
 ## 项目文件结构
