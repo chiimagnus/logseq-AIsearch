@@ -145,11 +145,52 @@ const settings: SettingSchemaDesc[] = [
     title: "🤖 Embedding模型选择 / Embedding Model",
     description: "选择用于向量化的模型\nSelect the model for vectorization",
     enumChoices: [
-      "Xenova/all-MiniLM-L6-v2 (推荐/Recommended)",
-      "Xenova/all-distilroberta-v1", 
-      "Xenova/multi-qa-MiniLM-L6-cos-v1"
+      "Ollama本地模型 / Ollama Local Model",
+      "云端API服务 / Cloud API Service"
     ],
-    default: "Xenova/all-MiniLM-L6-v2 (推荐/Recommended)"
+    default: "Ollama本地模型 / Ollama Local Model"
+  },
+  {
+    key: "ollamaEmbeddingModel", 
+    type: "string",
+    title: "🖥️ Ollama模型名称 / Ollama Model Name",
+    description: "请先使用 'ollama pull nomic-embed-text' 下载模型\nPlease download model first with 'ollama pull nomic-embed-text'",
+    default: "nomic-embed-text"
+  },
+  {
+    key: "ollamaHost",
+    type: "string", 
+    title: "🌐 Ollama服务地址 / Ollama Host",
+    description: "Ollama API服务地址\nOllama API service address",
+    default: "http://localhost:11434"
+  },
+  {
+    key: "cloudEmbeddingApiUrl",
+    type: "string",
+    title: "☁️ 云端API地址 / Cloud API URL", 
+    description: "如硅基流动: https://api.siliconflow.cn/v1/embeddings\nSiliconFlow: https://api.siliconflow.cn/v1/embeddings",
+    default: "https://api.siliconflow.cn/v1/embeddings"
+  },
+  {
+    key: "cloudEmbeddingApiKey",
+    type: "string",
+    title: "🔐 云端API密钥 / Cloud API Key",
+    description: "云端服务的API密钥\nAPI key for cloud service", 
+    default: ""
+  },
+  {
+    key: "cloudEmbeddingModel",
+    type: "string",
+    title: "🤖 云端模型名称 / Cloud Model Name",
+    description: "如硅基流动的 BAAI/bge-m3\nSiliconFlow model like BAAI/bge-m3",
+    default: "BAAI/bge-m3"
+  },
+  {
+    key: "testModeBlockLimit",
+    type: "number",
+    default: 100,
+    title: "🧪 测试模式Block限制 / Test Mode Block Limit",
+    description: "测试时只索引前N个blocks，设置为0表示索引全部\nIn test mode, only index first N blocks, set 0 to index all"
   },
 
   // ==================== 高级设置 ====================
