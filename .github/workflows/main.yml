@@ -5,8 +5,8 @@ name: Create Release and Package Plugin
 # 当一个以 'v' 开头的标签被推送到仓库时触发
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - 'master'
 
 jobs:
   build-and-release:
@@ -18,6 +18,8 @@ jobs:
       # 第一步：检出你的代码
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取所有提交历史，以便 semantic-release 分析
 
       # 第二步：设置 Node.js 环境
       # 分析 package.json 后，推荐使用 Node.js 20.x
@@ -34,7 +36,7 @@ jobs:
           version: 9 # pnpm 版本，可根据需要调整
           run_install: false
 
-      # 第四步：安装项目依赖
+      # 第四步：安装项目依赖和发布工具
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -42,26 +44,8 @@ jobs:
       - name: Build plugin
         run: pnpm build
 
-      # 第六步：准备打包文件
-      # 从 github.ref_name 获取标签名 (例如 v1.0.0)
-      # 从 github.repository 获取仓库名 (例如 chiimagnus/logseq-AIsearch)
-      # 并从中提取出插件名 logseq-AIsearch
-      - name: Prepare package assets
-        id: prep
-        run: |
-          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)
-          TAG_VERSION=${GITHUB_REF_NAME}
-          ZIP_FILENAME="${REPO_NAME}-${TAG_VERSION}.zip"
-          echo "ZIP_FILENAME=${ZIP_FILENAME}" >> $GITHUB_ENV
-          zip -r ${ZIP_FILENAME} dist package.json readme.md logo.svg -x "*.mp4"
-
-      # 第七步：创建 GitHub Release 并上传打包好的 zip 文件
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          # 使用标签名作为 Release 的标题
-          name: Release ${{ github.ref_name }}
-          # 自动生成 Release notes，会包含从上个 tag 到当前 tag 之间的所有 commits
-          generate_release_notes: true
-          # 指定要上传的文件，即上一步创建的 zip 文件
-          files: ${{ env.ZIP_FILENAME }}
+      # 第六步: 执行 semantic-release
+      - name: Run semantic-release
+        run: pnpm semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
