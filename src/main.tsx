@@ -95,11 +95,11 @@ const settings: SettingSchemaDesc[] = [
     default: "GLM-4-Flash-250414"
   },
   
-  // ==================== 向量数据库设置 ====================
+  // ==================== 向量搜索设置 ====================
   {
     key: "vectorSearchHeader",
     type: "heading",
-    title: "🎯 向量数据库设置 / Vector Database Settings",
+    title: "🎯 向量搜索设置 / Vector Search Settings",
     description: `
 ✨ 向量搜索功能说明 / Vector Search Features:
 • 基于AI语义理解的智能搜索
@@ -126,7 +126,7 @@ const settings: SettingSchemaDesc[] = [
 • 测试时可设置Block限制（如100）来快速验证
 • 索引建立时间取决于笔记数量，请耐心等待
 • 建议在笔记内容有大量更新后重建索引
-• 向量数据库存储在插件目录/.lancedb文件夹
+• 向量数据存储在浏览器本地存储中
 `,
     default: ""
   },
@@ -144,13 +144,7 @@ const settings: SettingSchemaDesc[] = [
     description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
     default: "alt+mod+i"
   },
-  {
-    key: "vectorBatchSize",
-    type: "number",
-    default: 100,
-    title: "⚡ 向量化批处理大小 / Vector Batch Size",
-    description: "设置向量化处理的批处理大小，较大的值可能更快但消耗更多内存\nSet batch size for vectorization, larger values may be faster but use more memory"
-  },
+
   {
     key: "embeddingModel",
     type: "enum",
@@ -285,9 +279,9 @@ async function main() {
     
     // 如果向量搜索从关闭变为开启
     if (vectorSearchEnabled && !wasVectorSearchEnabled) {
-      await logseq.UI.showMsg("正在初始化向量数据库... | Initializing vector database...", "info");
+      await logseq.UI.showMsg("正在初始化向量存储... | Initializing vector storage...", "info");
       await initializeVectorStore();
-      await logseq.UI.showMsg("向量数据库已初始化，请重建索引 | Vector database initialized, please rebuild index", "success");
+      await logseq.UI.showMsg("向量存储已初始化，请重建索引 | Vector storage initialized, please rebuild index", "success");
     }
     
     // 如果快捷键发生变更，提示用户重启插件
@@ -351,7 +345,7 @@ async function main() {
       const stats = await getVectorStoreStats();
       console.log("Vector Store Stats:", stats);
       await logseq.UI.showMsg(
-        `📊 向量数据库统计:\n` +
+        `📊 向量存储统计:\n` +
         `• 总Block数: ${stats.count || 0}\n` +
         `• 向量维度: ${stats.dim || 'Unknown'}\n` +
         `• 详细信息请查看控制台`, 
