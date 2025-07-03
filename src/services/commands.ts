@@ -42,38 +42,35 @@ export async function aiSearchCommand() {
     // 检查向量搜索服务状态
     const status = getInitializationStatus();
     if (!status.isInitialized) {
-      await logseq.UI.showMsg("向量搜索未初始化，使用传统搜索 | Vector search not initialized, using traditional search", "warning");
-      // 回退到传统搜索
-      const searchResult = await aiSearch(blockContent);
-      results = searchResult.results;
-      generateSummary = searchResult.generateSummary;
-    } else {
-      // 使用向量搜索
-      const vectorResults = await vectorSearch(blockContent);
-      if (vectorResults && vectorResults.length > 0) {
-        // 将向量搜索结果转换为兼容格式
-        results = vectorResults.map((result: any) => ({
-          block: { 
-            uuid: result.blockUUID,
-            content: result.blockContent,
-            page: {
-              name: result.pageName
-            }
-          },
-          score: result._distance ? (1 - result._distance) * 10 : 5 // 将距离转换为分数
-        }));
-        
-        // 如果启用AI总结，使用传统方式生成总结
-        if (logseq.settings?.enableAISummary) {
-          const searchResult = await aiSearch(blockContent);
-          generateSummary = searchResult.generateSummary;
-        } else {
-          generateSummary = async () => null;
-        }
+      await logseq.UI.showMsg("向量搜索服务尚未初始化，请先建立索引 | Vector search not initialized, please build index first.", "error");
+      return;
+    }
+
+    // 使用向量搜索
+    const vectorResults = await vectorSearch(blockContent);
+    if (vectorResults && vectorResults.length > 0) {
+      // 将向量搜索结果转换为兼容格式
+      results = vectorResults.map((result: any) => ({
+        block: { 
+          uuid: result.blockUUID,
+          content: result.blockContent,
+          page: {
+            name: result.pageName
+          }
+        },
+        score: result._distance ? (1 - result._distance) * 10 : 5 // 将距离转换为分数
+      }));
+      
+      // 如果启用AI总结，使用传统方式生成总结
+      if (logseq.settings?.enableAISummary) {
+        const searchResult = await aiSearch(blockContent);
+        generateSummary = searchResult.generateSummary;
       } else {
-        results = [];
         generateSummary = async () => null;
       }
+    } else {
+      results = [];
+      generateSummary = async () => null;
     }
 
     // === 第一阶段：立即插入搜索结果和引用 ===
