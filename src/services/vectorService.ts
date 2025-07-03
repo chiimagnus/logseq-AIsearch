@@ -221,36 +221,50 @@ export async function indexAllPages() {
     const vectorData: VectorDatabase = [];
     let indexedCount = 0;
     const currentTime = Date.now();
+    const batchSize = 10; // 批处理大小
     
-    for (const block of blocksToIndex) {
-      try {
-        const vector = await generateEmbedding(block.content);
-        vectorData.push({
-          blockUUID: block.uuid,
-          pageName: block.pageName,
-          blockContent: block.content,
-          vector: vector,
-          lastUpdated: currentTime
-        });
-        
-        indexedCount++;
-        
-        // 显示详细进度
-        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
-          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
-          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
+    // 分批处理以提高速度
+    for (let i = 0; i < blocksToIndex.length; i += batchSize) {
+      const batch = blocksToIndex.slice(i, i + batchSize);
+      
+      // 并行处理当前批次
+      const batchPromises = batch.map(async (block) => {
+        try {
+          const vector = await generateEmbedding(block.content);
+          return {
+            blockUUID: block.uuid,
+            pageName: block.pageName,
+            blockContent: block.content,
+            vector: vector,
+            lastUpdated: currentTime
+          };
+        } catch (error) {
+          console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
+          return null; // 标记为失败
         }
-      } catch (error) {
-        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
-        // 继续处理其他blocks
+      });
+      
+      // 等待当前批次完成
+      const batchResults = await Promise.all(batchPromises);
+      
+      // 过滤掉失败的结果并添加到vectorData
+      const validResults = batchResults.filter((result): result is VectorData => result !== null);
+      vectorData.push(...validResults);
+      
+      indexedCount += batch.length;
+      
+      // 显示详细进度
+      const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+      if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
+        logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length}) | 成功: ${vectorData.length}`);
+        console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%) | Success: ${vectorData.length}`);
       }
     }
 
     // 保存到持久化存储
     await saveVectorData(vectorData);
     
-    logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
+    logseq.UI.showMsg(`✅ 索引建立完成！共处理 ${indexedCount} 个blocks，成功索引 ${vectorData.length} 条内容。`, "success", { timeout: 5000 });
 
   } catch (error) {
     console.error("Failed to index all pages:", error);
