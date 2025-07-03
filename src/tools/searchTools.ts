@@ -4,21 +4,18 @@ import { SearchResult } from '../types/search';
 import { search as vectorSearch } from '../services/vectorService';
 
 /**
- * 时间感知搜索 - 现在完全由向量搜索驱动
- * @param timeKeywords - 时间关键词（当前未使用，但保留接口）
- * @param aiKeywords - AI提取的关键词
+ * 向量搜索驱动的搜索函数
+ * @param query - 用户的原始查询字符串
  * @returns 搜索结果
  */
-export async function timeAwareSearch(timeKeywords: string[], aiKeywords: string[]): Promise<SearchResult[]> {
+export async function timeAwareSearch(query: string): Promise<SearchResult[]> {
   console.log("🚀 [搜索策略] 已切换至向量搜索模式");
 
-  if (aiKeywords.length === 0) {
-    console.log("🤷‍♂️ [向量搜索] 关键词为空，跳过搜索");
+  if (!query || query.trim() === '') {
+    console.log("🤷‍♂️ [向量搜索] 查询为空，跳过搜索");
     return [];
   }
 
-  // 将关键词数组合并为单个查询字符串
-  const query = aiKeywords.join(' ');
   console.log(`🔍 [向量搜索] 使用查询: "${query}"`);
 
   try {
