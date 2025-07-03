@@ -23,6 +23,17 @@ const settings: SettingSchemaDesc[] = [
     default: "Custom LLM API"
   },
   {
+    key: "embeddingModel",
+    type: "enum",
+    title: "🤖 Embedding模型选择 / Embedding Model",
+    description: "选择用于向量化的模型\nSelect the model for vectorization",
+    enumChoices: [
+      "Ollama Embedding",
+      "Custom Embedding API"
+    ],
+    default: "Ollama本地模型 / Ollama Local Model"
+  },
+  {
     key: "shortcut",
     type: "string",
     title: "⌨️ AI搜索快捷键 / AI Search Shortcut",
@@ -36,176 +47,19 @@ const settings: SettingSchemaDesc[] = [
     description: "",
     default: "alt+mod+r"
   },
-  
-  // ==================== Ollama 本地部署 ====================
-  {
-    key: "ollamaHeader",
-    type: "heading",
-    title: "🖥️ Ollama 本地部署 / Ollama Local Deployment",
-    description: "",
-    default: ""
-  },
-  {
-    key: "host",
-    type: "string",
-    title: "🌐 主机地址和端口 / Host Address and Port",
-    description: "",
-    default: "localhost:11434"
-  },
-  {
-    key: "model",
-    type: "string",
-    title: "🤖 模型名称 / Model Name",
-    description: "",
-    default: "deepseek-r1:8b"
-  },
-  
-  // ==================== 自定义API配置 ====================
-  {
-    key: "unifiedApiHeader",
-    type: "heading",
-    title: "🛠️ 自定义API配置 / Custom API Configuration",
-    description:
-`
-🧠 智谱清言Zhipu AI: https://open.bigmodel.cn/api/paas/v4/chat/completions
-    
-🤖 硅基流动SiliconFlow: https://api.siliconflow.cn/v1/chat/completions
-`,
-    default: ""
-  },
-  {
-    key: "apiUrl",
-    type: "string",
-    title: "🔗 完整API URL / Full API URL",
-    description: "",
-    default: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-  },
-  {
-    key: "apiKey",
-    type: "string",
-    title: "🔐 API Key",
-    description: "",
-    default: ""
-  },
-  {
-    key: "modelName",
-    type: "string",
-    title: "🤖 模型名称 / Model Name",
-    description: "",
-    default: "GLM-4-Flash-250414"
-  },
-  
-  // ==================== 向量搜索设置 ====================
-  {
-    key: "vectorSearchHeader",
-    type: "heading",
-    title: "🎯 向量搜索设置 / Vector Search Settings",
-    description: `
-✨ 向量搜索功能说明 / Vector Search Features:
-• 基于AI语义理解的智能搜索
-• 支持本地embedding模型，保护隐私
-• 以block为单位建立索引，支持精确定位
-
-📋 使用步骤 / Usage Steps:
-1. 选择embedding模型类型（Ollama本地 或 云端API）
-2. 配置相应的模型参数（地址、密钥等）
-3. 启用向量搜索功能  
-4. 使用快捷键重建索引（首次使用必须）
-5. 使用AI搜索命令进行智能搜索
-
-🖥️ Ollama本地模型配置:
-• 先下载模型: ollama pull nomic-embed-text
-• 确保Ollama服务运行在 http://localhost:11434
-
-☁️ 云端API配置示例:
-• 硅基流动: https://api.siliconflow.cn/v1/embeddings
-• 模型: BAAI/bge-m3
-• 需要提供有效的API密钥
-
-⚠️ 注意事项 / Notes:
-• 测试时可设置Block限制（如100）来快速验证
-• 索引建立时间取决于笔记数量，请耐心等待
-• 建议在笔记内容有大量更新后重建索引
-• 向量数据存储在浏览器本地存储中
-`,
-    default: ""
-  },
-  {
-    key: "enableVectorSearch",
-    type: "boolean",
-    default: true,
-    title: "🚀 启用向量搜索 / Enable Vector Search",
-    description: "启用基于AI嵌入的向量搜索功能，提供更智能的语义搜索\nEnable AI embedding-based vector search for smarter semantic search"
-  },
+  // {
+  //   key: "enableVectorSearch",
+  //   type: "boolean",
+  //   default: true,
+  //   title: "🚀 启用AI语义搜索 / Enable AI Semantic Search",
+  //   description: ""
+  // },
   {
     key: "rebuildIndexShortcut",
     type: "string",
-    title: "🔄 重建索引快捷键 / Rebuild Index Shortcut",
+    title: "⌨️ 重建索引快捷键 / Rebuild Index Shortcut",
     description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
     default: "alt+mod+i"
-  },
-
-  {
-    key: "embeddingModel",
-    type: "enum",
-    title: "🤖 Embedding模型选择 / Embedding Model",
-    description: "选择用于向量化的模型\nSelect the model for vectorization",
-    enumChoices: [
-      "Ollama本地模型 / Ollama Local Model",
-      "云端API服务 / Cloud API Service"
-    ],
-    default: "Ollama本地模型 / Ollama Local Model"
-  },
-  {
-    key: "ollamaEmbeddingModel", 
-    type: "string",
-    title: "🖥️ Ollama模型名称 / Ollama Model Name",
-    description: "请先使用 'ollama pull nomic-embed-text' 下载模型\nPlease download model first with 'ollama pull nomic-embed-text'",
-    default: "nomic-embed-text"
-  },
-  {
-    key: "ollamaHost",
-    type: "string", 
-    title: "🌐 Ollama服务地址 / Ollama Host",
-    description: "Ollama API服务地址\nOllama API service address",
-    default: "http://localhost:11434"
-  },
-  {
-    key: "cloudEmbeddingApiUrl",
-    type: "string",
-    title: "☁️ 云端API地址 / Cloud API URL", 
-    description: "如硅基流动: https://api.siliconflow.cn/v1/embeddings\nSiliconFlow: https://api.siliconflow.cn/v1/embeddings",
-    default: "https://api.siliconflow.cn/v1/embeddings"
-  },
-  {
-    key: "cloudEmbeddingApiKey",
-    type: "string",
-    title: "🔐 云端API密钥 / Cloud API Key",
-    description: "云端服务的API密钥\nAPI key for cloud service", 
-    default: ""
-  },
-  {
-    key: "cloudEmbeddingModel",
-    type: "string",
-    title: "🤖 云端模型名称 / Cloud Model Name",
-    description: "如硅基流动的 BAAI/bge-m3\nSiliconFlow model like BAAI/bge-m3",
-    default: "BAAI/bge-m3"
-  },
-  {
-    key: "testModeBlockLimit",
-    type: "number",
-    default: 100,
-    title: "🧪 测试模式Block限制 / Test Mode Block Limit",
-    description: "测试时只索引前N个blocks，设置为0表示索引全部\nIn test mode, only index first N blocks, set 0 to index all"
-  },
-
-  // ==================== 高级设置 ====================
-  {
-    key: "searchSettingsHeader",
-    type: "heading",
-    title: "🔍 高级设置 / Advanced Settings",
-    description: "",
-    default: ""
   },
   {
     key: "maxResults",
@@ -215,26 +69,105 @@ const settings: SettingSchemaDesc[] = [
     description: "设置搜索返回的最大结果数量\nSet the maximum number of search results to return"
   },
   {
-    key: "minScore",
+    key: "testModeBlockLimit",
     type: "number",
-    default: 4.0,
-    title: "⭐ 最低相关度分数 / Minimum Score",
-    description: "设置结果筛选的最低相关度分数(0-10)\nSet the minimum relevance score for filtering results (0-10)"
+    default: 100,
+    title: "🧪 测试模式Block限制 / Test Mode Block Limit",
+    description: "测试时只索引前N个blocks，设置为0表示索引全部\nIn test mode, only index first N blocks, set 0 to index all"
+  },
+  
+  // ==================== Ollama 本地部署 ====================
+  {
+    key: "ollamaHeader",
+    type: "heading",
+    title: "🖥️ Ollama 本地部署 / Ollama Local Deployment",
+    description: "请先使用 'ollama pull nomic-embed-text' 下载embedding模型",
+    default: ""
   },
   {
-    key: "batchSize",
-    type: "number",
-    default: 10,
-    title: "⚡ 批处理大小 / Batch Size",
-    description: "设置并行处理相关性得分的批处理大小\nSet the batch size for parallel relevance score processing"
+    key: "host",
+    type: "string",
+    title: "🌐 Ollama聊天模型主机 / Ollama Chat Model Host",
+    description: "",
+    default: "localhost:11434"
   },
+  {
+    key: "model",
+    type: "string",
+    title: "🤖 Ollama聊天模型名称 / Ollama Chat Model Name",
+    description: "",
+    default: "deepseek-r1:8b"
+  },
+  {
+    key: "ollamaHost",
+    type: "string", 
+    title: "🌐 Ollama Embedding服务地址 / Ollama Host",
+    description: "Ollama API服务地址\nOllama API service address",
+    default: "http://localhost:11434"
+  },
+  {
+    key: "ollamaEmbeddingModel", 
+    type: "string",
+    title: "🤖 Ollama Embedding模型名称 / Ollama Embedding Model Name",
+    description: "推荐使用 nomic-embed-text",
+    default: "nomic-embed-text"
+  },
+  
+  // ==================== 自定义API配置 ====================
+  {
+    key: "unifiedApiHeader",
+    type: "heading",
+    title: "🛠️ 自定义API / Custom API Configuration",
+    description: "",
+    default: ""
+  },
+  {
+    key: "apiUrl",
+    type: "string",
+    title: "🔗 聊天模型API URL / Chat Model API URL",
+    description: "",
+    default: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+  },
+  {
+    key: "apiKey",
+    type: "string",
+    title: "🔐 聊天模型API Key / Chat Model API Key",
+    description: "",
+    default: ""
+  },
+  {
+    key: "modelName",
+    type: "string",
+    title: "🤖 聊天模型名称 / Chat Model Name",
+    description: `
+支持符合OpenAI格式的各种API服务。
 
+🧠 聊天模型API示例 (Chat Model API Examples):
+• 智谱清言Zhipu AI: https://open.bigmodel.cn/api/paas/v4/chat/completions
+• 硅基流动SiliconFlow: https://api.siliconflow.cn/v1/chat/completions
+`,
+    default: "GLM-4-Flash-250414"
+  },
   {
-    key: "enableAISummary",
-    type: "boolean",
-    default: true,
-    title: "🤖 启用AI总结 / Enable AI Summary",
-    description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+    key: "cloudEmbeddingApiUrl",
+    type: "string",
+    title: "Embedding API URL", 
+    description: "如SiliconFlow: https://api.siliconflow.cn/v1/embeddings",
+    default: "https://api.siliconflow.cn/v1/embeddings"
+  },
+  {
+    key: "cloudEmbeddingApiKey",
+    type: "string",
+    title: "🔐 Embedding API密钥 / Embedding API Key",
+    description: "", 
+    default: ""
+  },
+  {
+    key: "cloudEmbeddingModel",
+    type: "string",
+    title: "🤖 Embedding模型名称 / Embedding Model Name",
+    description: "SiliconFlow model like BAAI/bge-m3",
+    default: "BAAI/bge-m3"
   },
   
   // ==================== AI回应设置 ====================
