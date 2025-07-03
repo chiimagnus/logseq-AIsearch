@@ -6,756 +6,179 @@ alwaysApply: false
 
 本指南用于在 Logseq AI 搜索插件中实现简单的本地向量存储。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
 
-我们采用最简单的方案：**JSON 文件存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
+我们采用最简单的方案：**localStorage 存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
 
-## 核心依赖
+## 核心架构原则
 
-为了实现此功能，我们只需要以下核心库：
+### 1. 存储策略选择
 
--   `@xenova/transformers`: 用于在本地生成文本 embedding 的库（可选，也可使用 Ollama 或云端 API）。
+**首选方案：localStorage**
+- 在 Logseq 插件环境中最可靠
+- 无需复杂的 API 调用
+- 直接可用，无兼容性问题
+- 容量限制：通常 5-10MB，对大多数使用场景足够
 
-## 核心实现步骤
+**避免的方案：**
+- IndexedDB：在 Logseq 插件环境中可能有兼容性问题
+- Logseq Assets API：方法名和文档可能不一致，存在版本兼容性风险
 
-### 1. 数据结构设计
+### 2. 数据结构设计
 
-向量数据以 JSON 格式存储，每个条目包含 block 信息和对应的向量：
+**向量数据结构：**
+- blockUUID: 唯一标识符
+- pageName: 页面名称
+- blockContent: 块内容
+- vector: 向量数组（number[]）
+- lastUpdated: 时间戳
 
-```typescript
-interface VectorData {
-  blockUUID: string;
-  pageName: string;
-  blockContent: string;
-  vector: number[];  // 向量数组
-  lastUpdated: number; // 时间戳
-}
+**存储键值策略：**
+- 使用统一的存储键：`'ai-search-vector-data'`
+- 直接存储完整的向量数据数组
+- 包含元数据（总数、更新时间等）
 
-// 整个向量数据库就是一个数组
-type VectorDatabase = VectorData[];
-```
+### 3. 错误处理和容量管理
 
-### 2. 存储和加载函数
+**容量检测：**
+- 使用 try-catch 捕获 QuotaExceededError
+- 提供清晰的错误提示和解决建议
+- 考虑数据压缩或清理旧数据
 
-使用浏览器的本地存储（localStorage）来保存和读取向量数据：
+**渐进式保存：**
+- 支持增量保存和构建进度显示
+- 每处理一定数量后保存进度
+- 避免长时间无响应的构建过程
 
-```typescript
-const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
+### 4. 性能优化策略
 
-// 保存向量数据
-async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
-  try {
-    const jsonString = JSON.stringify(vectorData);
-    // 使用浏览器的本地存储
-    localStorage.setItem(VECTOR_STORAGE_KEY, jsonString);
-    console.log(`保存了 ${vectorData.length} 条向量数据到本地存储`);
-  } catch (error) {
-    console.error("保存向量数据失败:", error);
-    throw error;
-  }
-}
+**索引构建优化：**
+- 批处理：使用 Promise.all() 并行处理多个 blocks
+- 进度显示：每1000条显示一次进度，提升用户体验
+- 增量保存：每100个 blocks 保存一次，避免数据丢失
 
-// 加载向量数据
-async function loadVectorData(): Promise<VectorDatabase> {
-  try {
-    // 从浏览器本地存储读取
-    const jsonString = localStorage.getItem(VECTOR_STORAGE_KEY);
-    if (!jsonString) {
-      console.log("向量数据不存在，返回空数组");
-      return [];
-    }
-    
-    const vectorData: VectorDatabase = JSON.parse(jsonString);
-    console.log(`从本地存储加载了 ${vectorData.length} 条向量数据`);
-    return vectorData;
-  } catch (error) {
-    console.error("加载向量数据失败:", error);
-    return [];
-  }
-}
-```
+**搜索优化：**
+- 相似度阈值过滤：设置合理阈值（如0.3）过滤低相关结果
+- 限制搜索结果数量：默认50个结果平衡性能和完整性
+- 使用余弦相似度：计算效率高，效果好
 
-### 3. 生成 Embedding
+### 5. 调试和维护
 
-支持多种 embedding 生成方式：
+**调试命令：**
+- 提供查看向量数据详情的命令
+- 提供清除数据的命令
+- 显示构建状态和统计信息
 
-```typescript
-// Ollama API 调用
-async function generateOllamaEmbedding(text: string): Promise<number[]> {
-  const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
-  const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
-  
-  try {
-    const response = await fetch(`${ollamaHost}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: modelName,
-        prompt: text
-      })
-    });
+**状态管理：**
+- 跟踪索引构建状态
+- 提供数据统计（总数、维度、时间戳）
+- 支持重建和清理操作
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status}`);
-    }
+## 插件配置最佳实践
 
-    const data = await response.json();
-    return data.embedding;
-  } catch (error) {
-    console.error("Ollama embedding failed:", error);
-    throw error;
-  }
-}
+### 1. 设置项简化
 
-// 云端API调用
-async function generateCloudEmbedding(text: string): Promise<number[]> {
-  const apiUrl = String(logseq.settings?.cloudEmbeddingApiUrl || "https://api.siliconflow.cn/v1/embeddings");
-  const apiKey = String(logseq.settings?.cloudEmbeddingApiKey || "");
-  const modelName = String(logseq.settings?.cloudEmbeddingModel || "BAAI/bge-m3");
+**移除不必要的设置：**
+- 不提供传统搜索开关：统一使用向量搜索
+- 统一配置项：避免重复的配置（如合并 host 和 ollamaHost）
+- 移除测试限制：直接索引所有数据，提供完整功能
 
-  if (!apiKey) {
-    throw new Error("云端API密钥未设置");
-  }
+### 2. Embedding 服务配置
 
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelName,
-        input: text
-      })
-    });
+**支持多种服务：**
+- Ollama 本地服务：适合隐私要求高的用户
+- 云端 API：适合追求便利性的用户
+- 自动检测和错误处理
 
-    if (!response.ok) {
-      throw new Error(`Cloud API error: ${response.status}`);
-    }
+**配置验证：**
+- 提供连接测试功能
+- 清晰的错误提示和解决建议
+- 合理的默认配置
 
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error("Cloud embedding failed:", error);
-    throw error;
-  }
-}
+### 3. 用户体验优化
 
-// 统一的embedding生成函数
-async function generateEmbedding(text: string): Promise<number[]> {
-  const serviceType = getEmbeddingServiceType();
-  
-  if (serviceType === 'ollama') {
-    return await generateOllamaEmbedding(text);
-  } else {
-    return await generateCloudEmbedding(text);
-  }
-}
+**进度反馈：**
+- 实时显示索引构建进度
+- 提供预估时间信息
+- 支持后台构建不阻塞用户操作
 
-function getEmbeddingServiceType(): 'ollama' | 'cloud' {
-  const selected = String(logseq.settings?.embeddingModel || "Ollama本地模型 / Ollama Local Model");
-  return selected.includes("Ollama") ? 'ollama' : 'cloud';
-}
-```
+**错误恢复：**
+- 自动重试机制
+- 部分失败不影响整体功能
+- 提供手动重建选项
 
-### 4. 构建向量索引
+## 技术实现要点
 
-遍历所有 blocks，生成向量并保存：
+### 1. 向量计算
 
-```typescript
-async function indexAllPages(): Promise<void> {
-  try {
-    logseq.UI.showMsg("开始建立向量索引...", "success");
-    console.log("Starting to build vector index...");
+**相似度计算：**
+- 使用余弦相似度：适合高维向量比较
+- 标准化处理：确保向量长度一致性
+- 性能优化：避免不必要的计算
 
-    const allBlocks = await getAllBlocksWithPage();
-    if (!allBlocks || allBlocks.length === 0) {
-      logseq.UI.showMsg("没有需要索引的内容。", "warning");
-      return;
-    }
+### 2. 数据管理
 
-    // 测试模式：只索引部分blocks
-    const testLimit = Number(logseq.settings?.testModeBlockLimit) || 0;
-    const blocksToIndex = testLimit > 0 ? allBlocks.slice(0, testLimit) : allBlocks;
-    
-    console.log(`Found ${allBlocks.length} blocks total, indexing ${blocksToIndex.length} blocks.`);
-    if (testLimit > 0) {
-      logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
-    }
-    
-    const vectorData: VectorDatabase = [];
-    let indexedCount = 0;
-    const currentTime = Date.now();
-    
-    for (const block of blocksToIndex) {
-      try {
-        const vector = await generateEmbedding(block.content);
-        vectorData.push({
-          blockUUID: block.uuid,
-          pageName: block.pageName,
-          blockContent: block.content,
-          vector: vector,
-          lastUpdated: currentTime
-        });
-        
-        indexedCount++;
-        
-        // 显示进度
-        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
-          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
-          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
-        }
-      } catch (error) {
-        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
-        // 继续处理其他blocks
-      }
-    }
+**增量更新：**
+- 检测内容变化
+- 只更新修改过的 blocks
+- 保持数据一致性
 
-    // 保存到持久化存储
-    await saveVectorData(vectorData);
-    
-    logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
+**内存管理：**
+- 按需加载向量数据
+- 及时释放不需要的内存
+- 避免内存泄漏
 
-  } catch (error) {
-    console.error("Failed to index all pages:", error);
-    logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
-  }
-}
-```
+### 3. 并发处理
 
-### 5. 向量搜索函数
+**异步操作：**
+- 使用 async/await 处理异步操作
+- 避免阻塞 UI 线程
+- 合理的并发控制
 
-使用余弦相似度进行向量搜索：
+## 故障排除指南
 
-```typescript
-// 计算余弦相似度
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (vecA.length !== vecB.length) {
-    throw new Error('向量维度不匹配');
-  }
-  
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-  
-  if (normA === 0 || normB === 0) {
-    return 0;
-  }
-  
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
+### 1. 存储问题
 
-// 向量搜索
-async function searchBlocks(queryText: string, limit: number = 10) {
-  try {
-    console.log(`Searching for: "${queryText}"`);
-    
-    // 生成查询向量
-    const queryVector = await generateEmbedding(queryText);
-    
-    // 加载所有向量数据
-    const vectorData = await loadVectorData();
-    
-    if (vectorData.length === 0) {
-      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
-      return [];
-    }
-    
-    // 计算相似度并排序
-    const results = vectorData.map(item => ({
-      blockUUID: item.blockUUID,
-      pageName: item.pageName,
-      blockContent: item.blockContent,
-      score: cosineSimilarity(queryVector, item.vector)
-    }))
-    .sort((a, b) => b.score - a.score)  // 按相似度降序排列
-    .slice(0, limit);  // 取前 limit 个结果
+**QuotaExceededError：**
+- 清理浏览器存储
+- 减少索引的 blocks 数量
+- 考虑数据压缩
 
-    console.log("Search results:", results);
-    return results;
+### 2. API 兼容性
 
-  } catch (error) {
-    console.error("Search failed:", error);
-    logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
-    return [];
-  }
-}
-```
+**Logseq API 变化：**
+- 优先使用稳定的 API
+- 提供降级方案
+- 及时更新 API 使用方式
 
-### 6. 辅助函数
+### 3. 性能问题
 
-```typescript
-interface BlockWithPage {
-  uuid: string;
-  content: string;
-  pageName: string;
-}
+**搜索缓慢：**
+- 检查向量数据量
+- 优化相似度计算
+- 考虑索引优化
 
-// 获取所有页面中的 Block
-async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
-  try {
-    const allPages = await logseq.Editor.getAllPages();
-    if (!allPages) {
-      return [];
-    }
-
-    let allBlocks: BlockWithPage[] = [];
-
-    for (const page of allPages) {
-      const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
-      if (pageBlocks) {
-        const flattenedBlocks = flattenBlocks(pageBlocks).map(block => ({
-          uuid: block.uuid,
-          content: block.content,
-          pageName: page.name
-        }));
-        allBlocks = allBlocks.concat(flattenedBlocks);
-      }
-    }
-    
-    // 过滤掉内容为空的 block
-    return allBlocks.filter(block => block.content && block.content.trim() !== '');
-
-  } catch (error) {
-    console.error("Error getting all blocks:", error);
-    return [];
-  }
-}
-
-function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
-  let flattened: BlockEntity[] = [];
-  for (const block of blocks) {
-    flattened.push(block);
-    if (block.children && block.children.length > 0) {
-      flattened = flattened.concat(flattenBlocks(block.children as BlockEntity[]));
-    }
-  }
-  return flattened;
-}
-
-// 获取统计信息
-async function getVectorStoreStats() {
-  try {
-    const vectorData = await loadVectorData();
-    const count = vectorData.length;
-    const dim = vectorData.length > 0 ? vectorData[0].vector.length : 0;
-    return { count, dim };
-  } catch (error) {
-    console.error("Failed to get vector store stats:", error);
-    return { count: 0, dim: 0 };
-  }
-}
-```
-
-## 优势
-
-这个简单方案具有以下优势：
-
-1. **简单可靠**：无需复杂的数据库依赖，只使用浏览器本地存储
-2. **完全本地**：数据存储在浏览器的本地存储中，完全私有
-3. **易于调试**：可以通过浏览器开发者工具查看存储的数据
-4. **快速启动**：无需初始化复杂的数据库
-5. **内存友好**：只在需要时加载数据到内存
-6. **跨平台兼容**：在任何支持 Logseq 的平台上都能工作
-
-## 注意事项
-
-1. **性能考虑**：对于大量数据（>10万个blocks），搜索可能会比较慢
-2. **内存使用**：所有向量数据会加载到内存中进行搜索
-3. **备份**：JSON 文件可以直接复制备份，便于数据迁移
-4. **增量更新**：目前是全量重建索引，后续可以优化为增量更新
+**构建失败：**
+- 检查 embedding 服务状态
+- 验证网络连接
+- 查看错误日志
 
 ## 参考资源
 
 - [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
-- [Logseq Assets API](https://plugins-doc.logseq.com/#/hi_logseq.assets) - 了解文件存储 API
+- [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
+- [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
 
-- [VSS 扩展文档](https://github.com/duckdb/duckdb_vss) - 了解向量搜索扩展的使用方法
-- [DuckDB SQL 参考](https://duckdb.org/docs/sql/introduction) - 了解DuckDB的SQL语法
-- [DuckDB 数组类型](https://duckdb.org/docs/sql/data_types/array) - 了解如何使用数组存储向量
-- [HNSW 索引](https://github.com/duckdb/duckdb_vss#hnsw-index) - 了解HNSW索引的创建和使用
-# 简单向量存储使用指南
+## 实际经验总结
 
-本指南用于在 Logseq AI 搜索插件中实现简单的本地向量存储。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
+**关键教训：**
+1. 在 Logseq 环境中，简单方案往往比复杂方案更可靠
+2. localStorage 虽有限制，但对大多数场景足够
+3. 用户体验比技术复杂度更重要
+4. 错误处理和进度反馈不可忽视
+5. 保持配置简单，避免过度设计
 
-我们采用最简单的方案：**JSON 文件存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
-
-## 核心依赖
-
-为了实现此功能，我们只需要以下核心库：
-
--   `@xenova/transformers`: 用于在本地生成文本 embedding 的库（可选，也可使用 Ollama 或云端 API）。
-
-## 核心实现步骤
-
-### 1. 数据结构设计
-
-向量数据以 JSON 格式存储，每个条目包含 block 信息和对应的向量：
-
-```typescript
-interface VectorData {
-  blockUUID: string;
-  pageName: string;
-  blockContent: string;
-  vector: number[];  // 向量数组
-  lastUpdated: number; // 时间戳
-}
-
-// 整个向量数据库就是一个数组
-type VectorDatabase = VectorData[];
-```
-
-### 2. 存储和加载函数
-
-使用 Logseq 的持久化存储 API 来保存和读取向量数据：
-
-```typescript
-const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
-
-// 保存向量数据
-async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
-  try {
-    await logseq.Assets.makeSandboxStorage();
-    const jsonString = JSON.stringify(vectorData);
-    await logseq.Assets.writeFile(VECTOR_STORAGE_KEY + '.json', jsonString);
-    console.log(`保存了 ${vectorData.length} 条向量数据`);
-  } catch (error) {
-    console.error("保存向量数据失败:", error);
-    throw error;
-  }
-}
-
-// 加载向量数据
-async function loadVectorData(): Promise<VectorDatabase> {
-  try {
-    await logseq.Assets.makeSandboxStorage();
-    const exists = await logseq.Assets.existsFile(VECTOR_STORAGE_KEY + '.json');
-    if (!exists) {
-      console.log("向量数据文件不存在，返回空数组");
-      return [];
-    }
-    
-    const jsonString = await logseq.Assets.readFile(VECTOR_STORAGE_KEY + '.json');
-    const vectorData: VectorDatabase = JSON.parse(jsonString);
-    console.log(`加载了 ${vectorData.length} 条向量数据`);
-    return vectorData;
-  } catch (error) {
-    console.error("加载向量数据失败:", error);
-    return [];
-  }
-}
-```
-
-### 3. 生成 Embedding
-
-支持多种 embedding 生成方式：
-
-```typescript
-// Ollama API 调用
-async function generateOllamaEmbedding(text: string): Promise<number[]> {
-  const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
-  const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
-  
-  try {
-    const response = await fetch(`${ollamaHost}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: modelName,
-        prompt: text
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.embedding;
-  } catch (error) {
-    console.error("Ollama embedding failed:", error);
-    throw error;
-  }
-}
-
-// 云端API调用
-async function generateCloudEmbedding(text: string): Promise<number[]> {
-  const apiUrl = String(logseq.settings?.cloudEmbeddingApiUrl || "https://api.siliconflow.cn/v1/embeddings");
-  const apiKey = String(logseq.settings?.cloudEmbeddingApiKey || "");
-  const modelName = String(logseq.settings?.cloudEmbeddingModel || "BAAI/bge-m3");
-
-  if (!apiKey) {
-    throw new Error("云端API密钥未设置");
-  }
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelName,
-        input: text
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Cloud API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error("Cloud embedding failed:", error);
-    throw error;
-  }
-}
-
-// 统一的embedding生成函数
-async function generateEmbedding(text: string): Promise<number[]> {
-  const serviceType = getEmbeddingServiceType();
-  
-  if (serviceType === 'ollama') {
-    return await generateOllamaEmbedding(text);
-  } else {
-    return await generateCloudEmbedding(text);
-  }
-}
-
-function getEmbeddingServiceType(): 'ollama' | 'cloud' {
-  const selected = String(logseq.settings?.embeddingModel || "Ollama本地模型 / Ollama Local Model");
-  return selected.includes("Ollama") ? 'ollama' : 'cloud';
-}
-```
-
-### 4. 构建向量索引
-
-遍历所有 blocks，生成向量并保存：
-
-```typescript
-async function indexAllPages(): Promise<void> {
-  try {
-    logseq.UI.showMsg("开始建立向量索引...", "success");
-    console.log("Starting to build vector index...");
-
-    const allBlocks = await getAllBlocksWithPage();
-    if (!allBlocks || allBlocks.length === 0) {
-      logseq.UI.showMsg("没有需要索引的内容。", "warning");
-      return;
-    }
-
-    // 测试模式：只索引部分blocks
-    const testLimit = Number(logseq.settings?.testModeBlockLimit) || 0;
-    const blocksToIndex = testLimit > 0 ? allBlocks.slice(0, testLimit) : allBlocks;
-    
-    console.log(`Found ${allBlocks.length} blocks total, indexing ${blocksToIndex.length} blocks.`);
-    if (testLimit > 0) {
-      logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
-    }
-    
-    const vectorData: VectorDatabase = [];
-    let indexedCount = 0;
-    const currentTime = Date.now();
-    
-    for (const block of blocksToIndex) {
-      try {
-        const vector = await generateEmbedding(block.content);
-        vectorData.push({
-          blockUUID: block.uuid,
-          pageName: block.pageName,
-          blockContent: block.content,
-          vector: vector,
-          lastUpdated: currentTime
-        });
-        
-        indexedCount++;
-        
-        // 显示进度
-        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
-          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
-          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
-        }
-      } catch (error) {
-        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
-        // 继续处理其他blocks
-      }
-    }
-
-    // 保存到持久化存储
-    await saveVectorData(vectorData);
-    
-    logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
-
-  } catch (error) {
-    console.error("Failed to index all pages:", error);
-    logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
-  }
-}
-```
-
-### 5. 向量搜索函数
-
-使用余弦相似度进行向量搜索：
-
-```typescript
-// 计算余弦相似度
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (vecA.length !== vecB.length) {
-    throw new Error('向量维度不匹配');
-  }
-  
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-  
-  if (normA === 0 || normB === 0) {
-    return 0;
-  }
-  
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-// 向量搜索
-async function searchBlocks(queryText: string, limit: number = 10) {
-  try {
-    console.log(`Searching for: "${queryText}"`);
-    
-    // 生成查询向量
-    const queryVector = await generateEmbedding(queryText);
-    
-    // 加载所有向量数据
-    const vectorData = await loadVectorData();
-    
-    if (vectorData.length === 0) {
-      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
-      return [];
-    }
-    
-    // 计算相似度并排序
-    const results = vectorData.map(item => ({
-      blockUUID: item.blockUUID,
-      pageName: item.pageName,
-      blockContent: item.blockContent,
-      score: cosineSimilarity(queryVector, item.vector)
-    }))
-    .sort((a, b) => b.score - a.score)  // 按相似度降序排列
-    .slice(0, limit);  // 取前 limit 个结果
-
-    console.log("Search results:", results);
-    return results;
-
-  } catch (error) {
-    console.error("Search failed:", error);
-    logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
-    return [];
-  }
-}
-```
-
-### 6. 辅助函数
-
-```typescript
-interface BlockWithPage {
-  uuid: string;
-  content: string;
-  pageName: string;
-}
-
-// 获取所有页面中的 Block
-async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
-  try {
-    const allPages = await logseq.Editor.getAllPages();
-    if (!allPages) {
-      return [];
-    }
-
-    let allBlocks: BlockWithPage[] = [];
-
-    for (const page of allPages) {
-      const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
-      if (pageBlocks) {
-        const flattenedBlocks = flattenBlocks(pageBlocks).map(block => ({
-          uuid: block.uuid,
-          content: block.content,
-          pageName: page.name
-        }));
-        allBlocks = allBlocks.concat(flattenedBlocks);
-      }
-    }
-    
-    // 过滤掉内容为空的 block
-    return allBlocks.filter(block => block.content && block.content.trim() !== '');
-
-  } catch (error) {
-    console.error("Error getting all blocks:", error);
-    return [];
-  }
-}
-
-function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
-  let flattened: BlockEntity[] = [];
-  for (const block of blocks) {
-    flattened.push(block);
-    if (block.children && block.children.length > 0) {
-      flattened = flattened.concat(flattenBlocks(block.children as BlockEntity[]));
-    }
-  }
-  return flattened;
-}
-
-// 获取统计信息
-async function getVectorStoreStats() {
-  try {
-    const vectorData = await loadVectorData();
-    const count = vectorData.length;
-    const dim = vectorData.length > 0 ? vectorData[0].vector.length : 0;
-    return { count, dim };
-  } catch (error) {
-    console.error("Failed to get vector store stats:", error);
-    return { count: 0, dim: 0 };
-  }
-}
-```
-
-## 优势
-
-这个简单方案具有以下优势：
-
-1. **简单可靠**：无需复杂的数据库依赖，只使用 JSON 文件存储
-2. **完全本地**：数据存储在 Logseq 插件的沙箱存储中，完全私有
-3. **易于调试**：可以直接查看和编辑 JSON 文件
-4. **快速启动**：无需初始化复杂的数据库
-5. **内存友好**：只在需要时加载数据到内存
-6. **跨平台兼容**：在任何支持 Logseq 的平台上都能工作
-
-## 注意事项
-
-1. **性能考虑**：对于大量数据（>10万个blocks），搜索可能会比较慢
-2. **内存使用**：所有向量数据会加载到内存中进行搜索
-3. **备份**：JSON 文件可以直接复制备份，便于数据迁移
-4. **增量更新**：目前是全量重建索引，后续可以优化为增量更新
-
-## 参考资源
-
-- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
-- [Logseq Assets API](https://plugins-doc.logseq.com/#/hi_logseq.assets) - 了解文件存储 API
-
-- [VSS 扩展文档](https://github.com/duckdb/duckdb_vss) - 了解向量搜索扩展的使用方法
-- [DuckDB SQL 参考](https://duckdb.org/docs/sql/introduction) - 了解DuckDB的SQL语法
-- [DuckDB 数组类型](https://duckdb.org/docs/sql/data_types/array) - 了解如何使用数组存储向量
-- [HNSW 索引](https://github.com/duckdb/duckdb_vss#hnsw-index) - 了解HNSW索引的创建和使用
+**成功因素：**
+1. 优先考虑兼容性和稳定性
+2. 提供清晰的错误提示和解决方案
+3. 实现渐进式功能，支持部分失败场景
+4. 重视性能优化和用户体验
+5. 保持代码简洁，易于维护和调试
