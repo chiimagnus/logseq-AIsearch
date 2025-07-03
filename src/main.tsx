@@ -47,13 +47,7 @@ const settings: SettingSchemaDesc[] = [
     description: "",
     default: "alt+mod+r"
   },
-  // {
-  //   key: "enableVectorSearch",
-  //   type: "boolean",
-  //   default: true,
-  //   title: "🚀 启用AI语义搜索 / Enable AI Semantic Search",
-  //   description: ""
-  // },
+
   {
     key: "rebuildIndexShortcut",
     type: "string",
@@ -84,13 +78,7 @@ const settings: SettingSchemaDesc[] = [
     description: "请先使用 'ollama pull nomic-embed-text' 下载embedding模型",
     default: ""
   },
-  {
-    key: "host",
-    type: "string",
-    title: "🌐 Ollama聊天模型主机 / Ollama Chat Model Host",
-    description: "",
-    default: "localhost:11434"
-  },
+
   {
     key: "model",
     type: "string",
@@ -101,8 +89,8 @@ const settings: SettingSchemaDesc[] = [
   {
     key: "ollamaHost",
     type: "string", 
-    title: "🌐 Ollama Embedding服务地址 / Ollama Host",
-    description: "Ollama API服务地址\nOllama API service address",
+    title: "🌐 Ollama Host",
+    description: "Ollama API服务地址 (聊天和Embedding) / Ollama API service address (Chat and Embedding)",
     default: "http://localhost:11434"
   },
   {
@@ -197,26 +185,14 @@ const settings: SettingSchemaDesc[] = [
 async function main() {
   console.info("AI-Search Plugin Loaded");
 
-  // 根据用户设置初始化向量数据库
-  if (logseq.settings?.enableVectorSearch) {
-    await initializeVectorStore();
-  }
+  // 初始化向量数据库
+  await initializeVectorStore();
 
   // 注册设置
   logseq.useSettingsSchema(settings);
 
-  // 监听设置变更，动态初始化向量数据库
+  // 监听设置变更
   logseq.onSettingsChanged(async (newSettings, oldSettings) => {
-    const vectorSearchEnabled = newSettings.enableVectorSearch;
-    const wasVectorSearchEnabled = oldSettings?.enableVectorSearch;
-    
-    // 如果向量搜索从关闭变为开启
-    if (vectorSearchEnabled && !wasVectorSearchEnabled) {
-      await logseq.UI.showMsg("正在初始化向量存储... | Initializing vector storage...", "info");
-      await initializeVectorStore();
-      await logseq.UI.showMsg("向量存储已初始化，请重建索引 | Vector storage initialized, please rebuild index", "success");
-    }
-    
     // 如果快捷键发生变更，提示用户重启插件
     if (newSettings.rebuildIndexShortcut !== oldSettings?.rebuildIndexShortcut) {
       await logseq.UI.showMsg("快捷键已更新，重启插件后生效 | Shortcut updated, restart plugin to take effect", "info");
@@ -256,37 +232,27 @@ async function main() {
       mode: "non-editing"
     } as any,
   }, async () => {
-    if (logseq.settings?.enableVectorSearch) {
-      await indexAllPages();
-    } else {
-      await logseq.UI.showMsg("请先启用向量搜索功能 | Please enable vector search first", "warning");
-    }
+    await indexAllPages();
   });
   logseq.Editor.registerSlashCommand("Re-build AI search index", async () => {
-    if (logseq.settings?.enableVectorSearch) {
-      await indexAllPages();
-    } else {
-      await logseq.UI.showMsg("请先启用向量搜索功能 | Please enable vector search first", "warning");
-    }
+    await indexAllPages();
   });
 
   // 注册调试命令
-  if (logseq.settings?.enableVectorSearch) {
-    const { getVectorStoreStats } = await import('./services/vectorService');
-    
-    logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
-      const stats = await getVectorStoreStats();
-      console.log("Vector Store Stats:", stats);
-      await logseq.UI.showMsg(
-        `📊 向量存储统计:\n` +
-        `• 总Block数: ${stats.count || 0}\n` +
-        `• 向量维度: ${stats.dim || 'Unknown'}\n` +
-        `• 详细信息请查看控制台`, 
-        "success", 
-        { timeout: 8000 }
-      );
-    });
-  }
+  const { getVectorStoreStats } = await import('./services/vectorService');
+  
+  logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
+    const stats = await getVectorStoreStats();
+    console.log("Vector Store Stats:", stats);
+    await logseq.UI.showMsg(
+      `📊 向量存储统计:\n` +
+      `• 总Block数: ${stats.count || 0}\n` +
+      `• 向量维度: ${stats.dim || 'Unknown'}\n` +
+      `• 详细信息请查看控制台`, 
+      "success", 
+      { timeout: 8000 }
+    );
+  });
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
