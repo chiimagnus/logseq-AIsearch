@@ -55,20 +55,7 @@ const settings: SettingSchemaDesc[] = [
     description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
     default: "alt+mod+i"
   },
-  {
-    key: "maxResults",
-    type: "number",
-    default: 50,
-    title: "📊 最大搜索结果数 / Max Results",
-    description: "设置搜索返回的最大结果数量\nSet the maximum number of search results to return"
-  },
-  {
-    key: "testModeBlockLimit",
-    type: "number",
-    default: 100,
-    title: "🧪 测试模式Block限制 / Test Mode Block Limit",
-    description: "测试时只索引前N个blocks，设置为0表示索引全部\nIn test mode, only index first N blocks, set 0 to index all"
-  },
+
   
   // ==================== Ollama 本地部署 ====================
   {
