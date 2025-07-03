@@ -35,7 +35,7 @@ type VectorDatabase = VectorData[];
 
 ### 2. 存储和加载函数
 
-使用 Logseq 的持久化存储 API 来保存和读取向量数据：
+使用浏览器的本地存储（localStorage）来保存和读取向量数据：
 
 ```typescript
 const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
@@ -43,10 +43,10 @@ const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
 // 保存向量数据
 async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
   try {
-    await logseq.Assets.makeSandboxStorage();
     const jsonString = JSON.stringify(vectorData);
-    await logseq.Assets.writeFile(VECTOR_STORAGE_KEY + '.json', jsonString);
-    console.log(`保存了 ${vectorData.length} 条向量数据`);
+    // 使用浏览器的本地存储
+    localStorage.setItem(VECTOR_STORAGE_KEY, jsonString);
+    console.log(`保存了 ${vectorData.length} 条向量数据到本地存储`);
   } catch (error) {
     console.error("保存向量数据失败:", error);
     throw error;
@@ -56,16 +56,15 @@ async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
 // 加载向量数据
 async function loadVectorData(): Promise<VectorDatabase> {
   try {
-    await logseq.Assets.makeSandboxStorage();
-    const exists = await logseq.Assets.existsFile(VECTOR_STORAGE_KEY + '.json');
-    if (!exists) {
-      console.log("向量数据文件不存在，返回空数组");
+    // 从浏览器本地存储读取
+    const jsonString = localStorage.getItem(VECTOR_STORAGE_KEY);
+    if (!jsonString) {
+      console.log("向量数据不存在，返回空数组");
       return [];
     }
     
-    const jsonString = await logseq.Assets.readFile(VECTOR_STORAGE_KEY + '.json');
     const vectorData: VectorDatabase = JSON.parse(jsonString);
-    console.log(`加载了 ${vectorData.length} 条向量数据`);
+    console.log(`从本地存储加载了 ${vectorData.length} 条向量数据`);
     return vectorData;
   } catch (error) {
     console.error("加载向量数据失败:", error);
@@ -358,9 +357,9 @@ async function getVectorStoreStats() {
 
 这个简单方案具有以下优势：
 
-1. **简单可靠**：无需复杂的数据库依赖，只使用 JSON 文件存储
-2. **完全本地**：数据存储在 Logseq 插件的沙箱存储中，完全私有
-3. **易于调试**：可以直接查看和编辑 JSON 文件
+1. **简单可靠**：无需复杂的数据库依赖，只使用浏览器本地存储
+2. **完全本地**：数据存储在浏览器的本地存储中，完全私有
+3. **易于调试**：可以通过浏览器开发者工具查看存储的数据
 4. **快速启动**：无需初始化复杂的数据库
 5. **内存友好**：只在需要时加载数据到内存
 6. **跨平台兼容**：在任何支持 Logseq 的平台上都能工作
