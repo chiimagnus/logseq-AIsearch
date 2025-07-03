@@ -228,18 +228,18 @@ async function main() {
   // 注册调试命令
   const { getVectorStoreStats } = await import('./services/vectorService');
   
-  logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
-    const stats = await getVectorStoreStats();
-    console.log("Vector Store Stats:", stats);
-    await logseq.UI.showMsg(
-      `📊 向量存储统计:\n` +
-      `• 总Block数: ${stats.count || 0}\n` +
-      `• 向量维度: ${stats.dim || 'Unknown'}\n` +
-      `• 详细信息请查看控制台`, 
-      "success", 
-      { timeout: 8000 }
-    );
-  });
+  // logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
+  //   const stats = await getVectorStoreStats();
+  //   console.log("Vector Store Stats:", stats);
+  //   await logseq.UI.showMsg(
+  //     `📊 向量存储统计:\n` +
+  //     `• 总Block数: ${stats.count || 0}\n` +
+  //     `• 向量维度: ${stats.dim || 'Unknown'}\n` +
+  //     `• 详细信息请查看控制台`, 
+  //     "success", 
+  //     { timeout: 8000 }
+  //   );
+  // });
 
   // 添加查看向量数据详情的调试命令
   logseq.Editor.registerSlashCommand("Vector Debug: Show Data", async () => {
