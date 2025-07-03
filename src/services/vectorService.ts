@@ -213,14 +213,10 @@ export async function indexAllPages() {
       return;
     }
 
-    // 测试模式：只索引部分blocks
-    const testLimit = Number(logseq.settings?.testModeBlockLimit) || 0;
-    const blocksToIndex = testLimit > 0 ? allBlocks.slice(0, testLimit) : allBlocks;
+    // 索引所有blocks
+    const blocksToIndex = allBlocks;
     
-    console.log(`Found ${allBlocks.length} blocks total, indexing ${blocksToIndex.length} blocks.`);
-    if (testLimit > 0) {
-      logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
-    }
+    console.log(`Found ${allBlocks.length} blocks total, indexing all blocks.`);
     
     const vectorData: VectorDatabase = [];
     let indexedCount = 0;
@@ -316,7 +312,7 @@ export function getInitializationStatus() {
 }
 
 // 11. 搜索函数
-export async function search(queryText: string, limit: number = 10) {
+export async function search(queryText: string, limit: number = 50) {
   if (!isInitialized) {
     logseq.UI.showMsg("向量存储未初始化，请稍后再试。", "error");
     return null;
