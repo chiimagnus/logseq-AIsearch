@@ -19,12 +19,8 @@ export async function timeAwareSearch(query: string): Promise<SearchResult[]> {
   console.log(`🔍 [向量搜索] 使用查询: "${query}"`);
 
   try {
-    const maxResults: number = typeof logseq.settings?.maxResults === 'number' 
-      ? logseq.settings.maxResults 
-      : 50;
-
-    // 调用向量搜索服务
-    const vectorResults = await vectorSearch(query, maxResults);
+    // 调用向量搜索服务，使用默认限制
+    const vectorResults = await vectorSearch(query);
 
     if (!vectorResults || vectorResults.length === 0) {
       console.log("😞 [向量搜索] 未找到任何结果");
