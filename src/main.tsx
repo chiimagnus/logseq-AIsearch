@@ -260,6 +260,18 @@ async function main() {
     }
   });
 
+  // 添加清除向量数据的调试命令
+  logseq.Editor.registerSlashCommand("Vector Debug: Clear Data", async () => {
+    try {
+      localStorage.removeItem('ai-search-vector-data');
+      await logseq.UI.showMsg("✅ 向量数据已清除，请重新建立索引", "success");
+      console.log("向量数据已清除");
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 清除向量数据失败", "error");
+      console.error("清除向量数据失败:", error);
+    }
+  });
+
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
     key: 'AI-Search',
