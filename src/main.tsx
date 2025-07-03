@@ -241,6 +241,25 @@ async function main() {
     );
   });
 
+  // 添加查看向量数据详情的调试命令
+  logseq.Editor.registerSlashCommand("Vector Debug: Show Data", async () => {
+    const data = localStorage.getItem('ai-search-vector-data');
+    if (data) {
+      const vectorData = JSON.parse(data);
+      console.log("📊 向量数据详情:", vectorData);
+      console.log("📊 前5条数据样例:", vectorData.slice(0, 5));
+      await logseq.UI.showMsg(
+        `📊 向量数据已输出到控制台\n` +
+        `• 总数据量: ${vectorData.length}\n` +
+        `• 查看控制台获取详细信息`, 
+        "success", 
+        { timeout: 5000 }
+      );
+    } else {
+      await logseq.UI.showMsg("❌ 未找到向量数据", "error");
+    }
+  });
+
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
     key: 'AI-Search',
