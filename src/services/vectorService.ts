@@ -218,10 +218,14 @@ export async function indexAllPages() {
     
     console.log(`Found ${allBlocks.length} blocks total, indexing all blocks.`);
     
-    const vectorData: VectorDatabase = [];
+    // 首先清除旧数据，开始全新索引
+    await saveVectorData([]);
+    
+    let vectorData: VectorDatabase = [];
     let indexedCount = 0;
     const currentTime = Date.now();
     const batchSize = 10; // 批处理大小
+    const saveBatchSize = 100; // 每处理100个blocks保存一次
     
     // 分批处理以提高速度
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
@@ -253,6 +257,12 @@ export async function indexAllPages() {
       
       indexedCount += batch.length;
       
+      // 每处理saveBatchSize个blocks就保存一次（增量保存）
+      if (indexedCount % saveBatchSize === 0 || indexedCount === blocksToIndex.length) {
+        await saveVectorData(vectorData);
+        console.log(`💾 已保存 ${vectorData.length} 条向量数据到本地存储`);
+      }
+      
       // 显示详细进度
       const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
       if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
@@ -260,9 +270,6 @@ export async function indexAllPages() {
         console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%) | Success: ${vectorData.length}`);
       }
     }
-
-    // 保存到持久化存储
-    await saveVectorData(vectorData);
     
     logseq.UI.showMsg(`✅ 索引建立完成！共处理 ${indexedCount} 个blocks，成功索引 ${vectorData.length} 条内容。`, "success", { timeout: 5000 });
 

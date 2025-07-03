@@ -248,15 +248,24 @@ async function main() {
       const vectorData = JSON.parse(data);
       console.log("📊 向量数据详情:", vectorData);
       console.log("📊 前5条数据样例:", vectorData.slice(0, 5));
+      
+      // 分析数据时间戳来判断是否正在构建
+      const timestamps = vectorData.map((item: any) => item.lastUpdated);
+      const minTimestamp = Math.min(...timestamps);
+      const maxTimestamp = Math.max(...timestamps);
+      const isBuilding = (Date.now() - maxTimestamp) < 300000; // 5分钟内有更新认为正在构建
+      
       await logseq.UI.showMsg(
-        `📊 向量数据已输出到控制台\n` +
+        `📊 向量数据详情\n` +
         `• 总数据量: ${vectorData.length}\n` +
-        `• 查看控制台获取详细信息`, 
+        `• 状态: ${isBuilding ? '🔄 构建中' : '✅ 完成'}\n` +
+        `• 最后更新: ${new Date(maxTimestamp).toLocaleString()}\n` +
+        `• 详细数据请查看控制台`, 
         "success", 
-        { timeout: 5000 }
+        { timeout: 6000 }
       );
     } else {
-      await logseq.UI.showMsg("❌ 未找到向量数据", "error");
+      await logseq.UI.showMsg("❌ 未找到向量数据\n• 请先执行 'Re-build AI search index' 建立索引", "warning");
     }
   });
 
