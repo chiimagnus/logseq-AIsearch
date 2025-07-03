@@ -58,7 +58,7 @@ export async function aiSearchCommand() {
             name: result.pageName
           }
         },
-        score: result._distance ? (1 - result._distance) * 10 : 5 // 将距离转换为分数
+        score: result.score || 0 // 使用向量搜索返回的相似度分数
       }));
       
       // 如果启用AI总结，使用传统方式生成总结
