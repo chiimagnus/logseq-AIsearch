@@ -1,125 +1,227 @@
 ---
-description: 本指南用于在 Logseq AI 搜索插件中集成和使用 LanceDB 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
+description: 本指南用于在 Logseq AI 搜索插件中集成和使用 DuckDB-WASM 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
 globs: 
 alwaysApply: false
 ---
-# LanceDB 使用指南
 
-本指南用于在 Logseq AI 搜索插件中集成和使用 LanceDB 向量数据库。我们的目标是实现基于本地 embedding 的、以 block 为单位的向量搜索功能。
+# DuckDB-WASM 使用指南
 
-我们将遵循官方文档的指导：[LanceDB Quickstart](https://lancedb.github.io/lancedb/basic/)
+本指南用于在 Logseq AI 搜索插件中集成和使用 DuckDB-WASM 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
+
+我们将遵循官方文档的指导：[DuckDB-WASM 文档](https://duckdb.org/docs/api/wasm/overview.html) 和 [VSS 扩展](https://github.com/duckdb/duckdb_vss)
 
 ## 核心依赖
 
 为了实现此功能，我们需要以下核心库：
 
--   `@lancedb/lancedb`: LanceDB 的官方 TypeScript/JavaScript 客户端。
--   `@xenova/transformers`: 用于在本地生成文本 embedding 的库。
--   `apache-arrow`: LanceDB 的依赖库。
+-   `@duckdb/duckdb-wasm`: DuckDB 的官方 WebAssembly 客户端。
+-   `@xenova/transformers`: 用于在本地生成文本 embedding 的库（可选，也可使用 Ollama 或云端 API）。
 
 ## 核心实现步骤
 
-### 1. 初始化 Embedding 模型
+### 1. 初始化 DuckDB-WASM 和 VSS 扩展
 
-我们使用 `@xenova/transformers` 来加载本地 embedding 模型。我们将创建一个用于“特征提取”的 pipeline。
-
-```typescript
-import { pipeline, env } from '@xenova/transformers';
-
-// 可选：指定本地模型路径，避免每次都从网络下载
-// env.localModelPath = '/path/to/models';
-// env.allowRemoteModels = false;
-
-// 创建一个特征提取 pipeline
-// `all-MiniLM-L6-v2` 是一个轻量且高效的模型
-const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-```
-
-### 2. 初始化数据库和数据表
-
-连接到 LanceDB 数据库并定义数据表。由于我们手动生成 embedding，schema 中需要直接定义 vector 字段。`all-MiniLM-L6-v2` 模型输出的向量维度是 384。
+我们使用 DuckDB-WASM 来创建本地持久化数据库，并加载 VSS 扩展来支持向量搜索。
 
 ```typescript
-import * as lancedb from "@lancedb/lancedb";
+import * as duckdb from '@duckdb/duckdb-wasm';
 
-// 在插件的数据目录中指定数据库路径
-const dbPath = "/path/to/plugin/data/lancedb";
-const db = await lancedb.connect(dbPath);
+let db: duckdb.AsyncDuckDB;
 
-// 通过一条虚拟数据来创建或打开一个表，LanceDB 会自动推断 Schema
-// 这是确保表结构正确的一种简单方式
-const dummyData = [{
-    vector: Array(384).fill(0),
-    blockId: "dummy",
-    pageName: "dummy",
-    blockContent: "dummy"
-}];
-const table = await db.createTable("logseq_blocks", dummyData, { mode: "overwrite" });
-```
+async function initializeDuckDB() {
+  // 获取 DuckDB bundle
+  const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+  
+  // 创建 worker
+  const worker_url = URL.createObjectURL(
+    new Blob([`importScripts("${bundle.mainWorker!}");`], {type: 'application/javascript'})
+  );
 
-### 3. 索引数据
+  // 实例化数据库
+  const worker = new Worker(worker_url);
+  const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
+  db = new duckdb.AsyncDuckDB(logger, worker);
+  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  URL.revokeObjectURL(worker_url);
+  
+  // 连接到持久化数据库
+  await db.open({
+    path: 'logseq-ai-search.db',
+  });
 
-遍历 Logseq 的所有 block，为每个 block 生成 embedding，然后存入 LanceDB。
-
-```typescript
-// 假设我们有一个函数 `getAllLogseqBlocks` 可以获取所有 block
-const blocks = await getAllLogseqBlocks(); // [{ id: "...", content: "...", page: { "original-name": "..." } }]
-
-for (const block of blocks) {
-  if (!block.content.trim()) continue; // 跳过空 block
-
-  // 1. 生成 embedding
-  const result = await extractor(block.content, { pooling: 'mean', normalize: true });
-
-  // 2. 准备数据
-  const data = {
-    vector: Array.from(result.data), // 从 Float32Array 转换成普通数组
-    blockId: block.id.toString(),
-    pageName: block.page['original-name'],
-    blockContent: block.content
-  };
-
-  // 3. 添加到表中
-  await table.add([data]);
+  const conn = await db.connect();
+  
+  // 安装和加载 VSS 扩展
+  await conn.query(`INSTALL vss;`);
+  await conn.query(`LOAD vss;`);
+  
+  await conn.close();
 }
 ```
 
-### 4. 执行向量搜索
+### 2. 创建向量表
 
-当用户输入查询时，我们先为查询文本生成 embedding，然后用这个 embedding 向量在 LanceDB 中进行搜索。
+使用 DuckDB 的数组类型来存储向量，并创建相应的表结构。
 
 ```typescript
-async function searchBlocks(queryText: string) {
-  if (!table) return [];
+const TABLE_NAME = 'logseq_blocks';
+const VECTOR_DIMENSION = 768; // 根据使用的模型调整
 
-  // 1. 为查询文本生成 embedding
-  const result = await extractor(queryText, { pooling: 'mean', normalize: true });
-  const queryVector = Array.from(result.data);
-
-  // 2. 执行搜索
-  const results = await table
-    .search(queryVector)
-    .limit(10)
-    .toArray();
-
-  // `results` 将会是一个包含最相关 block 数据的数组
-  // [{ vector: [...], blockId: "...", pageName: "...", blockContent: "...", _score: 0.8... }]
-  return results;
+async function createVectorTable() {
+  const conn = await db.connect();
+  
+  try {
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+        blockUUID VARCHAR PRIMARY KEY,
+        pageName VARCHAR,
+        blockContent TEXT,
+        vector FLOAT[${VECTOR_DIMENSION}]
+      );
+    `);
+    
+    console.log(`Table '${TABLE_NAME}' created successfully.`);
+  } finally {
+    await conn.close();
+  }
 }
 ```
 
-## 性能优化
+### 3. 生成和存储 Embedding
 
-对于大量的 block，为了加速搜索，我们可以在数据全部添加完毕后创建向量索引。
+支持多种 embedding 生成方式：Ollama 本地模型、云端 API。
 
 ```typescript
-await table.createIndex();
+// Ollama API 调用
+async function generateOllamaEmbedding(text: string): Promise<number[]> {
+  const response = await fetch('http://localhost:11434/api/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'nomic-embed-text',
+      prompt: text
+    })
+  });
+  
+  const data = await response.json();
+  return data.embedding;
+}
+
+// 索引数据
+async function indexBlocks(blocks: BlockWithPage[]) {
+  const conn = await db.connect();
+  
+  try {
+    const data = [];
+    for (const block of blocks) {
+      const vector = await generateOllamaEmbedding(block.content);
+      data.push({
+        vector,
+        blockUUID: block.uuid,
+        pageName: block.pageName,
+        blockContent: block.content
+      });
+    }
+
+    // 使用 DuckDB 的高效批量插入
+    await db.insertArrowFromJSONAsync(data, { name: TABLE_NAME });
+    
+  } finally {
+    await conn.close();
+  }
+}
 ```
+
+### 4. 创建向量索引
+
+使用 HNSW 索引来加速向量搜索。
+
+```typescript
+async function createVectorIndex() {
+  const conn = await db.connect();
+  
+  try {
+    await conn.query(`CREATE INDEX hnsw_idx ON ${TABLE_NAME} USING HNSW (vector);`);
+    console.log("HNSW index created successfully.");
+  } finally {
+    await conn.close();
+  }
+}
+```
+
+### 5. 执行向量搜索
+
+使用 VSS 扩展的 `list_similarity` 函数来计算向量相似度。
+
+```typescript
+async function searchBlocks(queryText: string, limit: number = 10) {
+  const conn = await db.connect();
+  
+  try {
+    // 为查询文本生成 embedding
+    const queryVector = await generateOllamaEmbedding(queryText);
+
+    // 使用预处理语句进行搜索
+    const p_stmt = await conn.prepare(`
+      SELECT
+        blockUUID,
+        pageName,
+        blockContent, 
+        list_similarity(vector, ?) AS score
+      FROM ${TABLE_NAME}
+      ORDER BY score DESC
+      LIMIT ?;
+    `);
+    
+    const result = await p_stmt.query(queryVector, limit);
+    const searchResults = result.toArray().map(row => row.toJSON());
+    
+    await p_stmt.close();
+    return searchResults;
+    
+  } finally {
+    await conn.close();
+  }
+}
+```
+
+## 高级特性
+
+### 批量处理和性能优化
+
+```typescript
+// 批量处理大量数据
+const batchSize = 100;
+for (let i = 0; i < blocks.length; i += batchSize) {
+  const batch = blocks.slice(i, i + batchSize);
+  await indexBlocks(batch);
+}
+
+// 获取数据库统计信息
+async function getStats() {
+  const conn = await db.connect();
+  try {
+    const result = await conn.query(`SELECT COUNT(*) as count FROM ${TABLE_NAME};`);
+    return result.toArray()[0].toJSON().count;
+  } finally {
+    await conn.close();
+  }
+}
+```
+
+### 相似度函数选择
+
+VSS 扩展支持多种相似度计算方法：
+
+- `list_similarity(vector1, vector2)`: 默认余弦相似度
+- `list_distance(vector1, vector2)`: 欧几里得距离
+- `list_inner_product(vector1, vector2)`: 内积
 
 ## 参考资源
-- [LanceDB 快速入门](https://lancedb.github.io/lancedb/basic/) - 了解LanceDB的核心功能和API
-- [LanceDB向量搜索](https://lancedb.github.io/lancedb/concepts/vector_search/) - 了解LanceDB的向量搜索
-- [LanceDB索引概念](https://lancedb.github.io/lancedb/concepts/index_ivfpq/) - 了解LanceDB的索引概念
-- [LanceDB索引概念](https://lancedb.github.io/lancedb/concepts/index_hnsw/) - 了解LanceDB的索引概念
-- [LanceDB存储概念](https://lancedb.github.io/lancedb/concepts/storage/) - 了解LanceDB的存储概念
-- [LanceDB数据管理](https://lancedb.github.io/lancedb/concepts/data_management/) - 了解LanceDB的数据管理
+
+- [DuckDB-WASM 文档](https://duckdb.org/docs/api/wasm/overview.html) - 了解DuckDB WebAssembly的核心功能
+- [VSS 扩展文档](https://github.com/duckdb/duckdb_vss) - 了解向量搜索扩展的使用方法
+- [DuckDB SQL 参考](https://duckdb.org/docs/sql/introduction) - 了解DuckDB的SQL语法
+- [DuckDB 数组类型](https://duckdb.org/docs/sql/data_types/array) - 了解如何使用数组存储向量
+- [HNSW 索引](https://github.com/duckdb/duckdb_vss#hnsw-index) - 了解HNSW索引的创建和使用
