@@ -345,51 +345,19 @@ async function main() {
 
   // 注册调试命令
   if (logseq.settings?.enableVectorSearch) {
-    const { getVectorStoreStats, testSimilarity } = await import('./services/vectorService');
+    const { getVectorStoreStats } = await import('./services/vectorService');
     
     logseq.Editor.registerSlashCommand("Vector Debug: Show Stats", async () => {
       const stats = await getVectorStoreStats();
       console.log("Vector Store Stats:", stats);
-      if (stats.error) {
-        await logseq.UI.showMsg(`调试信息获取失败: ${stats.error}`, "error");
-      } else {
-        await logseq.UI.showMsg(
-          `📊 向量数据库统计:\n` +
-          `• 总Block数: ${stats.totalBlocks || 0}\n` +
-          `• 服务类型: ${stats.modelInfo?.serviceType === 'ollama' ? 'Ollama本地' : '云端API'}\n` +
-          `• 向量维度: ${stats.modelInfo?.dimension || 'Unknown'}\n` +
-          `• 测试模式限制: ${stats.indexInfo?.testModeLimit || '无限制'}\n` +
-          `• 详细信息请查看控制台`, 
-          "success", 
-          { timeout: 8000 }
-        );
-      }
-    });
-
-    logseq.Editor.registerSlashCommand("Vector Debug: Test Similarity", async () => {
-      const query1 = window.prompt("输入第一个测试文本:");
-      if (!query1) return;
-      
-      const query2 = window.prompt("输入第二个测试文本:");
-      if (!query2) return;
-      
-      const result = await testSimilarity(query1, query2);
-      console.log("Similarity Test:", result);
-      
-      if (result.error) {
-        await logseq.UI.showMsg(`相似度测试失败: ${result.error}`, "error");
-      } else {
-        const similarity = result.similarity || 0;
-        await logseq.UI.showMsg(
-          `🔍 相似度测试结果:\n` +
-          `文本1: "${result.query1}"\n` +
-          `文本2: "${result.query2}"\n` +
-          `相似度: ${(similarity * 100).toFixed(2)}%\n` +
-          `结论: ${result.interpretation}`,
-          "info",
-          { timeout: 10000 }
-        );
-      }
+      await logseq.UI.showMsg(
+        `📊 向量数据库统计:\n` +
+        `• 总Block数: ${stats.count || 0}\n` +
+        `• 向量维度: ${stats.dim || 'Unknown'}\n` +
+        `• 详细信息请查看控制台`, 
+        "success", 
+        { timeout: 8000 }
+      );
     });
   }
 
