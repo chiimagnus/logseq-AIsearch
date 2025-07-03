@@ -1,226 +1,761 @@
 ---
-description: 本指南用于在 Logseq AI 搜索插件中集成和使用 DuckDB-WASM 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
-globs: 
+description: 本指南用于在 Logseq AI 搜索插件中实现简单的本地向量存储。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。  我们采用最简单的方案：**JSON 文件存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
 alwaysApply: false
 ---
+# 简单向量存储使用指南
 
-# DuckDB-WASM 使用指南
+本指南用于在 Logseq AI 搜索插件中实现简单的本地向量存储。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
 
-本指南用于在 Logseq AI 搜索插件中集成和使用 DuckDB-WASM 向量数据库。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
-
-我们将遵循官方文档的指导：[DuckDB-WASM 文档](https://duckdb.org/docs/api/wasm/overview.html) 和 [VSS 扩展](https://github.com/duckdb/duckdb_vss)
+我们采用最简单的方案：**JSON 文件存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
 
 ## 核心依赖
 
-为了实现此功能，我们需要以下核心库：
+为了实现此功能，我们只需要以下核心库：
 
--   `@duckdb/duckdb-wasm`: DuckDB 的官方 WebAssembly 客户端。
 -   `@xenova/transformers`: 用于在本地生成文本 embedding 的库（可选，也可使用 Ollama 或云端 API）。
 
 ## 核心实现步骤
 
-### 1. 初始化 DuckDB-WASM 和 VSS 扩展
+### 1. 数据结构设计
 
-我们使用 DuckDB-WASM 来创建本地持久化数据库，并加载 VSS 扩展来支持向量搜索。
+向量数据以 JSON 格式存储，每个条目包含 block 信息和对应的向量：
 
 ```typescript
-import * as duckdb from '@duckdb/duckdb-wasm';
-
-let db: duckdb.AsyncDuckDB;
-
-async function initializeDuckDB() {
-  // 获取 DuckDB bundle
-  const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-  
-  // 创建 worker
-  const worker_url = URL.createObjectURL(
-    new Blob([`importScripts("${bundle.mainWorker!}");`], {type: 'application/javascript'})
-  );
-
-  // 实例化数据库
-  const worker = new Worker(worker_url);
-  const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
-  db = new duckdb.AsyncDuckDB(logger, worker);
-  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-  URL.revokeObjectURL(worker_url);
-  
-  // 连接到持久化数据库
-  await db.open({
-    path: 'logseq-ai-search.db',
-  });
-
-  const conn = await db.connect();
-  
-  // 安装和加载 VSS 扩展
-  await conn.query(`INSTALL vss;`);
-  await conn.query(`LOAD vss;`);
-  
-  await conn.close();
+interface VectorData {
+  blockUUID: string;
+  pageName: string;
+  blockContent: string;
+  vector: number[];  // 向量数组
+  lastUpdated: number; // 时间戳
 }
+
+// 整个向量数据库就是一个数组
+type VectorDatabase = VectorData[];
 ```
 
-### 2. 创建向量表
+### 2. 存储和加载函数
 
-使用 DuckDB 的数组类型来存储向量，并创建相应的表结构。
+使用 Logseq 的持久化存储 API 来保存和读取向量数据：
 
 ```typescript
-const TABLE_NAME = 'logseq_blocks';
-const VECTOR_DIMENSION = 768; // 根据使用的模型调整
+const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
 
-async function createVectorTable() {
-  const conn = await db.connect();
-  
+// 保存向量数据
+async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
   try {
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-        blockUUID VARCHAR PRIMARY KEY,
-        pageName VARCHAR,
-        blockContent TEXT,
-        vector FLOAT[${VECTOR_DIMENSION}]
-      );
-    `);
+    await logseq.Assets.makeSandboxStorage();
+    const jsonString = JSON.stringify(vectorData);
+    await logseq.Assets.writeFile(VECTOR_STORAGE_KEY + '.json', jsonString);
+    console.log(`保存了 ${vectorData.length} 条向量数据`);
+  } catch (error) {
+    console.error("保存向量数据失败:", error);
+    throw error;
+  }
+}
+
+// 加载向量数据
+async function loadVectorData(): Promise<VectorDatabase> {
+  try {
+    await logseq.Assets.makeSandboxStorage();
+    const exists = await logseq.Assets.existsFile(VECTOR_STORAGE_KEY + '.json');
+    if (!exists) {
+      console.log("向量数据文件不存在，返回空数组");
+      return [];
+    }
     
-    console.log(`Table '${TABLE_NAME}' created successfully.`);
-  } finally {
-    await conn.close();
+    const jsonString = await logseq.Assets.readFile(VECTOR_STORAGE_KEY + '.json');
+    const vectorData: VectorDatabase = JSON.parse(jsonString);
+    console.log(`加载了 ${vectorData.length} 条向量数据`);
+    return vectorData;
+  } catch (error) {
+    console.error("加载向量数据失败:", error);
+    return [];
   }
 }
 ```
 
-### 3. 生成和存储 Embedding
+### 3. 生成 Embedding
 
-支持多种 embedding 生成方式：Ollama 本地模型、云端 API。
+支持多种 embedding 生成方式：
 
 ```typescript
 // Ollama API 调用
 async function generateOllamaEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('http://localhost:11434/api/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'nomic-embed-text',
-      prompt: text
-    })
-  });
-  
-  const data = await response.json();
-  return data.embedding;
-}
-
-// 索引数据
-async function indexBlocks(blocks: BlockWithPage[]) {
-  const conn = await db.connect();
+  const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
+  const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
   
   try {
-    const data = [];
-    for (const block of blocks) {
-      const vector = await generateOllamaEmbedding(block.content);
-      data.push({
-        vector,
-        blockUUID: block.uuid,
-        pageName: block.pageName,
-        blockContent: block.content
-      });
+    const response = await fetch(`${ollamaHost}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelName,
+        prompt: text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status}`);
     }
 
-    // 使用 DuckDB 的高效批量插入
-    await db.insertArrowFromJSONAsync(data, { name: TABLE_NAME });
-    
-  } finally {
-    await conn.close();
+    const data = await response.json();
+    return data.embedding;
+  } catch (error) {
+    console.error("Ollama embedding failed:", error);
+    throw error;
   }
 }
-```
 
-### 4. 创建向量索引
+// 云端API调用
+async function generateCloudEmbedding(text: string): Promise<number[]> {
+  const apiUrl = String(logseq.settings?.cloudEmbeddingApiUrl || "https://api.siliconflow.cn/v1/embeddings");
+  const apiKey = String(logseq.settings?.cloudEmbeddingApiKey || "");
+  const modelName = String(logseq.settings?.cloudEmbeddingModel || "BAAI/bge-m3");
 
-使用 HNSW 索引来加速向量搜索。
+  if (!apiKey) {
+    throw new Error("云端API密钥未设置");
+  }
 
-```typescript
-async function createVectorIndex() {
-  const conn = await db.connect();
-  
   try {
-    await conn.query(`CREATE INDEX hnsw_idx ON ${TABLE_NAME} USING HNSW (vector);`);
-    console.log("HNSW index created successfully.");
-  } finally {
-    await conn.close();
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        input: text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cloud API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error("Cloud embedding failed:", error);
+    throw error;
+  }
+}
+
+// 统一的embedding生成函数
+async function generateEmbedding(text: string): Promise<number[]> {
+  const serviceType = getEmbeddingServiceType();
+  
+  if (serviceType === 'ollama') {
+    return await generateOllamaEmbedding(text);
+  } else {
+    return await generateCloudEmbedding(text);
+  }
+}
+
+function getEmbeddingServiceType(): 'ollama' | 'cloud' {
+  const selected = String(logseq.settings?.embeddingModel || "Ollama本地模型 / Ollama Local Model");
+  return selected.includes("Ollama") ? 'ollama' : 'cloud';
+}
+```
+
+### 4. 构建向量索引
+
+遍历所有 blocks，生成向量并保存：
+
+```typescript
+async function indexAllPages(): Promise<void> {
+  try {
+    logseq.UI.showMsg("开始建立向量索引...", "success");
+    console.log("Starting to build vector index...");
+
+    const allBlocks = await getAllBlocksWithPage();
+    if (!allBlocks || allBlocks.length === 0) {
+      logseq.UI.showMsg("没有需要索引的内容。", "warning");
+      return;
+    }
+
+    // 测试模式：只索引部分blocks
+    const testLimit = Number(logseq.settings?.testModeBlockLimit) || 0;
+    const blocksToIndex = testLimit > 0 ? allBlocks.slice(0, testLimit) : allBlocks;
+    
+    console.log(`Found ${allBlocks.length} blocks total, indexing ${blocksToIndex.length} blocks.`);
+    if (testLimit > 0) {
+      logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
+    }
+    
+    const vectorData: VectorDatabase = [];
+    let indexedCount = 0;
+    const currentTime = Date.now();
+    
+    for (const block of blocksToIndex) {
+      try {
+        const vector = await generateEmbedding(block.content);
+        vectorData.push({
+          blockUUID: block.uuid,
+          pageName: block.pageName,
+          blockContent: block.content,
+          vector: vector,
+          lastUpdated: currentTime
+        });
+        
+        indexedCount++;
+        
+        // 显示进度
+        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
+          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
+          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
+        }
+      } catch (error) {
+        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
+        // 继续处理其他blocks
+      }
+    }
+
+    // 保存到持久化存储
+    await saveVectorData(vectorData);
+    
+    logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
+
+  } catch (error) {
+    console.error("Failed to index all pages:", error);
+    logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
   }
 }
 ```
 
-### 5. 执行向量搜索
+### 5. 向量搜索函数
 
-使用 VSS 扩展的 `list_similarity` 函数来计算向量相似度。
+使用余弦相似度进行向量搜索：
 
 ```typescript
+// 计算余弦相似度
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) {
+    throw new Error('向量维度不匹配');
+  }
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+  
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// 向量搜索
 async function searchBlocks(queryText: string, limit: number = 10) {
-  const conn = await db.connect();
-  
   try {
-    // 为查询文本生成 embedding
-    const queryVector = await generateOllamaEmbedding(queryText);
+    console.log(`Searching for: "${queryText}"`);
+    
+    // 生成查询向量
+    const queryVector = await generateEmbedding(queryText);
+    
+    // 加载所有向量数据
+    const vectorData = await loadVectorData();
+    
+    if (vectorData.length === 0) {
+      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
+      return [];
+    }
+    
+    // 计算相似度并排序
+    const results = vectorData.map(item => ({
+      blockUUID: item.blockUUID,
+      pageName: item.pageName,
+      blockContent: item.blockContent,
+      score: cosineSimilarity(queryVector, item.vector)
+    }))
+    .sort((a, b) => b.score - a.score)  // 按相似度降序排列
+    .slice(0, limit);  // 取前 limit 个结果
 
-    // 使用预处理语句进行搜索
-    const p_stmt = await conn.prepare(`
-      SELECT
-        blockUUID,
-        pageName,
-        blockContent, 
-        list_similarity(vector, ?) AS score
-      FROM ${TABLE_NAME}
-      ORDER BY score DESC
-      LIMIT ?;
-    `);
-    
-    const result = await p_stmt.query(queryVector, limit);
-    const searchResults = result.toArray().map(row => row.toJSON());
-    
-    await p_stmt.close();
-    return searchResults;
-    
-  } finally {
-    await conn.close();
+    console.log("Search results:", results);
+    return results;
+
+  } catch (error) {
+    console.error("Search failed:", error);
+    logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
+    return [];
   }
 }
 ```
 
-## 高级特性
-
-### 批量处理和性能优化
+### 6. 辅助函数
 
 ```typescript
-// 批量处理大量数据
-const batchSize = 100;
-for (let i = 0; i < blocks.length; i += batchSize) {
-  const batch = blocks.slice(i, i + batchSize);
-  await indexBlocks(batch);
+interface BlockWithPage {
+  uuid: string;
+  content: string;
+  pageName: string;
 }
 
-// 获取数据库统计信息
-async function getStats() {
-  const conn = await db.connect();
+// 获取所有页面中的 Block
+async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
   try {
-    const result = await conn.query(`SELECT COUNT(*) as count FROM ${TABLE_NAME};`);
-    return result.toArray()[0].toJSON().count;
-  } finally {
-    await conn.close();
+    const allPages = await logseq.Editor.getAllPages();
+    if (!allPages) {
+      return [];
+    }
+
+    let allBlocks: BlockWithPage[] = [];
+
+    for (const page of allPages) {
+      const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
+      if (pageBlocks) {
+        const flattenedBlocks = flattenBlocks(pageBlocks).map(block => ({
+          uuid: block.uuid,
+          content: block.content,
+          pageName: page.name
+        }));
+        allBlocks = allBlocks.concat(flattenedBlocks);
+      }
+    }
+    
+    // 过滤掉内容为空的 block
+    return allBlocks.filter(block => block.content && block.content.trim() !== '');
+
+  } catch (error) {
+    console.error("Error getting all blocks:", error);
+    return [];
+  }
+}
+
+function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
+  let flattened: BlockEntity[] = [];
+  for (const block of blocks) {
+    flattened.push(block);
+    if (block.children && block.children.length > 0) {
+      flattened = flattened.concat(flattenBlocks(block.children as BlockEntity[]));
+    }
+  }
+  return flattened;
+}
+
+// 获取统计信息
+async function getVectorStoreStats() {
+  try {
+    const vectorData = await loadVectorData();
+    const count = vectorData.length;
+    const dim = vectorData.length > 0 ? vectorData[0].vector.length : 0;
+    return { count, dim };
+  } catch (error) {
+    console.error("Failed to get vector store stats:", error);
+    return { count: 0, dim: 0 };
   }
 }
 ```
 
-### 相似度函数选择
+## 优势
 
-VSS 扩展支持多种相似度计算方法：
+这个简单方案具有以下优势：
 
-- `list_similarity(vector1, vector2)`: 默认余弦相似度
-- `list_distance(vector1, vector2)`: 欧几里得距离
-- `list_inner_product(vector1, vector2)`: 内积
+1. **简单可靠**：无需复杂的数据库依赖，只使用 JSON 文件存储
+2. **完全本地**：数据存储在 Logseq 插件的沙箱存储中，完全私有
+3. **易于调试**：可以直接查看和编辑 JSON 文件
+4. **快速启动**：无需初始化复杂的数据库
+5. **内存友好**：只在需要时加载数据到内存
+6. **跨平台兼容**：在任何支持 Logseq 的平台上都能工作
+
+## 注意事项
+
+1. **性能考虑**：对于大量数据（>10万个blocks），搜索可能会比较慢
+2. **内存使用**：所有向量数据会加载到内存中进行搜索
+3. **备份**：JSON 文件可以直接复制备份，便于数据迁移
+4. **增量更新**：目前是全量重建索引，后续可以优化为增量更新
 
 ## 参考资源
 
-- [DuckDB-WASM 文档](https://duckdb.org/docs/api/wasm/overview.html) - 了解DuckDB WebAssembly的核心功能
+- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
+- [Logseq Assets API](https://plugins-doc.logseq.com/#/hi_logseq.assets) - 了解文件存储 API
+
+- [VSS 扩展文档](https://github.com/duckdb/duckdb_vss) - 了解向量搜索扩展的使用方法
+- [DuckDB SQL 参考](https://duckdb.org/docs/sql/introduction) - 了解DuckDB的SQL语法
+- [DuckDB 数组类型](https://duckdb.org/docs/sql/data_types/array) - 了解如何使用数组存储向量
+- [HNSW 索引](https://github.com/duckdb/duckdb_vss#hnsw-index) - 了解HNSW索引的创建和使用
+# 简单向量存储使用指南
+
+本指南用于在 Logseq AI 搜索插件中实现简单的本地向量存储。我们的目标是实现基于本地 embedding 的、以 logseq笔记软件中的最小单位 `block` 为单位的向量搜索功能。
+
+我们采用最简单的方案：**JSON 文件存储 + 纯 JavaScript 向量搜索**，这种方案简单、可靠、无需复杂依赖。
+
+## 核心依赖
+
+为了实现此功能，我们只需要以下核心库：
+
+-   `@xenova/transformers`: 用于在本地生成文本 embedding 的库（可选，也可使用 Ollama 或云端 API）。
+
+## 核心实现步骤
+
+### 1. 数据结构设计
+
+向量数据以 JSON 格式存储，每个条目包含 block 信息和对应的向量：
+
+```typescript
+interface VectorData {
+  blockUUID: string;
+  pageName: string;
+  blockContent: string;
+  vector: number[];  // 向量数组
+  lastUpdated: number; // 时间戳
+}
+
+// 整个向量数据库就是一个数组
+type VectorDatabase = VectorData[];
+```
+
+### 2. 存储和加载函数
+
+使用 Logseq 的持久化存储 API 来保存和读取向量数据：
+
+```typescript
+const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
+
+// 保存向量数据
+async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
+  try {
+    await logseq.Assets.makeSandboxStorage();
+    const jsonString = JSON.stringify(vectorData);
+    await logseq.Assets.writeFile(VECTOR_STORAGE_KEY + '.json', jsonString);
+    console.log(`保存了 ${vectorData.length} 条向量数据`);
+  } catch (error) {
+    console.error("保存向量数据失败:", error);
+    throw error;
+  }
+}
+
+// 加载向量数据
+async function loadVectorData(): Promise<VectorDatabase> {
+  try {
+    await logseq.Assets.makeSandboxStorage();
+    const exists = await logseq.Assets.existsFile(VECTOR_STORAGE_KEY + '.json');
+    if (!exists) {
+      console.log("向量数据文件不存在，返回空数组");
+      return [];
+    }
+    
+    const jsonString = await logseq.Assets.readFile(VECTOR_STORAGE_KEY + '.json');
+    const vectorData: VectorDatabase = JSON.parse(jsonString);
+    console.log(`加载了 ${vectorData.length} 条向量数据`);
+    return vectorData;
+  } catch (error) {
+    console.error("加载向量数据失败:", error);
+    return [];
+  }
+}
+```
+
+### 3. 生成 Embedding
+
+支持多种 embedding 生成方式：
+
+```typescript
+// Ollama API 调用
+async function generateOllamaEmbedding(text: string): Promise<number[]> {
+  const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
+  const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
+  
+  try {
+    const response = await fetch(`${ollamaHost}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelName,
+        prompt: text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.embedding;
+  } catch (error) {
+    console.error("Ollama embedding failed:", error);
+    throw error;
+  }
+}
+
+// 云端API调用
+async function generateCloudEmbedding(text: string): Promise<number[]> {
+  const apiUrl = String(logseq.settings?.cloudEmbeddingApiUrl || "https://api.siliconflow.cn/v1/embeddings");
+  const apiKey = String(logseq.settings?.cloudEmbeddingApiKey || "");
+  const modelName = String(logseq.settings?.cloudEmbeddingModel || "BAAI/bge-m3");
+
+  if (!apiKey) {
+    throw new Error("云端API密钥未设置");
+  }
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        input: text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cloud API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error("Cloud embedding failed:", error);
+    throw error;
+  }
+}
+
+// 统一的embedding生成函数
+async function generateEmbedding(text: string): Promise<number[]> {
+  const serviceType = getEmbeddingServiceType();
+  
+  if (serviceType === 'ollama') {
+    return await generateOllamaEmbedding(text);
+  } else {
+    return await generateCloudEmbedding(text);
+  }
+}
+
+function getEmbeddingServiceType(): 'ollama' | 'cloud' {
+  const selected = String(logseq.settings?.embeddingModel || "Ollama本地模型 / Ollama Local Model");
+  return selected.includes("Ollama") ? 'ollama' : 'cloud';
+}
+```
+
+### 4. 构建向量索引
+
+遍历所有 blocks，生成向量并保存：
+
+```typescript
+async function indexAllPages(): Promise<void> {
+  try {
+    logseq.UI.showMsg("开始建立向量索引...", "success");
+    console.log("Starting to build vector index...");
+
+    const allBlocks = await getAllBlocksWithPage();
+    if (!allBlocks || allBlocks.length === 0) {
+      logseq.UI.showMsg("没有需要索引的内容。", "warning");
+      return;
+    }
+
+    // 测试模式：只索引部分blocks
+    const testLimit = Number(logseq.settings?.testModeBlockLimit) || 0;
+    const blocksToIndex = testLimit > 0 ? allBlocks.slice(0, testLimit) : allBlocks;
+    
+    console.log(`Found ${allBlocks.length} blocks total, indexing ${blocksToIndex.length} blocks.`);
+    if (testLimit > 0) {
+      logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
+    }
+    
+    const vectorData: VectorDatabase = [];
+    let indexedCount = 0;
+    const currentTime = Date.now();
+    
+    for (const block of blocksToIndex) {
+      try {
+        const vector = await generateEmbedding(block.content);
+        vectorData.push({
+          blockUUID: block.uuid,
+          pageName: block.pageName,
+          blockContent: block.content,
+          vector: vector,
+          lastUpdated: currentTime
+        });
+        
+        indexedCount++;
+        
+        // 显示进度
+        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
+          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
+          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
+        }
+      } catch (error) {
+        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
+        // 继续处理其他blocks
+      }
+    }
+
+    // 保存到持久化存储
+    await saveVectorData(vectorData);
+    
+    logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
+
+  } catch (error) {
+    console.error("Failed to index all pages:", error);
+    logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
+  }
+}
+```
+
+### 5. 向量搜索函数
+
+使用余弦相似度进行向量搜索：
+
+```typescript
+// 计算余弦相似度
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) {
+    throw new Error('向量维度不匹配');
+  }
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+  
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// 向量搜索
+async function searchBlocks(queryText: string, limit: number = 10) {
+  try {
+    console.log(`Searching for: "${queryText}"`);
+    
+    // 生成查询向量
+    const queryVector = await generateEmbedding(queryText);
+    
+    // 加载所有向量数据
+    const vectorData = await loadVectorData();
+    
+    if (vectorData.length === 0) {
+      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
+      return [];
+    }
+    
+    // 计算相似度并排序
+    const results = vectorData.map(item => ({
+      blockUUID: item.blockUUID,
+      pageName: item.pageName,
+      blockContent: item.blockContent,
+      score: cosineSimilarity(queryVector, item.vector)
+    }))
+    .sort((a, b) => b.score - a.score)  // 按相似度降序排列
+    .slice(0, limit);  // 取前 limit 个结果
+
+    console.log("Search results:", results);
+    return results;
+
+  } catch (error) {
+    console.error("Search failed:", error);
+    logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
+    return [];
+  }
+}
+```
+
+### 6. 辅助函数
+
+```typescript
+interface BlockWithPage {
+  uuid: string;
+  content: string;
+  pageName: string;
+}
+
+// 获取所有页面中的 Block
+async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
+  try {
+    const allPages = await logseq.Editor.getAllPages();
+    if (!allPages) {
+      return [];
+    }
+
+    let allBlocks: BlockWithPage[] = [];
+
+    for (const page of allPages) {
+      const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
+      if (pageBlocks) {
+        const flattenedBlocks = flattenBlocks(pageBlocks).map(block => ({
+          uuid: block.uuid,
+          content: block.content,
+          pageName: page.name
+        }));
+        allBlocks = allBlocks.concat(flattenedBlocks);
+      }
+    }
+    
+    // 过滤掉内容为空的 block
+    return allBlocks.filter(block => block.content && block.content.trim() !== '');
+
+  } catch (error) {
+    console.error("Error getting all blocks:", error);
+    return [];
+  }
+}
+
+function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
+  let flattened: BlockEntity[] = [];
+  for (const block of blocks) {
+    flattened.push(block);
+    if (block.children && block.children.length > 0) {
+      flattened = flattened.concat(flattenBlocks(block.children as BlockEntity[]));
+    }
+  }
+  return flattened;
+}
+
+// 获取统计信息
+async function getVectorStoreStats() {
+  try {
+    const vectorData = await loadVectorData();
+    const count = vectorData.length;
+    const dim = vectorData.length > 0 ? vectorData[0].vector.length : 0;
+    return { count, dim };
+  } catch (error) {
+    console.error("Failed to get vector store stats:", error);
+    return { count: 0, dim: 0 };
+  }
+}
+```
+
+## 优势
+
+这个简单方案具有以下优势：
+
+1. **简单可靠**：无需复杂的数据库依赖，只使用 JSON 文件存储
+2. **完全本地**：数据存储在 Logseq 插件的沙箱存储中，完全私有
+3. **易于调试**：可以直接查看和编辑 JSON 文件
+4. **快速启动**：无需初始化复杂的数据库
+5. **内存友好**：只在需要时加载数据到内存
+6. **跨平台兼容**：在任何支持 Logseq 的平台上都能工作
+
+## 注意事项
+
+1. **性能考虑**：对于大量数据（>10万个blocks），搜索可能会比较慢
+2. **内存使用**：所有向量数据会加载到内存中进行搜索
+3. **备份**：JSON 文件可以直接复制备份，便于数据迁移
+4. **增量更新**：目前是全量重建索引，后续可以优化为增量更新
+
+## 参考资源
+
+- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
+- [Logseq Assets API](https://plugins-doc.logseq.com/#/hi_logseq.assets) - 了解文件存储 API
+
 - [VSS 扩展文档](https://github.com/duckdb/duckdb_vss) - 了解向量搜索扩展的使用方法
 - [DuckDB SQL 参考](https://duckdb.org/docs/sql/introduction) - 了解DuckDB的SQL语法
 - [DuckDB 数组类型](https://duckdb.org/docs/sql/data_types/array) - 了解如何使用数组存储向量
