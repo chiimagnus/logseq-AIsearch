@@ -19,8 +19,8 @@ alwaysApply: false
 - 容量限制：通常 5-10MB，对大多数使用场景足够
 
 **避免的方案：**
-- IndexedDB：在 Logseq 插件环境中可能有兼容性问题
-- Logseq Assets API：方法名和文档可能不一致，存在版本兼容性风险
+- IndexedDB：在 Logseq 插件环境中可能有兼容性问题【已测试，不行！】
+- Logseq Assets API：方法名和文档可能不一致，存在版本兼容性风险【存疑？】
 
 ### 2. 数据结构设计
 
@@ -71,39 +71,6 @@ alwaysApply: false
 - 跟踪索引构建状态
 - 提供数据统计（总数、维度、时间戳）
 - 支持重建和清理操作
-
-## 插件配置最佳实践
-
-### 1. 设置项简化
-
-**移除不必要的设置：**
-- 不提供传统搜索开关：统一使用向量搜索
-- 统一配置项：避免重复的配置（如合并 host 和 ollamaHost）
-- 移除测试限制：直接索引所有数据，提供完整功能
-
-### 2. Embedding 服务配置
-
-**支持多种服务：**
-- Ollama 本地服务：适合隐私要求高的用户
-- 云端 API：适合追求便利性的用户
-- 自动检测和错误处理
-
-**配置验证：**
-- 提供连接测试功能
-- 清晰的错误提示和解决建议
-- 合理的默认配置
-
-### 3. 用户体验优化
-
-**进度反馈：**
-- 实时显示索引构建进度
-- 提供预估时间信息
-- 支持后台构建不阻塞用户操作
-
-**错误恢复：**
-- 自动重试机制
-- 部分失败不影响整体功能
-- 提供手动重建选项
 
 ## 技术实现要点
 
@@ -161,12 +128,6 @@ alwaysApply: false
 - 验证网络连接
 - 查看错误日志
 
-## 参考资源
-
-- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
-- [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
-- [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
-
 ## 实际经验总结
 
 **关键教训：**
@@ -182,3 +143,10 @@ alwaysApply: false
 3. 实现渐进式功能，支持部分失败场景
 4. 重视性能优化和用户体验
 5. 保持代码简洁，易于维护和调试
+
+## 参考资源
+
+- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
+- [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
+- [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
+
