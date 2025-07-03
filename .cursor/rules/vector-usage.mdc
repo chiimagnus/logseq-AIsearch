@@ -149,4 +149,3 @@ alwaysApply: false
 - [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
 - [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
 - [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
-
