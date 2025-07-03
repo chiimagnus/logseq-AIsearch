@@ -1,25 +1,28 @@
-// 负责封装 AI 模型加载、数据库初始化、内容索引和向量搜索的核心逻辑。
+// 负责封装 AI 模型加载、数据存储、内容索引和向量搜索的核心逻辑。
 
-import * as duckdb from '@duckdb/duckdb-wasm';
 import { BlockEntity } from '@logseq/libs/dist/LSPlugin';
 
-// 1. 定义核心变量
-let db: duckdb.AsyncDuckDB;
-let isInitialized = false;
-const TABLE_NAME = 'logseq_blocks';
-
-// 动态获取批处理大小
-function getBatchSize(): number {
-  return Number(logseq.settings?.vectorBatchSize) || 100;
+// 1. 定义核心数据结构
+interface VectorData {
+  blockUUID: string;
+  pageName: string;
+  blockContent: string;
+  vector: number[];
+  lastUpdated: number;
 }
 
-// 获取embedding服务类型
+type VectorDatabase = VectorData[];
+
+// 2. 核心变量
+let isInitialized = false;
+const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
+
+// 3. 配置函数
 function getEmbeddingServiceType(): 'ollama' | 'cloud' {
   const selected = String(logseq.settings?.embeddingModel || "Ollama本地模型 / Ollama Local Model");
   return selected.includes("Ollama") ? 'ollama' : 'cloud';
 }
 
-// 获取向量维度（根据不同模型）
 function getVectorDimension(): number {
   const serviceType = getEmbeddingServiceType();
   if (serviceType === 'ollama') {
@@ -31,7 +34,38 @@ function getVectorDimension(): number {
   }
 }
 
-// Ollama API调用
+// 4. 存储和加载函数
+async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
+  try {
+    const jsonString = JSON.stringify(vectorData);
+    // 使用浏览器的本地存储
+    localStorage.setItem(VECTOR_STORAGE_KEY, jsonString);
+    console.log(`保存了 ${vectorData.length} 条向量数据到本地存储`);
+  } catch (error) {
+    console.error("保存向量数据失败:", error);
+    throw error;
+  }
+}
+
+async function loadVectorData(): Promise<VectorDatabase> {
+  try {
+    // 从浏览器本地存储读取
+    const jsonString = localStorage.getItem(VECTOR_STORAGE_KEY);
+    if (!jsonString) {
+      console.log("向量数据不存在，返回空数组");
+      return [];
+    }
+    
+    const vectorData: VectorDatabase = JSON.parse(jsonString);
+    console.log(`从本地存储加载了 ${vectorData.length} 条向量数据`);
+    return vectorData;
+  } catch (error) {
+    console.error("加载向量数据失败:", error);
+    return [];
+  }
+}
+
+// 5. Embedding 生成函数
 async function generateOllamaEmbedding(text: string): Promise<number[]> {
   const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
   const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
@@ -60,7 +94,6 @@ async function generateOllamaEmbedding(text: string): Promise<number[]> {
   }
 }
 
-// 云端API调用
 async function generateCloudEmbedding(text: string): Promise<number[]> {
   const apiUrl = String(logseq.settings?.cloudEmbeddingApiUrl || "https://api.siliconflow.cn/v1/embeddings");
   const apiKey = String(logseq.settings?.cloudEmbeddingApiKey || "");
@@ -95,7 +128,6 @@ async function generateCloudEmbedding(text: string): Promise<number[]> {
   }
 }
 
-// 统一的embedding生成函数
 async function generateEmbedding(text: string): Promise<number[]> {
   const serviceType = getEmbeddingServiceType();
   
@@ -106,56 +138,40 @@ async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
-// 2. 初始化函数 (Rewritten for DuckDB)
+// 6. 向量搜索函数
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) {
+    throw new Error('向量维度不匹配');
+  }
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+  
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// 7. 初始化函数
 export async function initializeVectorStore() {
   if (isInitialized) {
     console.log("Vector store already initialized.");
     return;
   }
-  console.log("Vector store initializing with DuckDB-WASM...");
+  console.log("Vector store initializing...");
 
   try {
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-    
-    const worker_url = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker!}");`], {type: 'application/javascript'})
-    );
-
-    // Instantiate the async DB
-    const worker = new Worker(worker_url);
-    const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING); // Only show warnings and errors
-    db = new duckdb.AsyncDuckDB(logger, worker);
-    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-    URL.revokeObjectURL(worker_url);
-    
-    // Connect to a persistent database
-    await db.open({
-        path: 'logseq-ai-search.db',
-    });
-
-    const conn = await db.connect();
-    console.log("DuckDB-WASM initialized and connected to persistent storage.");
-    logseq.UI.showMsg("DuckDB 向量数据库已连接", "info", { timeout: 3000 });
-
-    // Install and load VSS extension
-    await conn.query(`INSTALL vss;`);
-    await conn.query(`LOAD vss;`);
-    console.log("VSS extension for DuckDB loaded.");
-
-    // Create table if it doesn't exist
-    const vectorDim = getVectorDimension();
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-        blockUUID VARCHAR PRIMARY KEY,
-        pageName VARCHAR,
-        blockContent TEXT,
-        vector FLOAT[]
-      );
-    `);
-    console.log(`Table '${TABLE_NAME}' is ready.`);
-
-    await conn.close();
+    console.log("Vector storage initializing...");
+    logseq.UI.showMsg("向量存储系统已初始化", "info", { timeout: 3000 });
 
     // 测试embedding服务连接
     const serviceType = getEmbeddingServiceType();
@@ -174,19 +190,18 @@ export async function initializeVectorStore() {
     console.log("Vector store initialized successfully.");
 
   } catch (error) {
-      console.error("Vector store (DuckDB) initialization failed:", error);
-      logseq.UI.showMsg("向量数据库初始化失败，请检查控制台日志", "error");
+      console.error("Vector store initialization failed:", error);
+      logseq.UI.showMsg("向量存储初始化失败，请检查控制台日志", "error");
   }
 }
 
-// 3. 索引全部页面
+// 8. 索引所有页面
 export async function indexAllPages() {
-  if (!isInitialized || !db) {
-    logseq.UI.showMsg("向量数据库未初始化，请稍后再试。", "error");
+  if (!isInitialized) {
+    logseq.UI.showMsg("向量存储未初始化，请稍后再试。", "error");
     return;
   }
 
-  const conn = await db.connect();
   try {
     logseq.UI.showMsg("开始建立向量索引...", "success");
     console.log("Starting to build vector index...");
@@ -207,69 +222,43 @@ export async function indexAllPages() {
       logseq.UI.showMsg(`🧪 测试模式：只索引前 ${blocksToIndex.length} 个blocks`, "info", { timeout: 3000 });
     }
     
-    // 清空旧表并重建
-    await conn.query(`DROP TABLE IF EXISTS ${TABLE_NAME};`);
-    await conn.query(`
-      CREATE TABLE ${TABLE_NAME} (
-        blockUUID VARCHAR PRIMARY KEY,
-        pageName VARCHAR,
-        blockContent TEXT,
-        vector FLOAT[]
-      );
-    `);
-    console.log("Old table dropped and new table created for re-indexing.");
-
+    const vectorData: VectorDatabase = [];
     let indexedCount = 0;
-    const batchSize = getBatchSize();
+    const currentTime = Date.now();
     
-    for (let i = 0; i < blocksToIndex.length; i += batchSize) {
-      const batch = blocksToIndex.slice(i, i + batchSize);
-      
-      const data = [];
-      for (const block of batch) {
-        try {
-          const vector = await generateEmbedding(block.content);
-          data.push({
-            vector,
-            blockUUID: block.uuid,
-            pageName: block.pageName,
-            blockContent: block.content
-          });
-          indexedCount++;
-          
-          // 显示详细进度
-          const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-          if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
-            logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
-            console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
-          }
-        } catch (error) {
-          console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
-          // 继续处理其他blocks
+    for (const block of blocksToIndex) {
+      try {
+        const vector = await generateEmbedding(block.content);
+        vectorData.push({
+          blockUUID: block.uuid,
+          pageName: block.pageName,
+          blockContent: block.content,
+          vector: vector,
+          lastUpdated: currentTime
+        });
+        
+        indexedCount++;
+        
+        // 显示详细进度
+        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+        if (indexedCount % 10 === 0 || indexedCount === blocksToIndex.length) {
+          logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length})`);
+          console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%)`);
         }
-      }
-
-      if (data.length > 0) {
-        // Register JSON data as temporary file and insert
-        const jsonData = JSON.stringify(data);
-        await db.registerFileText(`batch_${i}.json`, jsonData);
-        await conn.insertJSONFromPath(`batch_${i}.json`, { name: TABLE_NAME });
-        console.log(`Added batch of ${data.length} blocks to database.`);
+      } catch (error) {
+        console.error(`Failed to generate embedding for block ${block.uuid}:`, error);
+        // 继续处理其他blocks
       }
     }
 
-    console.log("Start creating HNSW index on vector column.");
-    logseq.UI.showMsg(`索引数据添加完毕，开始构建快速搜索索引...`, "success");
-    await conn.query(`CREATE INDEX hnsw_idx ON ${TABLE_NAME} USING HNSW (vector);`);
-    console.log("HNSW Index created successfully.");
-
+    // 保存到持久化存储
+    await saveVectorData(vectorData);
+    
     logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
 
   } catch (error) {
     console.error("Failed to index all pages:", error);
     logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
-  } finally {
-    await conn.close();
   }
 }
 
@@ -279,7 +268,7 @@ interface BlockWithPage {
   pageName: string;
 }
 
-// 4. 获取所有页面中的 Block
+// 9. 获取所有页面中的 Block
 async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
   try {
     const allPages = await logseq.Editor.getAllPages();
@@ -321,66 +310,65 @@ function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
   return flattened;
 }
 
-// 5. 获取初始化状态
+// 10. 获取初始化状态
 export function getInitializationStatus() {
   return { isInitialized };
 }
 
-// 6. 搜索函数
+// 11. 搜索函数
 export async function search(queryText: string, limit: number = 10) {
-  if (!isInitialized || !db) {
-    logseq.UI.showMsg("向量数据库未初始化，请稍后再试。", "error");
+  if (!isInitialized) {
+    logseq.UI.showMsg("向量存储未初始化，请稍后再试。", "error");
     return null;
   }
 
-  const conn = await db.connect();
   try {
     console.log(`Searching for: "${queryText}"`);
+    
+    // 生成查询向量
     const queryVector = await generateEmbedding(queryText);
-
-    const p_stmt = await conn.prepare(
-      `SELECT
-          blockUUID,
-          pageName,
-          blockContent, 
-          list_similarity(vector, ?) AS score
-       FROM ${TABLE_NAME}
-       ORDER BY score DESC
-       LIMIT ?;`
-    );
     
-    const result = await p_stmt.query(queryVector, limit);
-    const searchResults = result.toArray().map(row => row.toJSON());
+    // 加载所有向量数据
+    const vectorData = await loadVectorData();
     
-    await p_stmt.close();
+    if (vectorData.length === 0) {
+      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
+      return [];
+    }
+    
+    // 计算相似度并排序
+    const results = vectorData.map(item => ({
+      blockUUID: item.blockUUID,
+      pageName: item.pageName,
+      blockContent: item.blockContent,
+      score: cosineSimilarity(queryVector, item.vector)
+    }))
+    .sort((a, b) => b.score - a.score)  // 按相似度降序排列
+    .slice(0, limit);  // 取前 limit 个结果
 
-    console.log("Search results:", searchResults);
-    return searchResults;
+    console.log("Search results:", results);
+    return results;
 
   } catch (error) {
     console.error("Search failed:", error);
     logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
     return null;
-  } finally {
-    await conn.close();
   }
 }
 
-// 7. 获取数据库统计信息
+// 12. 获取向量存储统计信息
 export async function getVectorStoreStats() {
-    if (!isInitialized || !db) {
-        return { count: 0, dim: 0 };
-    }
-    const conn = await db.connect();
-    try {
-        const countResult = await conn.query(`SELECT COUNT(*) as count FROM ${TABLE_NAME};`);
-        const count = countResult.toArray()[0].toJSON().count as number;
-        const dim = getVectorDimension();
-        return { count, dim };
-    } catch (error) {
-        console.error("Failed to get vector store stats:", error);
-        return { count: 0, dim: getVectorDimension() };
-    } finally {
-      await conn.close();
-    }
+  if (!isInitialized) {
+    return { count: 0, dim: 0 };
+  }
+  
+  try {
+    const vectorData = await loadVectorData();
+    const count = vectorData.length;
+    const dim = vectorData.length > 0 ? vectorData[0].vector.length : getVectorDimension();
+    return { count, dim };
+  } catch (error) {
+    console.error("Failed to get vector store stats:", error);
+    return { count: 0, dim: getVectorDimension() };
+  }
 } 
