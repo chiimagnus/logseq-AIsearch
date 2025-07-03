@@ -1,12 +1,12 @@
-// 封装了 AI 模型加载、数据库初始化、内容索引和向量搜索的全部核心逻辑。
+// 负责封装 AI 模型加载、数据库初始化、内容索引和向量搜索的核心逻辑。
 
-import * as lancedb from '@lancedb/lancedb';
+import * as duckdb from '@duckdb/duckdb-wasm';
 import { BlockEntity } from '@logseq/libs/dist/LSPlugin';
 
 // 1. 定义核心变量
-let db: lancedb.Connection;
-let table: lancedb.Table;
+let db: duckdb.AsyncDuckDB;
 let isInitialized = false;
+const TABLE_NAME = 'logseq_blocks';
 
 // 动态获取批处理大小
 function getBatchSize(): number {
@@ -106,41 +106,56 @@ async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
-// 2. 初始化函数
+// 2. 初始化函数 (Rewritten for DuckDB)
 export async function initializeVectorStore() {
   if (isInitialized) {
     console.log("Vector store already initialized.");
     return;
   }
-  console.log("Vector store initializing...");
-  
-  try {
-    // 初始化 LanceDB
-    if (!db) {
-        const dbPath = `${logseq.settings!.pluginDir}/.lancedb`;
-        db = await lancedb.connect(dbPath);
-        console.log(`LanceDB connected at: ${dbPath}`);
-        logseq.UI.showMsg(`📁 向量数据库路径: ${dbPath}`, "info", { timeout: 5000 });
-    }
+  console.log("Vector store initializing with DuckDB-WASM...");
 
-    // 获取或创建数据表
-    const tableNames = await db.tableNames();
-    const vectorDim = getVectorDimension();
+  try {
+    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
     
-    if (tableNames.includes('logseq_blocks')) {
-        table = await db.openTable('logseq_blocks');
-        console.log("Opened existing table 'logseq_blocks'.");
-    } else {
-        console.log("Creating new table 'logseq_blocks'...");
-        const dummyData = [{
-            vector: Array(vectorDim).fill(0),
-            blockUUID: "dummy",
-            pageName: "dummy",
-            blockContent: "dummy"
-        }];
-        table = await db.createTable("logseq_blocks", dummyData, { mode: "overwrite" });
-        console.log("Created new table 'logseq_blocks'.");
-    }
+    const worker_url = URL.createObjectURL(
+        new Blob([`importScripts("${bundle.mainWorker!}");`], {type: 'application/javascript'})
+    );
+
+    // Instantiate the async DB
+    const worker = new Worker(worker_url);
+    const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING); // Only show warnings and errors
+    db = new duckdb.AsyncDuckDB(logger, worker);
+    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+    URL.revokeObjectURL(worker_url);
+    
+    // Connect to a persistent database
+    await db.open({
+        path: 'logseq-ai-search.db',
+    });
+
+    const conn = await db.connect();
+    console.log("DuckDB-WASM initialized and connected to persistent storage.");
+    logseq.UI.showMsg("DuckDB 向量数据库已连接", "info", { timeout: 3000 });
+
+    // Install and load VSS extension
+    await conn.query(`INSTALL vss;`);
+    await conn.query(`LOAD vss;`);
+    console.log("VSS extension for DuckDB loaded.");
+
+    // Create table if it doesn't exist
+    const vectorDim = getVectorDimension();
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+        blockUUID VARCHAR PRIMARY KEY,
+        pageName VARCHAR,
+        blockContent TEXT,
+        vector FLOAT[]
+      );
+    `);
+    console.log(`Table '${TABLE_NAME}' is ready.`);
+
+    await conn.close();
 
     // 测试embedding服务连接
     const serviceType = getEmbeddingServiceType();
@@ -159,18 +174,19 @@ export async function initializeVectorStore() {
     console.log("Vector store initialized successfully.");
 
   } catch (error) {
-      console.error("Vector store initialization failed:", error);
+      console.error("Vector store (DuckDB) initialization failed:", error);
       logseq.UI.showMsg("向量数据库初始化失败，请检查控制台日志", "error");
   }
 }
 
 // 3. 索引全部页面
 export async function indexAllPages() {
-  if (!isInitialized || !db || !table) {
+  if (!isInitialized || !db) {
     logseq.UI.showMsg("向量数据库未初始化，请稍后再试。", "error");
     return;
   }
 
+  const conn = await db.connect();
   try {
     logseq.UI.showMsg("开始建立向量索引...", "success");
     console.log("Starting to build vector index...");
@@ -192,10 +208,15 @@ export async function indexAllPages() {
     }
     
     // 清空旧表并重建
-    await db.dropTable("logseq_blocks");
-    const vectorDim = getVectorDimension();
-    const dummyData = [{ vector: Array(vectorDim).fill(0), blockUUID: "dummy", pageName: "dummy", blockContent: "dummy" }];
-    table = await db.createTable("logseq_blocks", dummyData, { mode: "overwrite" });
+    await conn.query(`DROP TABLE IF EXISTS ${TABLE_NAME};`);
+    await conn.query(`
+      CREATE TABLE ${TABLE_NAME} (
+        blockUUID VARCHAR PRIMARY KEY,
+        pageName VARCHAR,
+        blockContent TEXT,
+        vector FLOAT[]
+      );
+    `);
     console.log("Old table dropped and new table created for re-indexing.");
 
     let indexedCount = 0;
@@ -204,7 +225,6 @@ export async function indexAllPages() {
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
       const batch = blocksToIndex.slice(i, i + batchSize);
       
-      // 逐个生成embedding（避免批处理API限制）
       const data = [];
       for (const block of batch) {
         try {
@@ -230,21 +250,26 @@ export async function indexAllPages() {
       }
 
       if (data.length > 0) {
-        await table.add(data);
+        // Register JSON data as temporary file and insert
+        const jsonData = JSON.stringify(data);
+        await db.registerFileText(`batch_${i}.json`, jsonData);
+        await conn.insertJSONFromPath(`batch_${i}.json`, { name: TABLE_NAME });
         console.log(`Added batch of ${data.length} blocks to database.`);
       }
     }
 
-    console.log("Start creating IVF_PQ index on vector column.");
+    console.log("Start creating HNSW index on vector column.");
     logseq.UI.showMsg(`索引数据添加完毕，开始构建快速搜索索引...`, "success");
-    await table.createIndex("vector");
-    console.log("Index created successfully.");
+    await conn.query(`CREATE INDEX hnsw_idx ON ${TABLE_NAME} USING HNSW (vector);`);
+    console.log("HNSW Index created successfully.");
 
     logseq.UI.showMsg(`✅ 索引建立完成！共 ${indexedCount} 条内容。`, "success", { timeout: 5000 });
 
   } catch (error) {
     console.error("Failed to index all pages:", error);
     logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
+  } finally {
+    await conn.close();
   }
 }
 
@@ -254,30 +279,31 @@ interface BlockWithPage {
   pageName: string;
 }
 
+// 4. 获取所有页面中的 Block
 async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
   try {
     const allPages = await logseq.Editor.getAllPages();
-    if (!allPages) return [];
+    if (!allPages) {
+      return [];
+    }
 
-    let allBlocksWithPage: BlockWithPage[] = [];
+    let allBlocks: BlockWithPage[] = [];
 
     for (const page of allPages) {
-      if (page.name) {
-        const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
-        const flatBlocks = flattenBlocks(pageBlocks);
-        
-        const blocksWithPage = flatBlocks
-          .filter(block => block.content && block.content.trim() !== '')
-          .map(block => ({
-            uuid: block.uuid,
-            content: block.content,
-            pageName: page.name
-          }));
-        
-        allBlocksWithPage.push(...blocksWithPage);
+      const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
+      if (pageBlocks) {
+        const flattenedBlocks = flattenBlocks(pageBlocks).map(block => ({
+          uuid: block.uuid,
+          content: block.content,
+          pageName: page.name
+        }));
+        allBlocks = allBlocks.concat(flattenedBlocks);
       }
     }
-    return allBlocksWithPage;
+    
+    // 过滤掉内容为空的 block
+    return allBlocks.filter(block => block.content && block.content.trim() !== '');
+
   } catch (error) {
     console.error("Error getting all blocks:", error);
     return [];
@@ -285,131 +311,76 @@ async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
 }
 
 function flattenBlocks(blocks: BlockEntity[]): BlockEntity[] {
-  let flatBlocks: BlockEntity[] = [];
+  let flattened: BlockEntity[] = [];
   for (const block of blocks) {
-    flatBlocks.push(block);
+    flattened.push(block);
     if (block.children && block.children.length > 0) {
-      flatBlocks = flatBlocks.concat(flattenBlocks(block.children as BlockEntity[]));
+      flattened = flattened.concat(flattenBlocks(block.children as BlockEntity[]));
     }
   }
-  return flatBlocks;
+  return flattened;
 }
 
-// 4. 获取初始化状态
+// 5. 获取初始化状态
 export function getInitializationStatus() {
-  return {
-    isInitialized,
-    hasDatabase: !!db,
-    hasTable: !!table,
-    embeddingService: getEmbeddingServiceType()
-  };
+  return { isInitialized };
 }
 
-// 5. 搜索函数
-export async function search(queryText: string) {
-  if (!isInitialized || !table) {
-    const status = getInitializationStatus();
-    console.error("Vector search service not properly initialized:", status);
-    logseq.UI.showMsg("向量搜索服务未初始化，请检查设置或重建索引 | Vector search service not initialized", "error");
-    return [];
+// 6. 搜索函数
+export async function search(queryText: string, limit: number = 10) {
+  if (!isInitialized || !db) {
+    logseq.UI.showMsg("向量数据库未初始化，请稍后再试。", "error");
+    return null;
   }
 
+  const conn = await db.connect();
   try {
     console.log(`Searching for: "${queryText}"`);
-
-    // 1. 为查询文本生成 embedding
     const queryVector = await generateEmbedding(queryText);
 
-    // 2. 执行搜索
-    const searchResults = await table
-      .search(queryVector)
-      .limit(Number(logseq.settings?.maxResults || 50))
-      .toArray();
+    const p_stmt = await conn.prepare(
+      `SELECT
+          blockUUID,
+          pageName,
+          blockContent, 
+          list_similarity(vector, ?) AS score
+       FROM ${TABLE_NAME}
+       ORDER BY score DESC
+       LIMIT ?;`
+    );
     
-    console.log(`Found ${searchResults.length} results.`);
+    const result = await p_stmt.query(queryVector, limit);
+    const searchResults = result.toArray().map(row => row.toJSON());
+    
+    await p_stmt.close();
+
+    console.log("Search results:", searchResults);
     return searchResults;
 
   } catch (error) {
     console.error("Search failed:", error);
     logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
-    return [];
+    return null;
+  } finally {
+    await conn.close();
   }
 }
 
-// 添加调试和统计功能
+// 7. 获取数据库统计信息
 export async function getVectorStoreStats() {
-  if (!isInitialized || !table) {
-    return {
-      error: "Vector store not initialized"
-    };
-  }
-
-  try {
-    const countResult = await table.countRows();
-    const vectorDim = getVectorDimension();
-    const sampleData = await table.search([0.1, 0.1, 0.1, ...Array(vectorDim - 3).fill(0)]).limit(5).toArray();
-    
-    const serviceType = getEmbeddingServiceType();
-    const serviceConfig = serviceType === 'ollama' 
-      ? {
-          host: String(logseq.settings?.ollamaHost || "http://localhost:11434"),
-          model: String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text")
-        }
-      : {
-          apiUrl: String(logseq.settings?.cloudEmbeddingApiUrl || ""),
-          model: String(logseq.settings?.cloudEmbeddingModel || "BAAI/bge-m3")
-        };
-    
-    return {
-      totalBlocks: countResult,
-      modelInfo: {
-        serviceType,
-        dimension: vectorDim,
-        config: serviceConfig
-      },
-      indexInfo: {
-        batchSize: getBatchSize(),
-        hasSearchIndex: true,
-        testModeLimit: Number(logseq.settings?.testModeBlockLimit) || 0
-      },
-      databasePath: `${logseq.settings!.pluginDir}/.lancedb`,
-      sampleBlocks: sampleData.map(item => ({
-        blockUUID: item.blockUUID,
-        pageName: item.pageName,
-        contentPreview: item.blockContent.substring(0, 100) + "...",
-        vectorPreview: item.vector.slice(0, 5) // 只显示前5个维度
-      }))
-    };
-  } catch (error) {
-    return {
-      error: `Failed to get stats: ${error}`
-    };
-  }
-}
-
-// 添加相似度测试功能
-export async function testSimilarity(query1: string, query2: string) {
-  if (!isInitialized) {
-    return { error: "Vector store not initialized" };
-  }
-
-  try {
-    const vector1 = await generateEmbedding(query1);
-    const vector2 = await generateEmbedding(query2);
-    
-    // 计算余弦相似度
-    const dotProduct = vector1.reduce((sum, a, i) => sum + a * vector2[i], 0);
-    const magnitude1 = Math.sqrt(vector1.reduce((sum, a) => sum + a * a, 0));
-    const magnitude2 = Math.sqrt(vector2.reduce((sum, a) => sum + a * a, 0));
-    const similarity = dotProduct / (magnitude1 * magnitude2);
-    
-    return {
-      query1,
-      query2,
-      similarity,
-      interpretation: similarity > 0.8 ? "很相似" : similarity > 0.6 ? "较相似" : similarity > 0.4 ? "有些相似" : "不太相似"
-    };
-  } catch (error) {
-    return { error: `Similarity test failed: ${error}` };
-  }
+    if (!isInitialized || !db) {
+        return { count: 0, dim: 0 };
+    }
+    const conn = await db.connect();
+    try {
+        const countResult = await conn.query(`SELECT COUNT(*) as count FROM ${TABLE_NAME};`);
+        const count = countResult.toArray()[0].toJSON().count as number;
+        const dim = getVectorDimension();
+        return { count, dim };
+    } catch (error) {
+        console.error("Failed to get vector store stats:", error);
+        return { count: 0, dim: getVectorDimension() };
+    } finally {
+      await conn.close();
+    }
 } 
