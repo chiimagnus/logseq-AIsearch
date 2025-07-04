@@ -32,5 +32,6 @@ alwaysApply: true
 - [postcss.config.js](mdc:postcss.config.js) - CSS处理配置
 
 ## 参考资源
-- [Logseq官方文档](https://docs.logseq.com) - 了解Logseq的核心功能和API
+- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
+- [Logseq Plugin API](https://logseq.github.io/plugins/modules.html) - 了解 Logseq 插件开发
 

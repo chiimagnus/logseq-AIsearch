@@ -145,13 +145,5 @@ alwaysApply: false
 5. 保持代码简洁，易于维护和调试
 
 ## 参考资源
-
 - [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
-- [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
-- [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
-- [Logseq Assets插件示例](https://github.com/YU000jp/logseq-plugin-multiple-assets) - 参考
-
-Assets API的实际使用：
-- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
-- [向量搜索最佳实践](https://www.pinecone.io/learn/vector-search/) - 了解向量搜索的理论基础
-- [JavaScript 性能优化](https://web.dev/performance/) - 了解前端性能优化技巧
+- [Logseq Plugin API](https://logseq.github.io/plugins/modules.html) - 了解 Logseq 插件开发
