@@ -33,17 +33,7 @@ const settings: SettingSchemaDesc[] = [
     ],
     default: "Ollama本地模型 / Ollama Local Model"
   },
-  {
-    key: "vectorStorageBackend",
-    type: "enum",
-    title: "💾 向量存储方案 / Vector Storage Backend",
-    description: "选择向量数据的存储方案\n• Assets API: 文件存储在笔记目录，支持压缩，可直接管理\n• 分块压缩存储: 浏览器存储，更稳定但文件不可见",
-    enumChoices: [
-      "Assets API 存储 (推荐) / Assets API Storage (Recommended)",
-      "分块压缩存储 / Chunked localStorage"
-    ],
-    default: "Assets API 存储 (推荐) / Assets API Storage (Recommended)"
-  },
+
   {
     key: "shortcut",
     type: "string",
@@ -195,21 +185,6 @@ async function main() {
     if (newSettings.rebuildIndexShortcut !== oldSettings?.rebuildIndexShortcut) {
       await logseq.UI.showMsg("快捷键已更新，重启插件后生效 | Shortcut updated, restart plugin to take effect", "info");
     }
-
-    // 如果存储后端发生变更，切换存储方案
-    if (newSettings.vectorStorageBackend !== oldSettings?.vectorStorageBackend) {
-      try {
-        const { switchStorageBackend } = await import('./services/vectorService');
-        const backend = newSettings.vectorStorageBackend?.includes('Assets') ? 'assets' : 'chunked-localStorage';
-        await switchStorageBackend(backend);
-
-        const backendName = backend === 'assets' ? 'Assets API 存储' : '分块压缩存储';
-        await logseq.UI.showMsg(`✅ 已切换到 ${backendName}`, "success", { timeout: 3000 });
-      } catch (error) {
-        console.error("切换存储后端失败:", error);
-        await logseq.UI.showMsg("❌ 存储后端切换失败，请重启插件", "error");
-      }
-    }
   });
 
   // 注册AI搜索快捷键
@@ -295,21 +270,7 @@ async function main() {
     }
   });
 
-  // 存储系统管理命令
-  logseq.Editor.registerSlashCommand("Storage: Reinitialize", async () => {
-    try {
-      await logseq.UI.showMsg("🔄 正在重新初始化存储系统...", "info");
 
-      // 重新初始化向量存储
-      const { initializeVectorStore } = await import('./services/vectorService');
-      await initializeVectorStore();
-
-      await logseq.UI.showMsg("✅ 存储系统重新初始化完成", "success");
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 存储系统重新初始化失败", "error");
-      console.error("存储系统重新初始化失败:", error);
-    }
-  });
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {

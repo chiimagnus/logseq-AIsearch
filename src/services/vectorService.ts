@@ -1,7 +1,7 @@
 // 负责封装 AI 模型加载、数据存储、内容索引和向量搜索的核心逻辑。
 
 import { BlockEntity } from '@logseq/libs/dist/LSPlugin';
-import { StorageManager, StorageBackend } from './storageManager';
+import { StorageManager } from './storageManager';
 
 // 1. 定义核心数据结构
 interface VectorData {
@@ -44,7 +44,7 @@ async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
     }
 
     await storageManager.saveData(VECTOR_STORAGE_KEY, vectorData);
-    console.log(`保存了 ${vectorData.length} 条向量数据到 ${storageManager.getCurrentBackend()} 存储`);
+    console.log(`保存了 ${vectorData.length} 条向量数据到 Assets API 存储`);
   } catch (error) {
     console.error("保存向量数据失败:", error);
     throw error;
@@ -64,7 +64,7 @@ async function loadVectorData(): Promise<VectorDatabase> {
       return [];
     }
 
-    console.log(`从 ${storageManager.getCurrentBackend()} 存储加载了 ${vectorData.length} 条向量数据`);
+    console.log(`从 Assets API 存储加载了 ${vectorData.length} 条向量数据`);
     return vectorData;
   } catch (error) {
     console.error("加载向量数据失败:", error);
@@ -179,34 +179,13 @@ export async function initializeVectorStore() {
   try {
     console.log("Vector storage initializing...");
 
-    // 从设置中获取用户偏好的存储后端
-    const storagePreference = String(logseq.settings?.vectorStorageBackend || "Assets API 存储 (推荐) / Assets API Storage (Recommended)");
-    const preferredBackend = storagePreference.includes('Assets') ? 'assets' : 'chunked-localStorage';
-
     // 初始化存储管理器
-    storageManager = new StorageManager(preferredBackend);
-
-    // 自动选择最佳存储后端
     try {
-      const selectedBackend = await storageManager.autoSelectBackend();
-
-      // 显示存储后端信息
-      const backendNames = {
-        'assets': 'Assets API',
-        'chunked-localStorage': '分块压缩存储',
-        'simple-localStorage': '简单存储'
-      };
-
-      logseq.UI.showMsg(
-        `📦 存储后端: ${backendNames[selectedBackend] || selectedBackend}`,
-        "info",
-        { timeout: 3000 }
-      );
-
-      console.log(`✅ 存储系统初始化完成，使用: ${selectedBackend}`);
-
+      storageManager = new StorageManager();
+      logseq.UI.showMsg("📦 存储后端: Assets API (压缩存储)", "info", { timeout: 3000 });
+      console.log("✅ 存储系统初始化完成，使用: Assets API");
     } catch (error) {
-      console.error("存储后端选择失败:", error);
+      console.error("存储系统初始化失败:", error);
       logseq.UI.showMsg("❌ 存储系统初始化失败", "error", { timeout: 5000 });
       return;
     }
@@ -424,7 +403,7 @@ export async function getVectorStoreStats() {
     const vectorData = await loadVectorData();
     const count = vectorData.length;
     const dim = vectorData.length > 0 ? vectorData[0].vector.length : getVectorDimension();
-    const backend = storageManager.getCurrentBackend();
+    const backend = 'Assets API';
     const storageStats = await storageManager.getStorageStats(VECTOR_STORAGE_KEY);
 
     return {
@@ -454,32 +433,3 @@ export async function clearVectorData() {
   }
 }
 
-// 14. 切换存储后端
-export async function switchStorageBackend(backend: StorageBackend) {
-  if (!storageManager) {
-    throw new Error("存储管理器未初始化");
-  }
-
-  try {
-    await storageManager.switchBackend(backend);
-    console.log(`已切换到存储后端: ${backend}`);
-  } catch (error) {
-    console.error("切换存储后端失败:", error);
-    throw error;
-  }
-}
-
-// 15. 数据迁移
-export async function migrateVectorData(fromBackend: StorageBackend, toBackend: StorageBackend) {
-  if (!storageManager) {
-    throw new Error("存储管理器未初始化");
-  }
-
-  try {
-    await storageManager.migrateData(fromBackend, toBackend, VECTOR_STORAGE_KEY);
-    console.log(`数据迁移完成: ${fromBackend} -> ${toBackend}`);
-  } catch (error) {
-    console.error("数据迁移失败:", error);
-    throw error;
-  }
-}
