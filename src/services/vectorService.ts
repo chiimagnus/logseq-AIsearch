@@ -1,6 +1,7 @@
 // 负责封装 AI 模型加载、数据存储、内容索引和向量搜索的核心逻辑。
 
 import { BlockEntity } from '@logseq/libs/dist/LSPlugin';
+import { StorageManager, StorageBackend } from './storageManager';
 
 // 1. 定义核心数据结构
 interface VectorData {
@@ -15,7 +16,8 @@ type VectorDatabase = VectorData[];
 
 // 2. 核心变量
 let isInitialized = false;
-const VECTOR_STORAGE_KEY = 'ai-search-vector-data';
+const VECTOR_STORAGE_KEY = 'vector-data';
+let storageManager: StorageManager;
 
 // 3. 配置函数
 function getEmbeddingServiceType(): 'ollama' | 'cloud' {
@@ -37,10 +39,12 @@ function getVectorDimension(): number {
 // 4. 存储和加载函数
 async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
   try {
-    const jsonString = JSON.stringify(vectorData);
-    // 使用浏览器的本地存储
-    localStorage.setItem(VECTOR_STORAGE_KEY, jsonString);
-    console.log(`保存了 ${vectorData.length} 条向量数据到本地存储`);
+    if (!storageManager) {
+      throw new Error("存储管理器未初始化");
+    }
+
+    await storageManager.saveData(VECTOR_STORAGE_KEY, vectorData);
+    console.log(`保存了 ${vectorData.length} 条向量数据到 ${storageManager.getCurrentBackend()} 存储`);
   } catch (error) {
     console.error("保存向量数据失败:", error);
     throw error;
@@ -49,15 +53,18 @@ async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
 
 async function loadVectorData(): Promise<VectorDatabase> {
   try {
-    // 从浏览器本地存储读取
-    const jsonString = localStorage.getItem(VECTOR_STORAGE_KEY);
-    if (!jsonString) {
+    if (!storageManager) {
+      console.log("存储管理器未初始化，返回空数组");
+      return [];
+    }
+
+    const vectorData = await storageManager.loadData(VECTOR_STORAGE_KEY);
+    if (!vectorData) {
       console.log("向量数据不存在，返回空数组");
       return [];
     }
-    
-    const vectorData: VectorDatabase = JSON.parse(jsonString);
-    console.log(`从本地存储加载了 ${vectorData.length} 条向量数据`);
+
+    console.log(`从 ${storageManager.getCurrentBackend()} 存储加载了 ${vectorData.length} 条向量数据`);
     return vectorData;
   } catch (error) {
     console.error("加载向量数据失败:", error);
@@ -171,12 +178,41 @@ export async function initializeVectorStore() {
 
   try {
     console.log("Vector storage initializing...");
+
+    // 初始化存储管理器，优先使用分块压缩存储（更稳定）
+    storageManager = new StorageManager('chunked-localStorage');
+
+    // 自动选择最佳存储后端
+    try {
+      const selectedBackend = await storageManager.autoSelectBackend();
+
+      // 显示存储后端信息
+      const backendNames = {
+        'assets': 'Assets API',
+        'chunked-localStorage': '分块压缩存储',
+        'simple-localStorage': '简单存储'
+      };
+
+      logseq.UI.showMsg(
+        `📦 存储后端: ${backendNames[selectedBackend] || selectedBackend}`,
+        "info",
+        { timeout: 3000 }
+      );
+
+      console.log(`✅ 存储系统初始化完成，使用: ${selectedBackend}`);
+
+    } catch (error) {
+      console.error("存储后端选择失败:", error);
+      logseq.UI.showMsg("❌ 存储系统初始化失败", "error", { timeout: 5000 });
+      return;
+    }
+
     logseq.UI.showMsg("向量存储系统已初始化", "info", { timeout: 3000 });
 
     // 测试embedding服务连接
     const serviceType = getEmbeddingServiceType();
     logseq.UI.showMsg(`🔧 正在测试${serviceType === 'ollama' ? 'Ollama' : '云端'}embedding服务...`, "info");
-    
+
     try {
       await generateEmbedding("测试连接");
       logseq.UI.showMsg(`✅ ${serviceType === 'ollama' ? 'Ollama' : '云端'}embedding服务连接成功`, "success", { timeout: 3000 });
@@ -376,17 +412,70 @@ export async function search(queryText: string, limit: number = 50) {
 
 // 12. 获取向量存储统计信息
 export async function getVectorStoreStats() {
-  if (!isInitialized) {
-    return { count: 0, dim: 0 };
+  if (!isInitialized || !storageManager) {
+    return { count: 0, dim: 0, backend: 'none' };
   }
-  
+
   try {
     const vectorData = await loadVectorData();
     const count = vectorData.length;
     const dim = vectorData.length > 0 ? vectorData[0].vector.length : getVectorDimension();
-    return { count, dim };
+    const backend = storageManager.getCurrentBackend();
+    const storageStats = await storageManager.getStorageStats(VECTOR_STORAGE_KEY);
+
+    return {
+      count,
+      dim,
+      backend,
+      storageStats
+    };
   } catch (error) {
     console.error("Failed to get vector store stats:", error);
-    return { count: 0, dim: getVectorDimension() };
+    return { count: 0, dim: getVectorDimension(), backend: 'error' };
   }
-} 
+}
+
+// 13. 清除向量数据
+export async function clearVectorData() {
+  if (!storageManager) {
+    throw new Error("存储管理器未初始化");
+  }
+
+  try {
+    await storageManager.clearData(VECTOR_STORAGE_KEY);
+    console.log("向量数据已清除");
+  } catch (error) {
+    console.error("清除向量数据失败:", error);
+    throw error;
+  }
+}
+
+// 14. 切换存储后端
+export async function switchStorageBackend(backend: StorageBackend) {
+  if (!storageManager) {
+    throw new Error("存储管理器未初始化");
+  }
+
+  try {
+    await storageManager.switchBackend(backend);
+    console.log(`已切换到存储后端: ${backend}`);
+  } catch (error) {
+    console.error("切换存储后端失败:", error);
+    throw error;
+  }
+}
+
+// 15. 数据迁移
+export async function migrateVectorData(fromBackend: StorageBackend, toBackend: StorageBackend) {
+  if (!storageManager) {
+    throw new Error("存储管理器未初始化");
+  }
+
+  try {
+    await storageManager.migrateData(fromBackend, toBackend, VECTOR_STORAGE_KEY);
+    console.log(`数据迁移完成: ${fromBackend} -> ${toBackend}`);
+  } catch (error) {
+    console.error("数据迁移失败:", error);
+    throw error;
+  }
+}
