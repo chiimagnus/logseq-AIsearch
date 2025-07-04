@@ -1,8 +1,5 @@
-// Assets API 压缩存储管理器
+// Assets API 压缩存储实现
 
-/**
- * Assets API 压缩存储实现
- */
 export class StorageManager {
   private storage: any;
 
