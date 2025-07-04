@@ -252,10 +252,51 @@ async function main() {
   });
 
   // 注册调试命令
-  const { getVectorStoreStats, clearVectorData, switchStorageBackend } = await import('./services/vectorService');
+  const { getVectorStoreStats, clearVectorData } = await import('./services/vectorService');
 
-  // 添加存储测试命令
-  logseq.Editor.registerSlashCommand("Storage Debug: Test APIs", async () => {
+  // 向量数据管理命令
+  logseq.Editor.registerSlashCommand("Vector: Show Stats", async () => {
+    try {
+      const stats = await getVectorStoreStats();
+      console.log("📊 向量存储统计:", stats);
+
+      let message = `📊 向量存储统计\n` +
+        `• 总Block数: ${stats.count || 0}\n` +
+        `• 向量维度: ${stats.dim || 'Unknown'}\n` +
+        `• 存储后端: ${stats.backend || 'Unknown'}`;
+
+      if (stats.storageStats) {
+        if (stats.storageStats.totalChunks) {
+          message += `\n• 数据块数: ${stats.storageStats.totalChunks}`;
+          message += `\n• 压缩率: ${stats.storageStats.compressionRatio}`;
+          message += `\n• 存储大小: ${stats.storageStats.compressedSizeMB}MB`;
+        } else if (stats.storageStats.sizeMB) {
+          message += `\n• 存储大小: ${stats.storageStats.sizeMB}MB`;
+        }
+      }
+
+      message += `\n• 详细信息请查看控制台`;
+
+      await logseq.UI.showMsg(message, "success", { timeout: 10000 });
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 获取存储统计失败", "error");
+      console.error("获取存储统计失败:", error);
+    }
+  });
+
+  logseq.Editor.registerSlashCommand("Vector: Clear Data", async () => {
+    try {
+      await clearVectorData();
+      await logseq.UI.showMsg("✅ 向量数据已清除，请重新建立索引", "success");
+      console.log("向量数据已清除");
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 清除向量数据失败", "error");
+      console.error("清除向量数据失败:", error);
+    }
+  });
+
+  // 存储系统管理命令
+  logseq.Editor.registerSlashCommand("Storage: Test & Status", async () => {
     try {
       const { runStorageTests } = await import('./services/storageTest');
       await runStorageTests();
@@ -265,107 +306,7 @@ async function main() {
     }
   });
 
-  // 添加存储后端切换命令
-  logseq.Editor.registerSlashCommand("Storage Debug: Switch to Assets", async () => {
-    try {
-      await switchStorageBackend('assets');
-      await logseq.UI.showMsg("✅ 已切换到 Assets API 存储", "success");
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 切换到 Assets API 失败\n建议使用分块压缩存储", "error");
-      console.error("切换存储后端失败:", error);
-    }
-  });
-
-  logseq.Editor.registerSlashCommand("Storage Debug: Switch to Chunked localStorage", async () => {
-    try {
-      await switchStorageBackend('chunked-localStorage');
-      await logseq.UI.showMsg("✅ 已切换到分块压缩 localStorage 存储", "success");
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 切换到分块压缩 localStorage 失败", "error");
-      console.error("切换存储后端失败:", error);
-    }
-  });
-
-  // 添加数据迁移命令
-  logseq.Editor.registerSlashCommand("Storage Debug: Migrate to Assets", async () => {
-    try {
-      const stats = await getVectorStoreStats();
-      const currentBackend = stats.backend;
-
-      if (currentBackend === 'assets') {
-        await logseq.UI.showMsg("⚠️ 当前已使用 Assets API 存储", "warning");
-        return;
-      }
-
-      await migrateVectorData(currentBackend as any, 'assets');
-      await logseq.UI.showMsg("✅ 数据已迁移到 Assets API 存储", "success");
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 数据迁移失败", "error");
-      console.error("数据迁移失败:", error);
-    }
-  });
-
-  logseq.Editor.registerSlashCommand("Storage Debug: Migrate to Chunked localStorage", async () => {
-    try {
-      const stats = await getVectorStoreStats();
-      const currentBackend = stats.backend;
-
-      if (currentBackend === 'chunked-localStorage') {
-        await logseq.UI.showMsg("⚠️ 当前已使用分块压缩 localStorage 存储", "warning");
-        return;
-      }
-
-      await migrateVectorData(currentBackend as any, 'chunked-localStorage');
-      await logseq.UI.showMsg("✅ 数据已迁移到分块压缩 localStorage 存储", "success");
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 数据迁移失败", "error");
-      console.error("数据迁移失败:", error);
-    }
-  });
-
-  // 添加存储演示和测试命令
-  logseq.Editor.registerSlashCommand("Storage Demo: Test Chunked Storage", async () => {
-    try {
-      const { testChunkedStorage } = await import('./services/storageDemo');
-      await testChunkedStorage();
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 分块存储测试失败", "error");
-      console.error("分块存储测试失败:", error);
-    }
-  });
-
-  logseq.Editor.registerSlashCommand("Storage Demo: Test Storage Manager", async () => {
-    try {
-      const { testStorageManager } = await import('./services/storageDemo');
-      await testStorageManager();
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 存储管理器测试失败", "error");
-      console.error("存储管理器测试失败:", error);
-    }
-  });
-
-  logseq.Editor.registerSlashCommand("Storage Demo: Performance Benchmark", async () => {
-    try {
-      const { runPerformanceBenchmark } = await import('./services/storageDemo');
-      await runPerformanceBenchmark();
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 性能基准测试失败", "error");
-      console.error("性能基准测试失败:", error);
-    }
-  });
-
-  logseq.Editor.registerSlashCommand("Storage Demo: Full Test Suite", async () => {
-    try {
-      const { runFullStorageTests } = await import('./services/storageDemo');
-      await runFullStorageTests();
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 完整测试套件失败", "error");
-      console.error("完整测试套件失败:", error);
-    }
-  });
-
-  // 添加强制重新初始化存储系统的命令
-  logseq.Editor.registerSlashCommand("Storage Debug: Force Reinitialize", async () => {
+  logseq.Editor.registerSlashCommand("Storage: Reinitialize", async () => {
     try {
       await logseq.UI.showMsg("🔄 正在重新初始化存储系统...", "info");
 
