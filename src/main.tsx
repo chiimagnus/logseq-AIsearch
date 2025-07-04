@@ -296,16 +296,6 @@ async function main() {
   });
 
   // 存储系统管理命令
-  logseq.Editor.registerSlashCommand("Storage: Test & Status", async () => {
-    try {
-      const { runStorageTests } = await import('./services/storageTest');
-      await runStorageTests();
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 存储测试失败", "error");
-      console.error("存储测试失败:", error);
-    }
-  });
-
   logseq.Editor.registerSlashCommand("Storage: Reinitialize", async () => {
     try {
       await logseq.UI.showMsg("🔄 正在重新初始化存储系统...", "info");
