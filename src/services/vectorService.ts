@@ -179,8 +179,12 @@ export async function initializeVectorStore() {
   try {
     console.log("Vector storage initializing...");
 
-    // 初始化存储管理器，优先使用分块压缩存储（更稳定）
-    storageManager = new StorageManager('chunked-localStorage');
+    // 从设置中获取用户偏好的存储后端
+    const storagePreference = String(logseq.settings?.vectorStorageBackend || "分块压缩存储 (推荐) / Chunked localStorage (Recommended)");
+    const preferredBackend = storagePreference.includes('Assets') ? 'assets' : 'chunked-localStorage';
+
+    // 初始化存储管理器
+    storageManager = new StorageManager(preferredBackend);
 
     // 自动选择最佳存储后端
     try {
