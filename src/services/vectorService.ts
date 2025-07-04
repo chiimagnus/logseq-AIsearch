@@ -12,7 +12,42 @@ interface VectorData {
   lastUpdated: number;
 }
 
+// 优化的存储数据结构（减少冗余）
+interface CompactVectorData {
+  u: string;      // blockUUID (缩短字段名)
+  p: string;      // pageName
+  c: string;      // blockContent (预处理后的内容)
+  v: number[];    // vector (可选择降低精度)
+  t: number;      // lastUpdated timestamp
+}
+
 type VectorDatabase = VectorData[];
+
+// 向量数据优化函数
+function optimizeVectorData(data: VectorData[]): CompactVectorData[] {
+  return data.map(item => ({
+    u: item.blockUUID,
+    p: item.pageName,
+    c: preprocessContent(item.blockContent), // 使用预处理后的内容
+    v: compressVector(item.vector), // 压缩向量精度
+    t: item.lastUpdated
+  }));
+}
+
+function restoreVectorData(compactData: CompactVectorData[]): VectorData[] {
+  return compactData.map(item => ({
+    blockUUID: item.u,
+    pageName: item.p,
+    blockContent: item.c,
+    vector: item.v,
+    lastUpdated: item.t
+  }));
+}
+
+// 向量精度压缩（减少小数位数）
+function compressVector(vector: number[]): number[] {
+  return vector.map(v => Math.round(v * 10000) / 10000); // 保留4位小数
+}
 
 // 2. 核心变量
 let isInitialized = false;
@@ -43,8 +78,11 @@ async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
       throw new Error("存储管理器未初始化");
     }
 
-    await storageManager.saveData(VECTOR_STORAGE_KEY, vectorData);
-    console.log(`保存了 ${vectorData.length} 条向量数据到 Assets API 存储`);
+    // 使用优化的数据结构存储
+    const compactData = optimizeVectorData(vectorData);
+    await storageManager.saveData(VECTOR_STORAGE_KEY, compactData);
+
+    console.log(`保存了 ${vectorData.length} 条向量数据到 Assets API 存储 (优化格式)`);
   } catch (error) {
     console.error("保存向量数据失败:", error);
     throw error;
@@ -58,13 +96,27 @@ async function loadVectorData(): Promise<VectorDatabase> {
       return [];
     }
 
-    const vectorData = await storageManager.loadData(VECTOR_STORAGE_KEY);
-    if (!vectorData) {
+    const compactData = await storageManager.loadData(VECTOR_STORAGE_KEY);
+    if (!compactData) {
       console.log("向量数据不存在，返回空数组");
       return [];
     }
 
-    console.log(`从 Assets API 存储加载了 ${vectorData.length} 条向量数据`);
+    // 检查数据格式，兼容旧格式
+    let vectorData: VectorDatabase;
+    if (Array.isArray(compactData) && compactData.length > 0) {
+      // 检查是否是新的压缩格式
+      if ('u' in compactData[0]) {
+        vectorData = restoreVectorData(compactData as CompactVectorData[]);
+        console.log(`从 Assets API 存储加载了 ${vectorData.length} 条向量数据 (优化格式)`);
+      } else {
+        vectorData = compactData as VectorDatabase;
+        console.log(`从 Assets API 存储加载了 ${vectorData.length} 条向量数据 (兼容格式)`);
+      }
+    } else {
+      vectorData = [];
+    }
+
     return vectorData;
   } catch (error) {
     console.error("加载向量数据失败:", error);
@@ -76,7 +128,7 @@ async function loadVectorData(): Promise<VectorDatabase> {
 async function generateOllamaEmbedding(text: string): Promise<number[]> {
   const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
   const modelName = String(logseq.settings?.ollamaEmbeddingModel || "nomic-embed-text");
-  
+
   try {
     const response = await fetch(`${ollamaHost}/api/embeddings`, {
       method: 'POST',
@@ -86,7 +138,9 @@ async function generateOllamaEmbedding(text: string): Promise<number[]> {
       body: JSON.stringify({
         model: modelName,
         prompt: text
-      })
+      }),
+      // 增加超时时间，避免长时间等待
+      signal: AbortSignal.timeout(30000) // 30秒超时
     });
 
     if (!response.ok) {
@@ -135,14 +189,35 @@ async function generateCloudEmbedding(text: string): Promise<number[]> {
   }
 }
 
-async function generateEmbedding(text: string): Promise<number[]> {
-  const serviceType = getEmbeddingServiceType();
-  
-  if (serviceType === 'ollama') {
-    return await generateOllamaEmbedding(text);
-  } else {
-    return await generateCloudEmbedding(text);
+// 智能重试机制
+async function generateEmbeddingWithRetry(text: string, maxRetries: number = 3): Promise<number[]> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const serviceType = getEmbeddingServiceType();
+
+      if (serviceType === 'ollama') {
+        return await generateOllamaEmbedding(text);
+      } else {
+        return await generateCloudEmbedding(text);
+      }
+    } catch (error) {
+      console.warn(`Embedding生成失败 (尝试 ${attempt}/${maxRetries}):`, error);
+
+      if (attempt === maxRetries) {
+        throw error; // 最后一次尝试失败，抛出错误
+      }
+
+      // 指数退避延迟
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
+
+  throw new Error("所有重试都失败了");
+}
+
+async function generateEmbedding(text: string): Promise<number[]> {
+  return await generateEmbeddingWithRetry(text);
 }
 
 // 6. 向量搜索函数
@@ -244,7 +319,7 @@ export async function indexAllPages() {
     let indexedCount = 0;
     const currentTime = Date.now();
     const batchSize = 10; // 批处理大小
-    const saveBatchSize = 100; // 每处理100个blocks保存一次
+    const saveBatchSize = 500; // 减少保存频率，提高性能
     
     // 分批处理以提高速度
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
@@ -253,12 +328,16 @@ export async function indexAllPages() {
       // 并行处理当前批次
       const batchPromises = batch.map(async (block) => {
         try {
-          const vector = await generateEmbedding(block.content);
+          // 使用预处理后的内容生成embedding
+          const processedContent = preprocessContent(block.content);
+          const vector = await generateEmbedding(processedContent);
+          const compressedVector = compressVector(vector);
+
           return {
             blockUUID: block.uuid,
             pageName: block.pageName,
-            blockContent: block.content,
-            vector: vector,
+            blockContent: processedContent, // 存储预处理后的内容
+            vector: compressedVector, // 存储压缩后的向量
             lastUpdated: currentTime
           };
         } catch (error) {
@@ -282,11 +361,20 @@ export async function indexAllPages() {
         console.log(`💾 已保存 ${vectorData.length} 条向量数据到本地存储`);
       }
       
-      // 显示详细进度
+      // 显示详细进度和性能统计
       const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+      const successRate = Math.round((vectorData.length / indexedCount) * 100);
+
       if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
-        logseq.UI.showMsg(`索引建立中... ${progress}% (${indexedCount}/${blocksToIndex.length}) | 成功: ${vectorData.length}`);
-        console.log(`Indexed ${indexedCount}/${blocksToIndex.length} blocks (${progress}%) | Success: ${vectorData.length}`);
+        const avgTime = indexedCount > 0 ? (Date.now() - currentTime) / indexedCount : 0;
+        logseq.UI.showMsg(
+          `🔄 索引进度: ${progress}% (${indexedCount}/${blocksToIndex.length})\n` +
+          `✅ 成功率: ${successRate}% (${vectorData.length}条)\n` +
+          `⚡ 平均速度: ${avgTime.toFixed(0)}ms/条`,
+          "info",
+          { timeout: 3000 }
+        );
+        console.log(`📊 索引统计: ${progress}% | 成功${vectorData.length}/${indexedCount} | 平均${avgTime.toFixed(0)}ms/条`);
       }
     }
     
@@ -304,6 +392,33 @@ interface BlockWithPage {
   pageName: string;
 }
 
+// 内容预处理函数
+function preprocessContent(content: string): string {
+  // 移除多余的空白字符
+  content = content.replace(/\s+/g, ' ').trim();
+
+  // 移除logseq特殊语法，保留核心内容
+  content = content.replace(/\[\[([^\]]+)\]\]/g, '$1'); // 移除双括号链接
+  content = content.replace(/#\w+/g, ''); // 移除标签
+  content = content.replace(/\*\*([^*]+)\*\*/g, '$1'); // 移除粗体标记
+  content = content.replace(/\*([^*]+)\*/g, '$1'); // 移除斜体标记
+
+  return content.trim();
+}
+
+// 检查内容是否值得索引
+function isContentWorthIndexing(content: string): boolean {
+  const processed = preprocessContent(content);
+
+  // 过滤条件
+  if (processed.length < 10) return false; // 太短
+  if (processed.length > 2000) return false; // 太长，可能是代码块
+  if (/^[\d\s\-\.\,]+$/.test(processed)) return false; // 只包含数字和符号
+  if (/^https?:\/\//.test(processed)) return false; // 只是URL
+
+  return true;
+}
+
 // 9. 获取所有页面中的 Block
 async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
   try {
@@ -313,6 +428,7 @@ async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
     }
 
     let allBlocks: BlockWithPage[] = [];
+    const seenContent = new Set<string>(); // 用于去重
 
     for (const page of allPages) {
       const pageBlocks = await logseq.Editor.getPageBlocksTree(page.name);
@@ -325,9 +441,24 @@ async function getAllBlocksWithPage(): Promise<BlockWithPage[]> {
         allBlocks = allBlocks.concat(flattenedBlocks);
       }
     }
-    
-    // 过滤掉内容为空的 block
-    return allBlocks.filter(block => block.content && block.content.trim() !== '');
+
+    // 智能过滤和去重
+    const filteredBlocks = allBlocks.filter(block => {
+      if (!block.content || block.content.trim() === '') return false;
+
+      // 检查内容是否值得索引
+      if (!isContentWorthIndexing(block.content)) return false;
+
+      // 去重：基于预处理后的内容
+      const processedContent = preprocessContent(block.content);
+      if (seenContent.has(processedContent)) return false;
+
+      seenContent.add(processedContent);
+      return true;
+    });
+
+    console.log(`📊 内容过滤统计: 原始${allBlocks.length}个blocks → 过滤后${filteredBlocks.length}个blocks`);
+    return filteredBlocks;
 
   } catch (error) {
     console.error("Error getting all blocks:", error);
