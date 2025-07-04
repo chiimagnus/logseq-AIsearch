@@ -16,7 +16,7 @@ export interface IStorageManager {
 }
 
 /**
- * Assets API 存储实现
+ * Assets API 存储实现（带压缩）
  */
 class AssetsStorage implements IStorageManager {
   private storage: any;
@@ -32,8 +32,23 @@ class AssetsStorage implements IStorageManager {
 
   async saveData(key: string, data: any): Promise<void> {
     try {
+      console.log(`🔄 开始保存数据到 Assets API: ${key}`);
+
       const jsonString = JSON.stringify(data);
-      await this.storage.setItem(`${key}.json`, jsonString);
+      const originalSize = new Blob([jsonString]).size;
+      console.log(`📊 原始数据大小: ${(originalSize / 1024 / 1024).toFixed(2)}MB`);
+
+      // 使用LZ-String压缩
+      const { default: LZString } = await import('lz-string');
+      const compressedData = LZString.compress(jsonString);
+      const compressedSize = new Blob([compressedData]).size;
+
+      console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB (压缩率: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}%)`);
+
+      // 保存压缩数据，使用.lz扩展名表示压缩
+      await this.storage.setItem(`${key}.lz`, compressedData);
+
+      console.log(`✅ Assets API 保存完成: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
     } catch (error) {
       console.error("Assets API 保存数据失败:", error);
       throw new Error(`Assets API 保存失败: ${error}`);
@@ -42,8 +57,40 @@ class AssetsStorage implements IStorageManager {
 
   async loadData(key: string): Promise<any> {
     try {
+      console.log(`🔄 开始从 Assets API 加载数据: ${key}`);
+
+      // 首先尝试加载压缩文件
+      let compressedData = await this.storage.getItem(`${key}.lz`);
+
+      if (compressedData) {
+        // 解压缩数据
+        const { default: LZString } = await import('lz-string');
+        const jsonString = LZString.decompress(compressedData);
+
+        if (jsonString) {
+          const data = JSON.parse(jsonString);
+          console.log(`✅ 从压缩文件加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
+          return data;
+        }
+      }
+
+      // 如果压缩文件不存在，尝试加载未压缩文件（向后兼容）
       const jsonString = await this.storage.getItem(`${key}.json`);
-      return jsonString ? JSON.parse(jsonString) : null;
+      if (jsonString) {
+        const data = JSON.parse(jsonString);
+        console.log(`✅ 从未压缩文件加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
+
+        // 自动转换为压缩格式
+        console.log(`🔄 自动转换为压缩格式...`);
+        await this.saveData(key, data);
+        await this.storage.removeItem(`${key}.json`); // 删除旧文件
+        console.log(`✅ 已转换为压缩格式并删除旧文件`);
+
+        return data;
+      }
+
+      console.log(`📭 未找到数据: ${key}`);
+      return null;
     } catch (error) {
       console.error("Assets API 加载数据失败:", error);
       // 对于加载失败，返回null而不是抛出错误，让系统可以降级
@@ -53,7 +100,10 @@ class AssetsStorage implements IStorageManager {
 
   async clearData(key: string): Promise<void> {
     try {
+      // 删除压缩文件和未压缩文件
+      await this.storage.removeItem(`${key}.lz`);
       await this.storage.removeItem(`${key}.json`);
+      console.log(`🗑️ 已清除 Assets API 数据: ${key}`);
     } catch (error) {
       console.error("Assets API 清除数据失败:", error);
       // 清除失败不抛出错误，因为可能文件本来就不存在
@@ -62,8 +112,14 @@ class AssetsStorage implements IStorageManager {
 
   async hasData(key: string): Promise<boolean> {
     try {
-      const data = await this.storage.getItem(`${key}.json`);
-      return data !== null && data !== undefined;
+      // 检查压缩文件或未压缩文件是否存在
+      const compressedData = await this.storage.getItem(`${key}.lz`);
+      if (compressedData !== null && compressedData !== undefined) {
+        return true;
+      }
+
+      const uncompressedData = await this.storage.getItem(`${key}.json`);
+      return uncompressedData !== null && uncompressedData !== undefined;
     } catch (error) {
       console.error("Assets API 检查数据存在性失败:", error);
       return false;
@@ -72,14 +128,43 @@ class AssetsStorage implements IStorageManager {
 
   async getStorageStats(key: string): Promise<any> {
     try {
-      const data = await this.storage.getItem(`${key}.json`);
+      // 优先检查压缩文件
+      let data = await this.storage.getItem(`${key}.lz`);
+      let isCompressed = true;
+      let fileName = `${key}.lz`;
+
+      if (!data) {
+        // 检查未压缩文件
+        data = await this.storage.getItem(`${key}.json`);
+        isCompressed = false;
+        fileName = `${key}.json`;
+      }
+
       if (!data) return null;
 
       const size = new Blob([data]).size;
+
+      // 如果是压缩文件，尝试获取原始大小
+      let originalSize = size;
+      if (isCompressed) {
+        try {
+          const { default: LZString } = await import('lz-string');
+          const decompressed = LZString.decompress(data);
+          if (decompressed) {
+            originalSize = new Blob([decompressed]).size;
+          }
+        } catch (error) {
+          console.warn("无法获取原始大小:", error);
+        }
+      }
+
       return {
         backend: 'Assets API',
         sizeMB: (size / 1024 / 1024).toFixed(2),
-        location: `assets/storages/${logseq.baseInfo?.id || 'unknown'}/${key}.json`
+        originalSizeMB: isCompressed ? (originalSize / 1024 / 1024).toFixed(2) : undefined,
+        compressionRatio: isCompressed ? ((1 - size / originalSize) * 100).toFixed(1) + '%' : undefined,
+        compressed: isCompressed,
+        location: `assets/storages/${logseq.baseInfo?.id || 'unknown'}/${fileName}`
       };
     } catch (error) {
       console.error("Assets API 获取统计信息失败:", error);

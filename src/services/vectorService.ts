@@ -180,7 +180,7 @@ export async function initializeVectorStore() {
     console.log("Vector storage initializing...");
 
     // 从设置中获取用户偏好的存储后端
-    const storagePreference = String(logseq.settings?.vectorStorageBackend || "分块压缩存储 (推荐) / Chunked localStorage (Recommended)");
+    const storagePreference = String(logseq.settings?.vectorStorageBackend || "Assets API 存储 (推荐) / Assets API Storage (Recommended)");
     const preferredBackend = storagePreference.includes('Assets') ? 'assets' : 'chunked-localStorage';
 
     // 初始化存储管理器

@@ -37,12 +37,12 @@ const settings: SettingSchemaDesc[] = [
     key: "vectorStorageBackend",
     type: "enum",
     title: "💾 向量存储方案 / Vector Storage Backend",
-    description: "选择向量数据的存储方案\nSelect the storage backend for vector data",
+    description: "选择向量数据的存储方案\n• Assets API: 文件存储在笔记目录，支持压缩，可直接管理\n• 分块压缩存储: 浏览器存储，更稳定但文件不可见",
     enumChoices: [
-      "分块压缩存储 (推荐) / Chunked localStorage (Recommended)",
-      "Assets API 存储 / Assets API Storage"
+      "Assets API 存储 (推荐) / Assets API Storage (Recommended)",
+      "分块压缩存储 / Chunked localStorage"
     ],
-    default: "分块压缩存储 (推荐) / Chunked localStorage (Recommended)"
+    default: "Assets API 存储 (推荐) / Assets API Storage (Recommended)"
   },
   {
     key: "shortcut",
