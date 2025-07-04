@@ -211,7 +211,7 @@ async function main() {
   // 注册一个反斜杠命令，名为 AI-Response
   logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
 
-  // 注册一个用于重建索引的命令
+  // 注册重建索引命令
   logseq.App.registerCommandPalette({
     key: "rebuild-ai-index",
     label: "Re-build AI search index",
@@ -222,8 +222,28 @@ async function main() {
   }, async () => {
     await indexAllPages();
   });
+
+  // 注册继续索引命令
+  logseq.App.registerCommandPalette({
+    key: "continue-ai-index",
+    label: "Continue AI search index",
+    keybinding: {
+      binding: "alt+mod+shift+i",
+      mode: "non-editing"
+    } as any,
+  }, async () => {
+    const { continueIndexing } = await import('./services/vectorService');
+    await continueIndexing();
+  });
+
+  // 注册斜杠命令
   logseq.Editor.registerSlashCommand("Re-build AI search index", async () => {
     await indexAllPages();
+  });
+
+  logseq.Editor.registerSlashCommand("Continue AI search index", async () => {
+    const { continueIndexing } = await import('./services/vectorService');
+    await continueIndexing();
   });
 
   // 注册调试命令
