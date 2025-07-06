@@ -25,93 +25,7 @@ function clearAllCache(): void {
   console.log("🗑️ 所有缓存已清除");
 }
 
-// 🚀 数据迁移：从 Asset API 迁移到 localStorage
-async function migrateFromAssetAPI(): Promise<VectorDatabase | null> {
-  try {
-    console.log("🔄 尝试从 Asset API 迁移数据...");
-    
-    // 尝试创建 Asset API 存储管理器进行数据迁移
-    let assetStorage: any;
-    try {
-      assetStorage = logseq.Assets.makeSandboxStorage();
-    } catch (error) {
-      console.log("📭 Asset API 不可用，跳过迁移");
-      return null;
-    }
-
-    // 检查是否有旧的清单文件
-    const manifestKey = 'vector-manifest';
-    let manifest: any = null;
-    
-    try {
-      const manifestData = await assetStorage.getItem(`${manifestKey}.json`);
-      if (manifestData) {
-        manifest = JSON.parse(manifestData);
-        console.log(`📋 发现 Asset API 清单文件，包含 ${manifest.shards?.length || 0} 个分片`);
-      }
-    } catch (error) {
-      console.log("📭 未找到 Asset API 清单文件");
-    }
-
-    // 如果有清单，尝试加载分片数据
-    if (manifest && manifest.shards && manifest.shards.length > 0) {
-      console.log(`🔄 开始迁移 ${manifest.shards.length} 个数据分片...`);
-      
-      const allShardsPromises = manifest.shards.map(async (shardKey: string) => {
-        try {
-          const compressedData = await assetStorage.getItem(`${shardKey}.lz`);
-          if (compressedData) {
-            const { default: LZString } = await import('lz-string');
-            const jsonString = LZString.decompress(compressedData);
-            if (jsonString) {
-              return JSON.parse(jsonString);
-            }
-          }
-          return null;
-        } catch (error) {
-          console.warn(`⚠️ 迁移分片 ${shardKey} 失败:`, error);
-          return null;
-        }
-      });
-      
-      const allShardsResults = await Promise.all(allShardsPromises);
-      const validCompactData = allShardsResults.filter(d => d && Array.isArray(d)).flat();
-      
-      if (validCompactData.length > 0) {
-        const vectorData = restoreVectorData(validCompactData);
-        console.log(`✅ 成功迁移 ${vectorData.length} 条向量数据`);
-        return vectorData;
-      }
-    }
-
-    // 如果没有分片数据，尝试加载单个文件
-    try {
-      const singleFileData = await assetStorage.getItem(`${VECTOR_STORAGE_KEY}.lz`);
-      if (singleFileData) {
-        const { default: LZString } = await import('lz-string');
-        const jsonString = LZString.decompress(singleFileData);
-        if (jsonString) {
-          const compactData = JSON.parse(jsonString);
-          if (Array.isArray(compactData)) {
-            const vectorData = restoreVectorData(compactData);
-            console.log(`✅ 成功迁移单个文件数据 ${vectorData.length} 条记录`);
-            return vectorData;
-          }
-        }
-      }
-    } catch (error) {
-      console.log("📭 未找到单个文件数据");
-    }
-
-    console.log("📭 未找到可迁移的 Asset API 数据");
-    return null;
-  } catch (error) {
-    console.warn("⚠️ 数据迁移失败:", error);
-    return null;
-  }
-}
-
-// 🚀 保存向量数据（替代分片保存）
+// 🚀 保存向量数据
 export async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
   if (!storageManager) throw new Error("存储管理器未初始化");
   if (vectorData.length === 0) return;
@@ -174,17 +88,6 @@ export async function loadVectorData(forceReload: boolean = false): Promise<Vect
     const compactData = await storageManager.loadData(VECTOR_STORAGE_KEY);
     
     if (!compactData || !Array.isArray(compactData)) {
-      console.log("localStorage 中未找到数据，尝试从 Asset API 迁移...");
-      
-      // 🚀 尝试数据迁移
-      const migratedData = await migrateFromAssetAPI();
-      if (migratedData && migratedData.length > 0) {
-        console.log(`🔄 开始将迁移的数据保存到 localStorage...`);
-        await saveVectorData(migratedData);
-        console.log(`✅ 数据迁移完成，${migratedData.length} 条记录已保存到 localStorage`);
-        return migratedData;
-      }
-      
       console.log("未找到向量数据或数据格式错误");
       vectorDataCache = [];
       return [];
