@@ -206,10 +206,10 @@ async function main() {
   );
 
   // 注册一个反斜杠命令，名为 AI-Search
-  logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
+  logseq.Editor.registerSlashCommand("[AI-Search] Search", aiSearchCommand);
 
   // 注册一个反斜杠命令，名为 AI-Response
-  logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
+  logseq.Editor.registerSlashCommand("[AI-Search] Response", aiResponseCommand);
 
   // 注册重建索引命令
   logseq.App.registerCommandPalette({
@@ -237,26 +237,26 @@ async function main() {
   });
 
   // 注册斜杠命令
-  logseq.Editor.registerSlashCommand("Re-build AI search index", async () => {
+  logseq.Editor.registerSlashCommand("[AI-Search] Re-build AI search index", async () => {
     await indexAllPages();
   });
 
-  logseq.Editor.registerSlashCommand("Continue AI search index", async () => {
+  logseq.Editor.registerSlashCommand("[AI-Search] Continue AI search index", async () => {
     const { continueIndexing } = await import('./services/vectorService');
     await continueIndexing();
   });
 
   // 注册调试命令
-  const { getVectorStoreStats, clearVectorData } = await import('./services/vectorService');
+  const { getVectorStoreStats, clearVectorData, checkVectorDataIntegrity } = await import('./services/vectorService');
 
   // 向量数据管理命令
-  logseq.Editor.registerSlashCommand("Vector: Show Stats", async () => {
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Show Stats", async () => {
     try {
       const stats = await getVectorStoreStats();
       console.log("📊 向量存储统计:", stats);
 
       let message = `📊 向量存储统计\n` +
-        `• 总Block数: ${stats.count || 0}\n` +
+        `• 已索引向量数: ${stats.count || 0}\n` +
         `• 向量维度: ${stats.dim || 'Unknown'}\n` +
         `• 存储后端: ${stats.backend || 'Unknown'}`;
 
@@ -270,6 +270,13 @@ async function main() {
         }
       }
 
+      // 添加数据状态信息
+      if (stats.count === 0 && stats.storageStats && stats.storageStats.sizeMB && parseFloat(stats.storageStats.sizeMB) > 0) {
+        message += `\n⚠️ 检测到数据文件存在但无法加载`;
+        message += `\n   可能是索引过程被中断导致数据损坏`;
+        message += `\n   建议使用"Vector: Clear Data"清除后重新索引`;
+      }
+
       message += `\n• 详细信息请查看控制台`;
 
       await logseq.UI.showMsg(message, "success", { timeout: 10000 });
@@ -279,7 +286,7 @@ async function main() {
     }
   });
 
-  logseq.Editor.registerSlashCommand("Vector: Clear Data", async () => {
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Clear Data", async () => {
     try {
       await clearVectorData();
       await logseq.UI.showMsg("✅ 向量数据已清除，请重新建立索引", "success");
@@ -287,6 +294,31 @@ async function main() {
     } catch (error) {
       await logseq.UI.showMsg("❌ 清除向量数据失败", "error");
       console.error("清除向量数据失败:", error);
+    }
+  });
+
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Check Integrity", async () => {
+    try {
+      const integrity = await checkVectorDataIntegrity();
+      console.log("🔍 向量数据完整性检查:", integrity);
+
+      let message = `🔍 向量数据完整性检查\n` +
+        `• 文件存在: ${integrity.hasFile ? '✅' : '❌'}\n` +
+        `• 可以加载: ${integrity.canLoad ? '✅' : '❌'}\n` +
+        `• 数据条数: ${integrity.dataCount}\n` +
+        `• 文件大小: ${integrity.fileSize}\n` +
+        `• 整体状态: ${integrity.isValid ? '✅ 正常' : '❌ 异常'}`;
+
+      if (integrity.issues.length > 0) {
+        message += `\n\n⚠️ 发现问题:\n${integrity.issues.map(issue => `• ${issue}`).join('\n')}`;
+      }
+
+      message += `\n\n详细信息请查看控制台`;
+
+      await logseq.UI.showMsg(message, integrity.isValid ? "success" : "warning", { timeout: 15000 });
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 完整性检查失败", "error");
+      console.error("完整性检查失败:", error);
     }
   });
 

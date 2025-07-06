@@ -45,14 +45,37 @@ export class StorageManager {
       const compressedData = await this.storage.getItem(`${key}.lz`);
 
       if (compressedData) {
-        // 解压缩数据
-        const { default: LZString } = await import('lz-string');
-        const jsonString = LZString.decompress(compressedData);
+        try {
+          // 解压缩数据
+          const { default: LZString } = await import('lz-string');
+          const jsonString = LZString.decompress(compressedData);
 
-        if (jsonString) {
-          const data = JSON.parse(jsonString);
-          console.log(`✅ 加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
-          return data;
+          if (jsonString) {
+            try {
+              const data = JSON.parse(jsonString);
+              console.log(`✅ 加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
+              return data;
+            } catch (parseError) {
+              console.error(`❌ JSON解析失败，数据可能损坏: ${key}`, parseError);
+              console.log(`🔧 尝试修复数据文件...`);
+
+              // 尝试修复JSON（移除末尾不完整的部分）
+              const repairedData = this.tryRepairJson(jsonString);
+              if (repairedData) {
+                console.log(`✅ 数据修复成功: ${Array.isArray(repairedData) ? repairedData.length : '1'} 条记录`);
+                return repairedData;
+              }
+
+              console.error(`❌ 数据修复失败，返回null`);
+              return null;
+            }
+          } else {
+            console.error(`❌ 解压缩失败，数据可能损坏: ${key}`);
+            return null;
+          }
+        } catch (decompressError) {
+          console.error(`❌ 解压缩过程出错: ${key}`, decompressError);
+          return null;
         }
       }
 
@@ -60,6 +83,66 @@ export class StorageManager {
       return null;
     } catch (error) {
       console.error("Assets API 加载数据失败:", error);
+      return null;
+    }
+  }
+
+  // 尝试修复损坏的JSON数据
+  private tryRepairJson(jsonString: string): any {
+    try {
+      // 如果是数组，尝试找到最后一个完整的对象
+      if (jsonString.trim().startsWith('[')) {
+        // 找到最后一个完整的 '},' 或 '}'
+        let lastValidIndex = -1;
+        let braceCount = 0;
+        let inString = false;
+        let escapeNext = false;
+
+        for (let i = 1; i < jsonString.length; i++) {
+          const char = jsonString[i];
+
+          if (escapeNext) {
+            escapeNext = false;
+            continue;
+          }
+
+          if (char === '\\') {
+            escapeNext = true;
+            continue;
+          }
+
+          if (char === '"' && !escapeNext) {
+            inString = !inString;
+            continue;
+          }
+
+          if (!inString) {
+            if (char === '{') {
+              braceCount++;
+            } else if (char === '}') {
+              braceCount--;
+              if (braceCount === 0) {
+                // 找到一个完整的对象
+                const nextChar = jsonString[i + 1];
+                if (nextChar === ',' || nextChar === ']' || i === jsonString.length - 2) {
+                  lastValidIndex = i;
+                }
+              }
+            }
+          }
+        }
+
+        if (lastValidIndex > 0) {
+          // 构造修复后的JSON
+          const repairedJson = jsonString.substring(0, lastValidIndex + 1) + ']';
+          console.log(`🔧 尝试修复JSON，截取到位置: ${lastValidIndex}`);
+          return JSON.parse(repairedJson);
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error("JSON修复失败:", error);
       return null;
     }
   }

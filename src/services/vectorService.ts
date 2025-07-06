@@ -326,20 +326,44 @@ async function indexPages(isContinue: boolean = false) {
 
     if (isContinue) {
       existingVectorData = await loadVectorData();
-      const existingUUIDs = new Set(existingVectorData.map(item => item.blockUUID));
 
-      // 只索引新的blocks
-      blocksToIndex = allBlocks.filter(block => !existingUUIDs.has(block.uuid));
+      // 检查是否存在数据文件但加载失败的情况
+      const hasDataFile = await storageManager?.hasData(VECTOR_STORAGE_KEY);
 
-      console.log(`📊 继续索引统计:`);
-      console.log(`   • 总blocks: ${allBlocks.length}`);
-      console.log(`   • 已索引: ${existingVectorData.length}`);
-      console.log(`   • 待索引: ${blocksToIndex.length}`);
+      if (hasDataFile && existingVectorData.length === 0) {
+        console.warn("⚠️ 检测到向量数据文件存在但加载失败，可能数据已损坏");
 
-      if (blocksToIndex.length === 0) {
-        logseq.UI.showMsg("所有内容都已索引完成！", "success");
-        console.log("✅ 所有blocks都已索引，无需继续");
-        return;
+        logseq.UI.showMsg(
+          "⚠️ 检测到向量数据文件存在但无法加载，可能是索引过程被中断导致数据损坏。\n" +
+          "将自动清除损坏的数据并重新开始索引...",
+          "warning",
+          { timeout: 5000 }
+        );
+
+        // 等待用户看到消息
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        console.log("🔄 自动清除损坏数据并重新索引");
+        await saveVectorData([]);
+        existingVectorData = [];
+        blocksToIndex = allBlocks;
+        console.log(`📊 重新索引统计: 总共${allBlocks.length}个blocks`);
+      } else {
+        const existingUUIDs = new Set(existingVectorData.map(item => item.blockUUID));
+
+        // 只索引新的blocks
+        blocksToIndex = allBlocks.filter(block => !existingUUIDs.has(block.uuid));
+
+        console.log(`📊 继续索引统计:`);
+        console.log(`   • 总blocks: ${allBlocks.length}`);
+        console.log(`   • 已索引: ${existingVectorData.length}`);
+        console.log(`   • 待索引: ${blocksToIndex.length}`);
+
+        if (blocksToIndex.length === 0) {
+          logseq.UI.showMsg("所有内容都已索引完成！", "success");
+          console.log("✅ 所有blocks都已索引，无需继续");
+          return;
+        }
       }
     } else {
       // 重新索引所有blocks
@@ -627,6 +651,95 @@ export async function clearVectorData() {
   } catch (error) {
     console.error("清除向量数据失败:", error);
     throw error;
+  }
+}
+
+// 14. 检查向量数据完整性
+export async function checkVectorDataIntegrity(): Promise<{
+  isValid: boolean;
+  hasFile: boolean;
+  canLoad: boolean;
+  dataCount: number;
+  fileSize: string;
+  issues: string[];
+}> {
+  if (!isInitialized || !storageManager) {
+    return {
+      isValid: false,
+      hasFile: false,
+      canLoad: false,
+      dataCount: 0,
+      fileSize: '0MB',
+      issues: ['向量服务未初始化']
+    };
+  }
+
+  const issues: string[] = [];
+  let hasFile = false;
+  let canLoad = false;
+  let dataCount = 0;
+  let fileSize = '0MB';
+
+  try {
+    // 检查文件是否存在
+    hasFile = await storageManager.hasData(VECTOR_STORAGE_KEY);
+
+    if (hasFile) {
+      // 获取文件大小
+      const storageStats = await storageManager.getStorageStats(VECTOR_STORAGE_KEY);
+      fileSize = storageStats?.sizeMB ? `${storageStats.sizeMB}MB` : '未知';
+
+      // 尝试加载数据
+      const vectorData = await loadVectorData();
+      if (vectorData && Array.isArray(vectorData)) {
+        canLoad = true;
+        dataCount = vectorData.length;
+
+        // 检查数据结构完整性
+        if (vectorData.length > 0) {
+          const sample = vectorData[0];
+          if (!sample.blockUUID || !sample.vector || !Array.isArray(sample.vector)) {
+            issues.push('向量数据结构不完整');
+          }
+
+          // 检查向量维度一致性
+          const expectedDim = getVectorDimension();
+          const inconsistentDims = vectorData.filter(item =>
+            !item.vector || item.vector.length !== expectedDim
+          );
+
+          if (inconsistentDims.length > 0) {
+            issues.push(`发现${inconsistentDims.length}条向量维度不一致的数据`);
+          }
+        }
+      } else {
+        issues.push('无法加载向量数据，可能文件已损坏');
+      }
+    } else {
+      issues.push('向量数据文件不存在');
+    }
+
+    const isValid = hasFile && canLoad && issues.length === 0;
+
+    return {
+      isValid,
+      hasFile,
+      canLoad,
+      dataCount,
+      fileSize,
+      issues
+    };
+
+  } catch (error) {
+    issues.push(`检查过程出错: ${error}`);
+    return {
+      isValid: false,
+      hasFile,
+      canLoad: false,
+      dataCount: 0,
+      fileSize,
+      issues
+    };
   }
 }
 
