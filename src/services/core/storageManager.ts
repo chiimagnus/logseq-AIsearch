@@ -1,75 +1,74 @@
-// Assets API 压缩存储实现
+// Enhanced localStorage 存储实现 - 替代有问题的 Assets API
 
 export class StorageManager {
-  private storage: any;
+  private readonly CHUNK_SIZE = 1000; // 每个分片的记录数
+  private readonly MAX_CHUNK_SIZE_MB = 5; // 每个分片最大大小（MB）
 
   constructor() {
-    try {
-      this.storage = logseq.Assets.makeSandboxStorage();
-    } catch (error) {
-      console.error("Assets API 初始化失败:", error);
-      throw new Error("Assets API 不可用");
-    }
+    console.log("🔧 初始化 localStorage 存储管理器");
   }
 
   async saveData(key: string, data: any): Promise<void> {
     try {
-      console.log(`🔄 开始保存数据到 Assets API: ${key}`);
+      console.log(`🔄 开始保存数据到 localStorage: ${key}`);
+      
+      if (!Array.isArray(data)) {
+        throw new Error("数据必须是数组格式");
+      }
 
-      // 🚀 优化：异步序列化，避免阻塞主线程
-      const jsonString = await this.asyncJsonStringify(data);
+      // 清除旧数据
+      await this.clearData(key);
 
-      // 🚀 优化：异步压缩，避免阻塞主线程
-      const compressedData = await this.asyncCompress(jsonString);
-      const compressedSize = new Blob([compressedData]).size;
+      // 分片保存数据
+      const chunks = this.splitIntoChunks(data, this.CHUNK_SIZE);
+      console.log(`📊 数据分为 ${chunks.length} 个分片`);
 
-      console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
+      // 保存元数据
+      const metadata = {
+        totalChunks: chunks.length,
+        totalRecords: data.length,
+        timestamp: Date.now(),
+        version: 1
+      };
 
-      // 直接保存压缩数据
-      await this.storage.setItem(`${key}.lz`, compressedData);
+      localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
 
-      console.log(`✅ Assets API 保存完成: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
+      // 保存每个分片
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkKey = `${key}_chunk_${i}`;
+        
+        // 异步压缩分片
+        const compressedChunk = await this.asyncCompress(JSON.stringify(chunk));
+        localStorage.setItem(chunkKey, compressedChunk);
+        
+        console.log(`✅ 分片 ${i + 1}/${chunks.length} 保存完成 (${chunk.length} 条记录)`);
+      }
+
+      console.log(`✅ localStorage 保存完成: ${data.length} 条记录，${chunks.length} 个分片`);
     } catch (error) {
-      console.error("Assets API 保存数据失败:", error);
-      throw new Error(`Assets API 保存失败: ${error}`);
+      console.error("localStorage 保存数据失败:", error);
+      throw new Error(`localStorage 保存失败: ${error}`);
     }
   }
 
-  // 🚀 新增：异步JSON序列化，分块处理大数据
-  private async asyncJsonStringify(data: any): Promise<string> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          console.log(`🔄 [异步序列化] 开始序列化 ${Array.isArray(data) ? data.length : '1'} 条数据`);
-          const result = JSON.stringify(data);
-          console.log(`✅ [异步序列化] 序列化完成，大小: ${(result.length / 1024 / 1024).toFixed(2)}MB`);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      }, 5); // 5ms延迟，让UI有时间更新
-    });
+  // 将数据分割成分片
+  private splitIntoChunks(data: any[], chunkSize: number): any[][] {
+    const chunks: any[][] = [];
+    for (let i = 0; i < data.length; i += chunkSize) {
+      chunks.push(data.slice(i, i + chunkSize));
+    }
+    return chunks;
   }
 
-  // 🚀 新增：异步压缩，避免阻塞主线程
+  // 🚀 异步压缩，避免阻塞主线程
   private async asyncCompress(jsonString: string): Promise<string> {
     return new Promise(async (resolve, reject) => {
       setTimeout(async () => {
         try {
-          console.log(`🔄 [异步压缩] 开始压缩数据...`);
           const { default: LZString } = await import('lz-string');
-          
-          // 🚀 优化：分块压缩大数据
-          const chunkSize = 1024 * 1024; // 1MB chunks
-          if (jsonString.length > chunkSize) {
-            console.log(`📊 [分块压缩] 数据较大 (${(jsonString.length / 1024 / 1024).toFixed(2)}MB)，使用分块压缩`);
-            const result = await this.compressInChunks(jsonString, LZString);
-            resolve(result);
-          } else {
-            const result = LZString.compress(jsonString);
-            console.log(`✅ [异步压缩] 压缩完成`);
-            resolve(result);
-          }
+          const result = LZString.compress(jsonString);
+          resolve(result);
         } catch (error) {
           reject(error);
         }
@@ -77,279 +76,206 @@ export class StorageManager {
     });
   }
 
-  // 🚀 新增：分块压缩，处理大数据时避免长时间阻塞
-  private async compressInChunks(jsonString: string, LZString: any): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const processChunk = () => {
+  // 🚀 异步解压缩
+  private async asyncDecompress(compressedData: string): Promise<string | null> {
+    return new Promise(async (resolve, reject) => {
+      setTimeout(async () => {
         try {
-          const result = LZString.compress(jsonString);
-          console.log(`✅ [分块压缩] 压缩完成`);
+          const { default: LZString } = await import('lz-string');
+          const result = LZString.decompress(compressedData);
           resolve(result);
         } catch (error) {
           reject(error);
         }
-      };
-
-      // 使用 setTimeout 确保不阻塞UI
-      setTimeout(processChunk, 10);
+      }, 5);
     });
   }
 
   async loadData(key: string): Promise<any> {
     try {
-      console.log(`🔄 开始从 Assets API 加载数据: ${key}`);
+      console.log(`🔄 开始从 localStorage 加载数据: ${key}`);
 
-      // 加载压缩文件
-      const compressedData = await this.storage.getItem(`${key}.lz`);
+      // 检查元数据
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (!metadataStr) {
+        console.log(`📭 未找到数据: ${key}`);
+        return null;
+      }
 
-      if (compressedData) {
-        try {
-          // 🚀 优化：异步解压缩数据
-          const jsonString = await this.asyncDecompress(compressedData);
+      const metadata = JSON.parse(metadataStr);
+      console.log(`📊 找到数据元信息: ${metadata.totalRecords} 条记录，${metadata.totalChunks} 个分片`);
 
-          if (jsonString) {
-            try {
-              // 🚀 优化：异步JSON解析
-              const data = await this.asyncJsonParse(jsonString);
-              console.log(`✅ 加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
-              return data;
-            } catch (parseError) {
-              console.error(`❌ JSON解析失败，数据可能损坏: ${key}`, parseError);
-              console.log(`🔧 尝试修复数据文件...`);
+      // 加载所有分片
+      const allData: any[] = [];
+      let loadedChunks = 0;
 
-              // 尝试修复JSON（移除末尾不完整的部分）
-              const repairedData = this.tryRepairJson(jsonString);
-              if (repairedData) {
-                console.log(`✅ 数据修复成功: ${Array.isArray(repairedData) ? repairedData.length : '1'} 条记录`);
-                return repairedData;
-              }
+      for (let i = 0; i < metadata.totalChunks; i++) {
+        const chunkKey = `${key}_chunk_${i}`;
+        const compressedChunk = localStorage.getItem(chunkKey);
 
-              console.error(`❌ 数据修复失败，返回null`);
-              return null;
+        if (compressedChunk) {
+          try {
+            // 异步解压缩
+            const jsonString = await this.asyncDecompress(compressedChunk);
+            if (jsonString) {
+              const chunk = JSON.parse(jsonString);
+              allData.push(...chunk);
+              loadedChunks++;
+              console.log(`✅ 分片 ${i + 1}/${metadata.totalChunks} 加载完成`);
+            } else {
+              console.warn(`⚠️ 分片 ${i} 解压缩失败`);
             }
-          } else {
-            console.error(`❌ 解压缩失败，数据可能损坏: ${key}`);
-            return null;
+          } catch (error) {
+            console.error(`❌ 分片 ${i} 处理失败:`, error);
           }
-        } catch (decompressError) {
-          console.error(`❌ 解压缩过程出错: ${key}`, decompressError);
-          return null;
+        } else {
+          console.warn(`⚠️ 分片 ${i} 不存在`);
         }
       }
 
-      console.log(`📭 未找到数据: ${key}`);
-      return null;
+      console.log(`✅ 数据加载完成: ${allData.length} 条记录 (${loadedChunks}/${metadata.totalChunks} 分片)`);
+      return allData;
+
     } catch (error) {
-      console.error("Assets API 加载数据失败:", error);
-      return null;
-    }
-  }
-
-  // 🚀 新增：异步解压缩
-  private async asyncDecompress(compressedData: string): Promise<string | null> {
-    return new Promise(async (resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          console.log(`🔄 [异步解压] 开始解压缩数据...`);
-          const { default: LZString } = await import('lz-string');
-          const result = LZString.decompress(compressedData);
-          console.log(`✅ [异步解压] 解压缩完成`);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      }, 5);
-    });
-  }
-
-  // 🚀 新增：异步JSON解析
-  private async asyncJsonParse(jsonString: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          console.log(`🔄 [异步解析] 开始解析JSON数据...`);
-          const result = JSON.parse(jsonString);
-          console.log(`✅ [异步解析] JSON解析完成`);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      }, 5);
-    });
-  }
-
-  // 尝试修复损坏的JSON数据
-  private tryRepairJson(jsonString: string): any {
-    try {
-      // 如果是数组，尝试找到最后一个完整的对象
-      if (jsonString.trim().startsWith('[')) {
-        // 找到最后一个完整的 '},' 或 '}'
-        let lastValidIndex = -1;
-        let braceCount = 0;
-        let inString = false;
-        let escapeNext = false;
-
-        for (let i = 1; i < jsonString.length; i++) {
-          const char = jsonString[i];
-
-          if (escapeNext) {
-            escapeNext = false;
-            continue;
-          }
-
-          if (char === '\\') {
-            escapeNext = true;
-            continue;
-          }
-
-          if (char === '"' && !escapeNext) {
-            inString = !inString;
-            continue;
-          }
-
-          if (!inString) {
-            if (char === '{') {
-              braceCount++;
-            } else if (char === '}') {
-              braceCount--;
-              if (braceCount === 0) {
-                // 找到一个完整的对象
-                const nextChar = jsonString[i + 1];
-                if (nextChar === ',' || nextChar === ']' || i === jsonString.length - 2) {
-                  lastValidIndex = i;
-                }
-              }
-            }
-          }
-        }
-
-        if (lastValidIndex > 0) {
-          // 构造修复后的JSON
-          const repairedJson = jsonString.substring(0, lastValidIndex + 1) + ']';
-          console.log(`🔧 尝试修复JSON，截取到位置: ${lastValidIndex}`);
-          return JSON.parse(repairedJson);
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error("JSON修复失败:", error);
+      console.error("localStorage 加载数据失败:", error);
       return null;
     }
   }
 
   async clearData(key: string): Promise<void> {
     try {
-      await this.storage.removeItem(`${key}.lz`);
-      console.log(`🗑️ 已清除 Assets API 数据: ${key}`);
-    } catch (error) {
-      console.error("Assets API 清除数据失败:", error);
-      // 清除失败不抛出错误，因为可能文件本来就不存在
-    }
-  }
-
-  async hasData(key: string): Promise<boolean> {
-    try {
-      // 🚀 安全检查：确保key不为空
-      if (!key || key.trim() === '') {
-        console.warn("⚠️ hasData调用时key为空，返回false");
-        return false;
+      // 获取元数据以确定需要清除的分片数量
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (metadataStr) {
+        const metadata = JSON.parse(metadataStr);
+        
+        // 清除所有分片
+        for (let i = 0; i < metadata.totalChunks; i++) {
+          localStorage.removeItem(`${key}_chunk_${i}`);
+        }
+        
+        // 清除元数据
+        localStorage.removeItem(`${key}_metadata`);
+        
+        console.log(`🗑️ 已清除 localStorage 数据: ${key} (${metadata.totalChunks} 个分片)`);
+      } else {
+        // 尝试清除可能存在的分片（防止孤立数据）
+        let i = 0;
+        while (localStorage.getItem(`${key}_chunk_${i}`)) {
+          localStorage.removeItem(`${key}_chunk_${i}`);
+          i++;
+        }
+        localStorage.removeItem(`${key}_metadata`);
+        
+        if (i > 0) {
+          console.log(`🗑️ 已清除 localStorage 孤立数据: ${key} (${i} 个分片)`);
+        }
       }
-
-      const data = await this.storage.getItem(`${key}.lz`);
-      return data !== null && data !== undefined;
     } catch (error) {
-      console.error("Assets API 检查数据存在性失败:", error);
-      return false;
+      console.error("localStorage 清除数据失败:", error);
+      // 清除失败不抛出错误，因为可能数据本来就不存在
     }
   }
 
   async getStorageStats(key: string): Promise<any> {
     try {
-      const compressedData = await this.storage.getItem(`${key}.lz`);
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (!metadataStr) return null;
 
-      if (!compressedData) return null;
-
-      const compressedSize = new Blob([compressedData]).size;
-
-      return {
-        backend: 'Assets API',
-        sizeMB: (compressedSize / 1024 / 1024).toFixed(2),
-        location: `assets/storages/${logseq.baseInfo?.id || 'unknown'}/${key}.lz`
-      };
-    } catch (error) {
-      console.error("Assets API 获取统计信息失败:", error);
-      return null;
-    }
-  }
-
-  // 🚀 新增：JSON文件支持（用于清单文件）
-  async saveJsonData(key: string, data: any): Promise<void> {
-    try {
-      console.log(`🔄 开始保存JSON数据到 Assets API: ${key}`);
-
-      const jsonString = JSON.stringify(data, null, 2);
-      console.log(`📊 JSON数据大小: ${(jsonString.length / 1024).toFixed(2)}KB`);
-
-      // 直接保存JSON数据，不压缩
-      await this.storage.setItem(`${key}.json`, jsonString);
-
-      console.log(`✅ JSON数据保存完成: ${key}.json`);
-    } catch (error) {
-      console.error("Assets API 保存JSON数据失败:", error);
-      throw new Error(`Assets API JSON保存失败: ${error}`);
-    }
-  }
-
-  async loadJsonData(key: string): Promise<any> {
-    try {
-      console.log(`🔄 开始从 Assets API 加载JSON数据: ${key}`);
-
-      // 加载JSON文件
-      const jsonString = await this.storage.getItem(`${key}.json`);
-
-      if (jsonString) {
-        try {
-          const data = JSON.parse(jsonString);
-          console.log(`✅ 加载JSON数据成功: ${key}`);
-          return data;
-        } catch (parseError) {
-          console.error(`❌ JSON解析失败: ${key}`, parseError);
-          return null;
+      const metadata = JSON.parse(metadataStr);
+      
+      // 计算总大小
+      let totalSize = 0;
+      for (let i = 0; i < metadata.totalChunks; i++) {
+        const chunkKey = `${key}_chunk_${i}`;
+        const chunk = localStorage.getItem(chunkKey);
+        if (chunk) {
+          totalSize += new Blob([chunk]).size;
         }
       }
 
-      console.log(`📭 未找到JSON数据: ${key}`);
-      return null;
+      return {
+        backend: 'localStorage (分片存储)',
+        sizeMB: (totalSize / 1024 / 1024).toFixed(2),
+        totalChunks: metadata.totalChunks,
+        totalRecords: metadata.totalRecords,
+        compressionRatio: 'LZ压缩',
+        compressedSizeMB: (totalSize / 1024 / 1024).toFixed(2)
+      };
     } catch (error) {
-      console.error("Assets API 加载JSON数据失败:", error);
+      console.error("localStorage 获取统计信息失败:", error);
       return null;
     }
   }
 
-  async hasJsonData(key: string): Promise<boolean> {
+  // 检查数据是否存在
+  async hasData(key: string): Promise<boolean> {
+    return localStorage.getItem(`${key}_metadata`) !== null;
+  }
+
+  // 获取数据完整性信息
+  async getDataIntegrity(key: string): Promise<any> {
     try {
-      // 🚀 安全检查：确保key不为空
-      if (!key || key.trim() === '') {
-        console.warn("⚠️ hasJsonData调用时key为空，返回false");
-        return false;
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (!metadataStr) {
+        return {
+          hasFile: false,
+          canLoad: false,
+          dataCount: 0,
+          fileSize: '0KB',
+          isValid: false,
+          issues: ['元数据文件不存在']
+        };
       }
 
-      const data = await this.storage.getItem(`${key}.json`);
-      return data !== null && data !== undefined;
+      const metadata = JSON.parse(metadataStr);
+      const issues: string[] = [];
+      let actualChunks = 0;
+
+      // 检查所有分片是否存在
+      for (let i = 0; i < metadata.totalChunks; i++) {
+        const chunkKey = `${key}_chunk_${i}`;
+        if (localStorage.getItem(chunkKey)) {
+          actualChunks++;
+        } else {
+          issues.push(`分片 ${i} 缺失`);
+        }
+      }
+
+      const totalSize = await this.calculateTotalSize(key, metadata.totalChunks);
+
+      return {
+        hasFile: true,
+        canLoad: actualChunks === metadata.totalChunks,
+        dataCount: metadata.totalRecords,
+        fileSize: `${(totalSize / 1024).toFixed(2)}KB`,
+        isValid: actualChunks === metadata.totalChunks && issues.length === 0,
+        issues,
+        actualChunks,
+        expectedChunks: metadata.totalChunks
+      };
     } catch (error) {
-      console.error("Assets API 检查JSON数据存在性失败:", error);
-      return false;
+      return {
+        hasFile: false,
+        canLoad: false,
+        dataCount: 0,
+        fileSize: '0KB',
+        isValid: false,
+        issues: [`完整性检查失败: ${error}`]
+      };
     }
   }
 
-  async clearJsonData(key: string): Promise<void> {
-    try {
-      await this.storage.removeItem(`${key}.json`);
-      console.log(`🗑️ 已清除 Assets API JSON数据: ${key}`);
-    } catch (error) {
-      console.error("Assets API 清除JSON数据失败:", error);
-      // 清除失败不抛出错误，因为可能文件本来就不存在
+  // 计算总大小
+  private async calculateTotalSize(key: string, totalChunks: number): Promise<number> {
+    let totalSize = 0;
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkKey = `${key}_chunk_${i}`;
+      const chunk = localStorage.getItem(chunkKey);
+      if (chunk) {
+        totalSize += new Blob([chunk]).size;
+      }
     }
+    return totalSize;
   }
 }

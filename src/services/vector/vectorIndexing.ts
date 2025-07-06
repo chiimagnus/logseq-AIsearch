@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, hasVectorData, addVectorShard, clearVectorData } from './vectorStorage';
+import { loadVectorData, hasVectorData, saveVectorData, clearVectorData } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/content/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -59,12 +59,11 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
       blocksToIndex = allBlocks;
     }
 
-    let totalDataCount = existingVectorData.length;
     let indexedCount = 0;
     const startTime = Date.now();
     const batchSize = 15;
-    const saveBatchSize = 500; // 保存为分片的阈值
-    let batchBuffer: VectorData[] = [];
+    const saveInterval = 500; // 每500个保存一次
+    let newVectorData: VectorData[] = [];
     
     console.log(`🔄 开始处理 ${blocksToIndex.length} 个blocks...`);
     
@@ -93,24 +92,28 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
 
       const batchResults = await Promise.all(batchPromises);
       const validResults = batchResults.filter((result): result is VectorData => result !== null);
-      batchBuffer.push(...validResults);
+      newVectorData.push(...validResults);
       indexedCount += batch.length;
       
       const currentProgress = Math.round((indexedCount / blocksToIndex.length) * 100);
 
       if (indexedCount % 50 === 0 || indexedCount === blocksToIndex.length) {
-        console.log(`📊 [进度] ${currentProgress}% (${indexedCount}/${blocksToIndex.length}) - 缓冲区: ${batchBuffer.length} 条`);
+        console.log(`📊 [进度] ${currentProgress}% (${indexedCount}/${blocksToIndex.length}) - 新数据: ${newVectorData.length} 条`);
       }
 
-      if (batchBuffer.length >= saveBatchSize || (indexedCount === blocksToIndex.length && batchBuffer.length > 0)) {
-        console.log(`💾 [保存分片] 准备将 ${batchBuffer.length} 条新数据保存为新分片...`);
+      // 定期保存进度，避免数据丢失
+      if (newVectorData.length >= saveInterval || indexedCount === blocksToIndex.length) {
+        console.log(`💾 [保存进度] 准备保存 ${existingVectorData.length + newVectorData.length} 条向量数据...`);
         try {
-          await addVectorShard(batchBuffer);
-          totalDataCount += batchBuffer.length;
-          console.log(`✅ [分片已保存] 总数据量: ${totalDataCount} 条`);
-          batchBuffer = []; // 清空缓冲区
+          const allVectorData = [...existingVectorData, ...newVectorData];
+          await saveVectorData(allVectorData);
+          console.log(`✅ [进度已保存] 总数据量: ${allVectorData.length} 条`);
+          
+          // 更新现有数据并清空新数据缓冲区
+          existingVectorData = allVectorData;
+          newVectorData = [];
         } catch (saveError) {
-          console.error(`❌ [分片保存失败] ${saveError}`);
+          console.error(`❌ [保存失败] ${saveError}`);
           logseq.UI.showMsg(`索引保存失败: ${saveError}`, "error");
           throw saveError; // 停止索引
         }
@@ -124,6 +127,8 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
+
+    const totalDataCount = existingVectorData.length;
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
     console.log(`📊 最终统计: 总共 ${totalDataCount} 条向量数据`);
