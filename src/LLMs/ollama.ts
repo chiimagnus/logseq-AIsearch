@@ -1,9 +1,9 @@
 export async function ollamaGenerate(prompt: string): Promise<string> {
   try {
-    const host = logseq.settings?.host || 'localhost:11434';
+    const ollamaHost = String(logseq.settings?.ollamaHost || "http://localhost:11434");
     const model = logseq.settings?.model;
 
-    const response = await fetch(`http://${host}/api/generate`, {
+    const response = await fetch(`${ollamaHost}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

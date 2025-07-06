@@ -9,3 +9,5 @@ release：AI-Search/package.json
 release：AI-Search/readme.md
 pnpm-lock.yaml
 *.zip
+package-lock.json
+/.augment

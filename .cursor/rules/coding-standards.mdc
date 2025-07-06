@@ -1,7 +1,5 @@
 ---
-description: 代码编写规范和原则，使用最新的React 18特性，优先使用函数组件和Hooks，实现组件的懒加载和代码分割。
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # 编码标准与最佳实践
 
@@ -32,3 +30,8 @@ alwaysApply: false
 - [tsconfig.json](mdc:tsconfig.json) - TypeScript配置
 - [tailwind.config.js](mdc:tailwind.config.js) - 样式配置
 - [postcss.config.js](mdc:postcss.config.js) - CSS处理配置
+
+## 参考资源
+- [Logseq Plugin API](https://plugins-doc.logseq.com/) - 了解 Logseq 插件开发
+- [Logseq Plugin API](https://logseq.github.io/plugins/modules.html) - 了解 Logseq 插件开发
+

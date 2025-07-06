@@ -12,7 +12,6 @@ export interface SearchResult {
 }
 
 export interface SearchConfig {
-  maxResults: number;
   minScore: number;
   batchSize: number;
   enableAISummary: boolean;

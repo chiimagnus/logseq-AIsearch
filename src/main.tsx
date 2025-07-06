@@ -3,6 +3,7 @@ import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 import { aiSearchCommand, aiResponseCommand } from './services/commands';
+import { initializeVectorStore, indexAllPages } from './services/vectorService';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
@@ -22,6 +23,18 @@ const settings: SettingSchemaDesc[] = [
     default: "Custom LLM API"
   },
   {
+    key: "embeddingModel",
+    type: "enum",
+    title: "🤖 Embedding模型选择 / Embedding Model",
+    description: "选择用于向量化的模型\nSelect the model for vectorization",
+    enumChoices: [
+      "Ollama Embedding",
+      "Custom Embedding API"
+    ],
+    default: "Ollama本地模型 / Ollama Local Model"
+  },
+
+  {
     key: "shortcut",
     type: "string",
     title: "⌨️ AI搜索快捷键 / AI Search Shortcut",
@@ -35,101 +48,102 @@ const settings: SettingSchemaDesc[] = [
     description: "",
     default: "alt+mod+r"
   },
+
+  {
+    key: "rebuildIndexShortcut",
+    type: "string",
+    title: "⌨️ 重建索引快捷键 / Rebuild Index Shortcut",
+    description: "设置重建向量索引的快捷键\nSet shortcut for rebuilding vector index",
+    default: "alt+mod+i"
+  },
+
   
   // ==================== Ollama 本地部署 ====================
   {
     key: "ollamaHeader",
     type: "heading",
     title: "🖥️ Ollama 本地部署 / Ollama Local Deployment",
-    description: "",
+    description: "请先使用 'ollama pull nomic-embed-text' 下载embedding模型",
     default: ""
   },
-  {
-    key: "host",
-    type: "string",
-    title: "🌐 主机地址和端口 / Host Address and Port",
-    description: "",
-    default: "localhost:11434"
-  },
+
   {
     key: "model",
     type: "string",
-    title: "🤖 模型名称 / Model Name",
+    title: "🤖 Ollama聊天模型名称 / Ollama Chat Model Name",
     description: "",
     default: "deepseek-r1:8b"
+  },
+  {
+    key: "ollamaHost",
+    type: "string", 
+    title: "🌐 Ollama Host",
+    description: "Ollama API服务地址 (聊天和Embedding) / Ollama API service address (Chat and Embedding)",
+    default: "http://localhost:11434"
+  },
+  {
+    key: "ollamaEmbeddingModel", 
+    type: "string",
+    title: "🤖 Ollama Embedding模型名称 / Ollama Embedding Model Name",
+    description: "推荐使用 nomic-embed-text",
+    default: "nomic-embed-text"
   },
   
   // ==================== 自定义API配置 ====================
   {
     key: "unifiedApiHeader",
     type: "heading",
-    title: "🛠️ 自定义API配置 / Custom API Configuration",
-    description:
-`
-🧠 智谱清言Zhipu AI: https://open.bigmodel.cn/api/paas/v4/chat/completions
-    
-🤖 硅基流动SiliconFlow: https://api.siliconflow.cn/v1/chat/completions
-`,
+    title: "🛠️ 自定义API / Custom API Configuration",
+    description: "",
     default: ""
   },
   {
     key: "apiUrl",
     type: "string",
-    title: "🔗 完整API URL / Full API URL",
+    title: "🔗 聊天模型API URL / Chat Model API URL",
     description: "",
     default: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
   },
   {
     key: "apiKey",
     type: "string",
-    title: "🔐 API Key",
+    title: "🔐 聊天模型API Key / Chat Model API Key",
     description: "",
     default: ""
   },
   {
     key: "modelName",
     type: "string",
-    title: "🤖 模型名称 / Model Name",
-    description: "",
+    title: "🤖 聊天模型名称 / Chat Model Name",
+    description: `
+支持符合OpenAI格式的各种API服务。
+
+🧠 聊天模型API示例 (Chat Model API Examples):
+• 智谱清言Zhipu AI: https://open.bigmodel.cn/api/paas/v4/chat/completions
+• 硅基流动SiliconFlow: https://api.siliconflow.cn/v1/chat/completions
+`,
     default: "GLM-4-Flash-250414"
   },
-  
-  // ==================== 高级设置 ====================
   {
-    key: "searchSettingsHeader",
-    type: "heading",
-    title: "🔍 高级设置 / Advanced Settings",
-    description: "",
+    key: "cloudEmbeddingApiUrl",
+    type: "string",
+    title: "Embedding API URL", 
+    description: "如SiliconFlow: https://api.siliconflow.cn/v1/embeddings",
+    default: "https://api.siliconflow.cn/v1/embeddings"
+  },
+  {
+    key: "cloudEmbeddingApiKey",
+    type: "string",
+    title: "🔐 Embedding API密钥 / Embedding API Key",
+    description: "", 
     default: ""
   },
   {
-    key: "maxResults",
-    type: "number",
-    default: 50,
-    title: "📊 最大搜索结果数 / Max Results",
-    description: "设置搜索返回的最大结果数量\nSet the maximum number of search results to return"
-  },
-  {
-    key: "minScore",
-    type: "number",
-    default: 4.0,
-    title: "⭐ 最低相关度分数 / Minimum Score",
-    description: "设置结果筛选的最低相关度分数(0-10)\nSet the minimum relevance score for filtering results (0-10)"
-  },
-  {
-    key: "batchSize",
-    type: "number",
-    default: 10,
-    title: "⚡ 批处理大小 / Batch Size",
-    description: "设置并行处理相关性得分的批处理大小\nSet the batch size for parallel relevance score processing"
-  },
-
-  {
-    key: "enableAISummary",
-    type: "boolean",
-    default: true,
-    title: "🤖 启用AI总结 / Enable AI Summary",
-    description: "是否启用AI总结功能\nWhether to enable AI summary feature"
+    key: "cloudEmbeddingModel",
+    type: "string",
+    title: "🤖 Embedding模型名称 / Embedding Model Name",
+    description: "SiliconFlow model like BAAI/bge-m3",
+    default: "BAAI/bge-m3"
   },
   
   // ==================== AI回应设置 ====================
@@ -156,11 +170,22 @@ const settings: SettingSchemaDesc[] = [
   }
 ];
 
-function main() {
+async function main() {
   console.info("AI-Search Plugin Loaded");
+
+  // 初始化向量数据库
+  await initializeVectorStore();
 
   // 注册设置
   logseq.useSettingsSchema(settings);
+
+  // 监听设置变更
+  logseq.onSettingsChanged(async (newSettings, oldSettings) => {
+    // 如果快捷键发生变更，提示用户重启插件
+    if (newSettings.rebuildIndexShortcut !== oldSettings?.rebuildIndexShortcut) {
+      await logseq.UI.showMsg("快捷键已更新，重启插件后生效 | Shortcut updated, restart plugin to take effect", "info");
+    }
+  });
 
   // 注册AI搜索快捷键
   logseq.App.registerCommandShortcut(
@@ -181,10 +206,123 @@ function main() {
   );
 
   // 注册一个反斜杠命令，名为 AI-Search
-  logseq.Editor.registerSlashCommand("AI-Search", aiSearchCommand);
+  logseq.Editor.registerSlashCommand("[AI-Search] Search", aiSearchCommand);
 
   // 注册一个反斜杠命令，名为 AI-Response
-  logseq.Editor.registerSlashCommand("AI-Response", aiResponseCommand);
+  logseq.Editor.registerSlashCommand("[AI-Search] Response", aiResponseCommand);
+
+  // 注册重建索引命令
+  logseq.App.registerCommandPalette({
+    key: "rebuild-ai-index",
+    label: "Re-build AI search index",
+    keybinding: {
+      binding: logseq.settings?.rebuildIndexShortcut || "alt+mod+i",
+      mode: "non-editing"
+    } as any,
+  }, async () => {
+    await indexAllPages();
+  });
+
+  // 注册继续索引命令
+  logseq.App.registerCommandPalette({
+    key: "continue-ai-index",
+    label: "Continue AI search index",
+    keybinding: {
+      binding: "alt+mod+shift+i",
+      mode: "non-editing"
+    } as any,
+  }, async () => {
+    const { continueIndexing } = await import('./services/vectorService');
+    await continueIndexing();
+  });
+
+  // 注册斜杠命令
+  logseq.Editor.registerSlashCommand("[AI-Search] Re-build AI search index", async () => {
+    await indexAllPages();
+  });
+
+  logseq.Editor.registerSlashCommand("[AI-Search] Continue AI search index", async () => {
+    const { continueIndexing } = await import('./services/vectorService');
+    await continueIndexing();
+  });
+
+  // 注册调试命令
+  const { getVectorStoreStats, clearVectorData, checkVectorDataIntegrity } = await import('./services/vectorService');
+
+  // 向量数据管理命令
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Show Stats", async () => {
+    try {
+      const stats = await getVectorStoreStats();
+      console.log("📊 向量存储统计:", stats);
+
+      let message = `📊 向量存储统计\n` +
+        `• 已索引向量数: ${stats.count || 0}\n` +
+        `• 向量维度: ${stats.dim || 'Unknown'}\n` +
+        `• 存储后端: ${stats.backend || 'Unknown'}`;
+
+      if (stats.storageStats) {
+        if (stats.storageStats.totalChunks) {
+          message += `\n• 数据块数: ${stats.storageStats.totalChunks}`;
+          message += `\n• 压缩率: ${stats.storageStats.compressionRatio}`;
+          message += `\n• 存储大小: ${stats.storageStats.compressedSizeMB}MB`;
+        } else if (stats.storageStats.sizeMB) {
+          message += `\n• 存储大小: ${stats.storageStats.sizeMB}MB`;
+        }
+      }
+
+      // 添加数据状态信息
+      if (stats.count === 0 && stats.storageStats && stats.storageStats.sizeMB && parseFloat(stats.storageStats.sizeMB) > 0) {
+        message += `\n⚠️ 检测到数据文件存在但无法加载`;
+        message += `\n   可能是索引过程被中断导致数据损坏`;
+        message += `\n   建议使用"Vector: Clear Data"清除后重新索引`;
+      }
+
+      message += `\n• 详细信息请查看控制台`;
+
+      await logseq.UI.showMsg(message, "success", { timeout: 10000 });
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 获取存储统计失败", "error");
+      console.error("获取存储统计失败:", error);
+    }
+  });
+
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Clear Data", async () => {
+    try {
+      await clearVectorData();
+      await logseq.UI.showMsg("✅ 向量数据已清除，请重新建立索引", "success");
+      console.log("向量数据已清除");
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 清除向量数据失败", "error");
+      console.error("清除向量数据失败:", error);
+    }
+  });
+
+  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Check Integrity", async () => {
+    try {
+      const integrity = await checkVectorDataIntegrity();
+      console.log("🔍 向量数据完整性检查:", integrity);
+
+      let message = `🔍 向量数据完整性检查\n` +
+        `• 文件存在: ${integrity.hasFile ? '✅' : '❌'}\n` +
+        `• 可以加载: ${integrity.canLoad ? '✅' : '❌'}\n` +
+        `• 数据条数: ${integrity.dataCount}\n` +
+        `• 文件大小: ${integrity.fileSize}\n` +
+        `• 整体状态: ${integrity.isValid ? '✅ 正常' : '❌ 异常'}`;
+
+      if (integrity.issues.length > 0) {
+        message += `\n\n⚠️ 发现问题:\n${integrity.issues.map(issue => `• ${issue}`).join('\n')}`;
+      }
+
+      message += `\n\n详细信息请查看控制台`;
+
+      await logseq.UI.showMsg(message, integrity.isValid ? "success" : "warning", { timeout: 15000 });
+    } catch (error) {
+      await logseq.UI.showMsg("❌ 完整性检查失败", "error");
+      console.error("完整性检查失败:", error);
+    }
+  });
+
+
 
   // 修改顶栏按钮
   logseq.App.registerUIItem('toolbar', {
