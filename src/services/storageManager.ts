@@ -17,15 +17,13 @@ export class StorageManager {
       console.log(`🔄 开始保存数据到 Assets API: ${key}`);
 
       const jsonString = JSON.stringify(data);
-      const originalSize = new Blob([jsonString]).size;
-      console.log(`📊 原始数据大小: ${(originalSize / 1024 / 1024).toFixed(2)}MB`);
 
       // 使用LZ-String压缩
       const { default: LZString } = await import('lz-string');
       const compressedData = LZString.compress(jsonString);
       const compressedSize = new Blob([compressedData]).size;
 
-      console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB (压缩率: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}%)`);
+      console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
 
       // 直接保存压缩数据
       await this.storage.setItem(`${key}.lz`, compressedData);
@@ -175,23 +173,9 @@ export class StorageManager {
 
       const compressedSize = new Blob([compressedData]).size;
 
-      // 获取原始大小
-      let originalSize = compressedSize;
-      try {
-        const { default: LZString } = await import('lz-string');
-        const decompressed = LZString.decompress(compressedData);
-        if (decompressed) {
-          originalSize = new Blob([decompressed]).size;
-        }
-      } catch (error) {
-        console.warn("无法获取原始大小:", error);
-      }
-
       return {
         backend: 'Assets API',
         sizeMB: (compressedSize / 1024 / 1024).toFixed(2),
-        originalSizeMB: (originalSize / 1024 / 1024).toFixed(2),
-        compressionRatio: ((1 - compressedSize / originalSize) * 100).toFixed(1) + '%',
         location: `assets/storages/${logseq.baseInfo?.id || 'unknown'}/${key}.lz`
       };
     } catch (error) {
