@@ -2,8 +2,8 @@ import "@logseq/libs";
 import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
-import { aiSearchCommand, aiResponseCommand } from './services/commands';
-import { initializeVectorStore, indexAllPages } from './services/vectorService';
+import { aiSearchCommand, aiResponseCommand } from './services/core/commands';
+import { initializeVectorStore, indexAllPages } from './services/vector/vectorService';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
@@ -232,7 +232,7 @@ async function main() {
       mode: "non-editing"
     } as any,
   }, async () => {
-    const { continueIndexing } = await import('./services/vectorService');
+    const { continueIndexing } = await import('./services/vector/vectorService');
     await continueIndexing();
   });
 
@@ -242,12 +242,12 @@ async function main() {
   });
 
   logseq.Editor.registerSlashCommand("[AI-Search] Continue AI search index", async () => {
-    const { continueIndexing } = await import('./services/vectorService');
+    const { continueIndexing } = await import('./services/vector/vectorService');
     await continueIndexing();
   });
 
   // 注册调试命令
-  const { getVectorStoreStats, clearVectorData, checkVectorDataIntegrity } = await import('./services/vectorService');
+  const { getVectorStoreStats, clearVectorData, checkVectorDataIntegrity } = await import('./services/vector/vectorService');
 
   // 向量数据管理命令
   logseq.Editor.registerSlashCommand("[AI-Search] Vector: Show Stats", async () => {

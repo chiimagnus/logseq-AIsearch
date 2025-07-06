@@ -1,7 +1,7 @@
 // 内容处理工具（索引前处理：过滤、去重）
 
 import { BlockEntity } from '@logseq/libs/dist/LSPlugin';
-import { BlockWithPage } from '../types/vector';
+import { BlockWithPage } from '../../types/vector';
 
 // 内容预处理函数
 export function preprocessContent(content: string): string {

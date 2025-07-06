@@ -1,7 +1,7 @@
 // 向量数据存储服务
 
-import { VectorData, VectorDatabase, CompactVectorData, VectorStoreStats, VectorDataIntegrity } from '../types/vector';
-import { StorageManager } from './storageManager';
+import { VectorData, VectorDatabase, CompactVectorData, VectorStoreStats, VectorDataIntegrity } from '../../types/vector';
+import { StorageManager } from '../core/storageManager';
 import { getVectorDimension } from './embeddingService';
 
 // 存储相关常量

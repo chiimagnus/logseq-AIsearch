@@ -1,9 +1,9 @@
 // 搜索编排器 - AI Agent 核心决策层
 
-import { SearchResponse } from '../types/search';
-import { timeAwareSearch } from '../tools/searchTools';
-import { generateResponse } from './apiService';
-import { getSummaryPrompt } from '../prompts/summaryGeneration';
+import { SearchResponse } from '../../types/search';
+import { timeAwareSearch } from '../../tools/search/searchTools';
+import { generateResponse } from '../ai/apiService';
+import { getSummaryPrompt } from '../../prompts/summaryGeneration';
 
 // AI 搜索的核心编排逻辑
 export async function aiSearch(query: string): Promise<{

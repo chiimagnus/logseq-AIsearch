@@ -1,9 +1,9 @@
 // 向量索引服务
 
-import { VectorData, VectorDatabase, BlockWithPage } from '../types/vector';
+import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
 import { saveVectorData, loadVectorData, hasVectorData } from './vectorStorage';
-import { getAllBlocksWithPage, preprocessContent } from '../tools/contentProcessor';
+import { getAllBlocksWithPage, preprocessContent } from '../../tools/content/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
 function compressVector(vector: number[]): number[] {

@@ -1,6 +1,6 @@
 // 向量搜索服务
 
-import { VectorSearchResult } from '../types/vector';
+import { VectorSearchResult } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
 import { loadVectorData } from './vectorStorage';
 
