@@ -26,7 +26,7 @@ export async function initializeVectorStore() {
       return;
     }
 
-    logseq.UI.showMsg("向量存储系统已初始化", "info", { timeout: 3000 });
+    // logseq.UI.showMsg("向量存储系统已初始化", "info", { timeout: 3000 });
 
     // 测试embedding服务连接
     try {

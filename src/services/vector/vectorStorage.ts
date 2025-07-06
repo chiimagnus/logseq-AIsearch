@@ -11,7 +11,7 @@ let storageManager: StorageManager;
 // 初始化存储管理器
 export function initializeStorage(): void {
   storageManager = new StorageManager();
-  logseq.UI.showMsg("📦 存储后端: Assets API (压缩存储)", "info", { timeout: 3000 });
+  // logseq.UI.showMsg("📦 存储后端: Assets API (压缩存储)", "info", { timeout: 3000 });
   console.log("✅ 存储系统初始化完成，使用: Assets API");
 }
 

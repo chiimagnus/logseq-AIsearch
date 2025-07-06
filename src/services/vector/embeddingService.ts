@@ -120,7 +120,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 // 测试 embedding 服务连接
 export async function testEmbeddingService(): Promise<void> {
   const serviceType = getEmbeddingServiceType();
-  logseq.UI.showMsg(`🔧 正在测试${serviceType === 'ollama' ? 'Ollama' : '云端'}embedding服务...`, "info");
+  // logseq.UI.showMsg(`🔧 正在测试${serviceType === 'ollama' ? 'Ollama' : '云端'}embedding服务...`, "info");
 
   try {
     await generateEmbedding("测试连接");
