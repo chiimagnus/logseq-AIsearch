@@ -423,49 +423,29 @@ async function indexPages(isContinue: boolean = false) {
       // 每处理saveBatchSize个blocks就保存一次（增量保存）
       if (indexedCount % saveBatchSize === 0 || indexedCount === blocksToIndex.length) {
         await saveVectorData(vectorData);
-        console.log(`💾 [保存] 已保存 ${vectorData.length} 条向量数据`);
+        // console.log(`💾 [保存] 已保存 ${vectorData.length} 条向量数据`);
       }
 
-      // 显示详细进度和性能统计
+      // 显示详细进度
       const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-      const successRate = Math.round((vectorData.length / (indexedCount || 1)) * 100);
-      const elapsedTime = Date.now() - startTime;
-      const avgTime = indexedCount > 0 ? elapsedTime / indexedCount : 0;
-      const estimatedTotal = avgTime * blocksToIndex.length;
-      const remainingTime = Math.max(0, estimatedTotal - elapsedTime);
 
       if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
         console.log(`\n📊 [进度] ${progress}% (${indexedCount}/${blocksToIndex.length})`);
-        console.log(`   ✅ 成功: ${vectorData.length} 条 (${successRate}%)`);
-        console.log(`   ⚡ 速度: ${avgTime.toFixed(0)}ms/条`);
-        console.log(`   ⏱️ 预计剩余: ${(remainingTime / 1000 / 60).toFixed(1)}分钟`);
 
         logseq.UI.showMsg(
-          `🔄 ${actionText}索引进度: ${progress}%\n` +
-          `📝 已处理: ${indexedCount}/${blocksToIndex.length}\n` +
-          `✅ 成功: ${vectorData.length}条 (${successRate}%)\n` +
-          `⏱️ 预计剩余: ${(remainingTime / 1000 / 60).toFixed(1)}分钟`,
+          `🔄 ${actionText}索引进度: ${progress}%`,
           "info",
           { timeout: 3000 }
         );
       }
     }
-    
-    const totalTime = (Date.now() - startTime) / 1000;
-    const finalSuccessRate = Math.round((vectorData.length / (indexedCount || 1)) * 100);
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
-    console.log(`   📊 总计处理: ${indexedCount} 个blocks`);
-    console.log(`   ✅ 成功索引: ${vectorData.length} 条 (${finalSuccessRate}%)`);
-    console.log(`   ⏱️ 总耗时: ${totalTime.toFixed(1)}秒`);
-    console.log(`   ⚡ 平均速度: ${(totalTime / indexedCount * 1000).toFixed(0)}ms/条`);
     console.log(`===============================\n`);
 
     logseq.UI.showMsg(
       `🎉 ${actionText}索引完成！\n` +
-      `📊 处理: ${indexedCount}个blocks\n` +
-      `✅ 成功: ${vectorData.length}条 (${finalSuccessRate}%)\n` +
-      `⏱️ 耗时: ${totalTime.toFixed(1)}秒`,
+      `📊 处理: ${indexedCount}个blocks`,
       "success",
       { timeout: 8000 }
     );
