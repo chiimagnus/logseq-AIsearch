@@ -8,6 +8,8 @@ export interface VectorData {
   lastUpdated: number;
 }
 
+export type VectorDatabase = VectorData[];
+
 // 优化的存储数据结构（减少冗余）
 export interface CompactVectorData {
   u: string;      // blockUUID (缩短字段名)
@@ -17,7 +19,20 @@ export interface CompactVectorData {
   t: number;      // lastUpdated timestamp
 }
 
-export type VectorDatabase = VectorData[];
+// 向量存储清单
+export interface VectorStoreManifest {
+  nextShardId: number;
+  shards: string[]; // 分片文件名列表
+  totalCount: number; // 总向量数
+}
+
+// 向量存储统计信息
+export interface VectorStoreStats {
+  count: number;
+  dim: number;
+  backend: string;
+  storageStats?: any;
+}
 
 export interface BlockWithPage {
   uuid: string;
@@ -32,18 +47,7 @@ export interface VectorSearchResult {
   score: number;
 }
 
-export interface VectorStoreStats {
-  count: number;
-  dim: number;
-  backend: string;
-  storageStats?: {
-    totalChunks?: number;
-    compressionRatio?: string;
-    compressedSizeMB?: string;
-    sizeMB?: string;
-  };
-}
-
+// 向量数据完整性报告
 export interface VectorDataIntegrity {
   isValid: boolean;
   hasFile: boolean;
