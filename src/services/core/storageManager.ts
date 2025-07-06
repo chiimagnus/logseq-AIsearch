@@ -282,4 +282,74 @@ export class StorageManager {
       return null;
     }
   }
+
+  // 🚀 新增：JSON文件支持（用于清单文件）
+  async saveJsonData(key: string, data: any): Promise<void> {
+    try {
+      console.log(`🔄 开始保存JSON数据到 Assets API: ${key}`);
+
+      const jsonString = JSON.stringify(data, null, 2);
+      console.log(`📊 JSON数据大小: ${(jsonString.length / 1024).toFixed(2)}KB`);
+
+      // 直接保存JSON数据，不压缩
+      await this.storage.setItem(`${key}.json`, jsonString);
+
+      console.log(`✅ JSON数据保存完成: ${key}.json`);
+    } catch (error) {
+      console.error("Assets API 保存JSON数据失败:", error);
+      throw new Error(`Assets API JSON保存失败: ${error}`);
+    }
+  }
+
+  async loadJsonData(key: string): Promise<any> {
+    try {
+      console.log(`🔄 开始从 Assets API 加载JSON数据: ${key}`);
+
+      // 加载JSON文件
+      const jsonString = await this.storage.getItem(`${key}.json`);
+
+      if (jsonString) {
+        try {
+          const data = JSON.parse(jsonString);
+          console.log(`✅ 加载JSON数据成功: ${key}`);
+          return data;
+        } catch (parseError) {
+          console.error(`❌ JSON解析失败: ${key}`, parseError);
+          return null;
+        }
+      }
+
+      console.log(`📭 未找到JSON数据: ${key}`);
+      return null;
+    } catch (error) {
+      console.error("Assets API 加载JSON数据失败:", error);
+      return null;
+    }
+  }
+
+  async hasJsonData(key: string): Promise<boolean> {
+    try {
+      // 🚀 安全检查：确保key不为空
+      if (!key || key.trim() === '') {
+        console.warn("⚠️ hasJsonData调用时key为空，返回false");
+        return false;
+      }
+
+      const data = await this.storage.getItem(`${key}.json`);
+      return data !== null && data !== undefined;
+    } catch (error) {
+      console.error("Assets API 检查JSON数据存在性失败:", error);
+      return false;
+    }
+  }
+
+  async clearJsonData(key: string): Promise<void> {
+    try {
+      await this.storage.removeItem(`${key}.json`);
+      console.log(`🗑️ 已清除 Assets API JSON数据: ${key}`);
+    } catch (error) {
+      console.error("Assets API 清除JSON数据失败:", error);
+      // 清除失败不抛出错误，因为可能文件本来就不存在
+    }
+  }
 }

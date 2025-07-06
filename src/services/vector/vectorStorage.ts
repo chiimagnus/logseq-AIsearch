@@ -30,18 +30,18 @@ async function loadManifest(): Promise<VectorStoreManifest> {
     return manifestCache;
   }
 
-  // 只在必要时才从存储加载
+  // 🚀 改为加载JSON文件，避免解压操作
   try {
-    const manifest = await storageManager.loadData(VECTOR_MANIFEST_KEY);
+    const manifest = await storageManager.loadJsonData(VECTOR_MANIFEST_KEY);
     const result = manifest || { nextShardId: 0, shards: [], totalCount: 0 };
     
     // 缓存清单文件
     manifestCache = result;
-    console.log("📋 清单文件已缓存");
+    console.log("📋 清单文件已从JSON加载并缓存");
     
     return result;
   } catch (error) {
-    console.warn("⚠️ 无法加载清单文件，使用空清单");
+    console.warn("⚠️ 无法加载清单JSON文件，使用空清单");
     const emptyManifest = { nextShardId: 0, shards: [], totalCount: 0 };
     manifestCache = emptyManifest;
     return emptyManifest;
@@ -55,8 +55,8 @@ async function saveManifest(manifest: VectorStoreManifest): Promise<void> {
   // 更新缓存
   manifestCache = manifest;
   
-  // 保存到存储
-  await storageManager.saveData(VECTOR_MANIFEST_KEY, manifest);
+  // 🚀 改为保存JSON文件，避免压缩操作
+  await storageManager.saveJsonData(VECTOR_MANIFEST_KEY, manifest);
 }
 
 // 向量数据优化函数
@@ -247,12 +247,12 @@ export async function clearVectorData(): Promise<void> {
       console.log("📭 没有找到数据分片，跳过分片清除");
     }
 
-    // 清除清单文件
+    // 🚀 清除JSON清单文件
     try {
-      await storageManager.clearData(VECTOR_MANIFEST_KEY);
-      console.log("🗑️ 已清除向量数据清单");
+      await storageManager.clearJsonData(VECTOR_MANIFEST_KEY);
+      console.log("🗑️ 已清除向量数据JSON清单");
     } catch (error) {
-      console.warn("⚠️ 清除清单文件失败:", error);
+      console.warn("⚠️ 清除JSON清单文件失败:", error);
     }
 
     // 🚀 清除所有缓存
@@ -289,10 +289,10 @@ export async function checkVectorDataIntegrity(): Promise<VectorDataIntegrity> {
       };
     }
 
-    // 只在必要时才检查存储
-    const hasManifest = await storageManager.hasData(VECTOR_MANIFEST_KEY);
+    // 🚀 只在必要时才检查JSON存储
+    const hasManifest = await storageManager.hasJsonData(VECTOR_MANIFEST_KEY);
     if (!hasManifest) {
-      issues.push('向量数据清单文件不存在');
+      issues.push('向量数据JSON清单文件不存在');
       return { isValid: false, hasFile: false, canLoad: false, dataCount: 0, fileSize: 'N/A', issues };
     }
 
@@ -330,18 +330,18 @@ export async function hasVectorData(): Promise<boolean> {
     return true;
   }
   
-  // 如果缓存为空，简单检查清单文件是否存在
+  // 🚀 改为检查JSON清单文件是否存在
   try {
-    const hasManifest = await storageManager.hasData(VECTOR_MANIFEST_KEY);
+    const hasManifest = await storageManager.hasJsonData(VECTOR_MANIFEST_KEY);
     if (hasManifest) {
-      console.log("✅ 发现清单文件");
+      console.log("✅ 发现JSON清单文件");
       return true;
     } else {
-      console.log("📭 未发现清单文件");
+      console.log("📭 未发现JSON清单文件");
       return false;
     }
   } catch (error) {
-    console.warn("⚠️ 检查清单文件失败:", error);
+    console.warn("⚠️ 检查JSON清单文件失败:", error);
     return false;
   }
 } 
