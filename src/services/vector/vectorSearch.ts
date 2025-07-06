@@ -2,7 +2,7 @@
 
 import { VectorSearchResult } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData } from './vectorStorage';
+import { getCachedVectorData, loadVectorData } from './vectorStorage';
 
 // 余弦相似度计算
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
@@ -27,20 +27,27 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// 主要搜索函数
+// 🚀 优化：主要搜索函数 - 使用内存缓存
 export async function search(queryText: string, limit: number = 50): Promise<VectorSearchResult[] | null> {
   try {
-    console.log(`Searching for: "${queryText}"`);
+    console.log(`🔍 开始搜索: "${queryText}"`);
     
     // 生成查询向量
     const queryVector = await generateEmbedding(queryText);
     
-    // 加载所有向量数据
-    const vectorData = await loadVectorData();
+    // 🚀 优先使用缓存数据
+    let vectorData = getCachedVectorData();
     
-    if (vectorData.length === 0) {
-      logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
-      return [];
+    if (!vectorData) {
+      console.log("📦 缓存为空，从存储加载数据...");
+      vectorData = await loadVectorData();
+      
+      if (vectorData.length === 0) {
+        logseq.UI.showMsg("向量数据为空，请先建立索引", "warning");
+        return [];
+      }
+    } else {
+      console.log(`✅ 使用缓存数据进行搜索 (${vectorData.length} 条记录)`);
     }
     
     // 计算相似度并排序
@@ -54,11 +61,11 @@ export async function search(queryText: string, limit: number = 50): Promise<Vec
     .sort((a, b) => b.score - a.score)  // 按相似度降序排列
     .slice(0, limit);  // 取前 limit 个结果
 
-    console.log("Search results:", results);
+    console.log(`🎯 搜索完成，找到 ${results.length} 个相关结果`);
     return results;
 
   } catch (error) {
-    console.error("Search failed:", error);
+    console.error("❌ 搜索失败:", error);
     logseq.UI.showMsg("搜索失败，请检查控制台日志。", "error");
     return null;
   }
