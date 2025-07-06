@@ -13,25 +13,47 @@ export class StorageManager {
   }
 
   async saveData(key: string, data: any): Promise<void> {
-    try {
-      console.log(`🔄 开始保存数据到 Assets API: ${key}`);
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30秒超时
 
-      const jsonString = JSON.stringify(data);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 开始保存数据到 Assets API: ${key} (尝试 ${attempt}/${maxRetries})`);
 
-      // 使用LZ-String压缩
-      const { default: LZString } = await import('lz-string');
-      const compressedData = LZString.compress(jsonString);
-      const compressedSize = new Blob([compressedData]).size;
+        const jsonString = JSON.stringify(data);
 
-      console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
+        // 使用LZ-String压缩
+        const { default: LZString } = await import('lz-string');
+        const compressedData = LZString.compress(jsonString);
+        const compressedSize = new Blob([compressedData]).size;
 
-      // 直接保存压缩数据
-      await this.storage.setItem(`${key}.lz`, compressedData);
+        console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
 
-      console.log(`✅ Assets API 保存完成: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
-    } catch (error) {
-      console.error("Assets API 保存数据失败:", error);
-      throw new Error(`Assets API 保存失败: ${error}`);
+        // 添加超时控制的保存操作
+        await Promise.race([
+          this.storage.setItem(`${key}.lz`, compressedData),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('保存操作超时')), timeoutMs)
+          )
+        ]);
+
+        console.log(`✅ Assets API 保存完成: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
+        return; // 成功保存，退出重试循环
+
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Assets API 保存数据失败 (尝试 ${attempt}/${maxRetries}):`, errorMsg);
+
+        if (attempt === maxRetries) {
+          // 最后一次尝试失败
+          throw new Error(`Assets API 保存失败 (${maxRetries}次尝试后): ${errorMsg}`);
+        }
+
+        // 等待后重试
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
+        console.log(`⏳ 等待 ${delay}ms 后重试...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
 
