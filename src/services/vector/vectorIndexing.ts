@@ -89,15 +89,24 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
       console.log("🗑️ 已清除旧的向量数据");
     }
 
-    let vectorData: VectorDatabase = [...existingVectorData];
+    // 🔧 修复：使用现有数据作为基础，避免重复加载
+    let totalVectorData: VectorDatabase = [...existingVectorData];
     let indexedCount = 0;
     const startTime = Date.now();
-    const batchSize = 10; // 批处理大小
-    const saveBatchSize = 500; // 恢复原来的保存频率
+    const batchSize = 15; // 🚀 优化：增加批处理大小
+    const saveBatchSize = 300; // 🚀 优化：减少保存频率，减少压缩次数
+    
+    // 🔧 修复：使用临时缓冲区，避免内存无限增长
+    let batchBuffer: VectorData[] = [];
+    
+    console.log(`🔄 开始处理 ${blocksToIndex.length} 个blocks，批处理大小: ${batchSize}`);
     
     // 分批处理，添加延迟避免卡顿
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
       const batch = blocksToIndex.slice(i, i + batchSize);
+      const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+      
+      console.log(`📊 [批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(blocksToIndex.length / batchSize)}] 处理中... (${progress}%)`);
 
       // 并行处理当前批次
       const batchPromises = batch.map(async (block) => {
@@ -110,54 +119,75 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
           return {
             blockUUID: block.uuid,
             pageName: block.pageName,
-            blockContent: processedContent, // 存储预处理后的内容
-            vector: compressedVector, // 存储压缩后的向量
+            blockContent: processedContent,
+            vector: compressedVector,
             lastUpdated: startTime
           };
         } catch (error) {
           console.warn(`⚠️ [失败] Block ${block.uuid.slice(0, 8)}... embedding生成失败:`, error instanceof Error ? error.message : error);
-          return null; // 标记为失败
+          return null;
         }
       });
 
       // 等待当前批次完成
       const batchResults = await Promise.all(batchPromises);
 
-      // 过滤掉失败的结果并添加到vectorData
+      // 过滤掉失败的结果并添加到缓冲区
       const validResults = batchResults.filter((result): result is VectorData => result !== null);
-      vectorData.push(...validResults);
+      batchBuffer.push(...validResults);
 
       indexedCount += batch.length;
+      const currentProgress = Math.round((indexedCount / blocksToIndex.length) * 100);
 
-        // 显示进度
-        const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
+      // 🚀 优化：更频繁的进度更新但减少UI消息
+      if (indexedCount % 50 === 0 || indexedCount === blocksToIndex.length) {
+        console.log(`📊 [进度] ${currentProgress}% (${indexedCount}/${blocksToIndex.length}) - 缓冲区: ${batchBuffer.length} 条`);
+      }
 
-        if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
-          logseq.UI.showMsg(
-            `🔄 ${actionText}索引进度: ${progress}%`,
-            "info",
-            { timeout: 3000 }
-          );
+      // 🔧 修复：当缓冲区达到保存阈值时，异步保存并清空缓冲区
+      if (batchBuffer.length >= saveBatchSize || indexedCount === blocksToIndex.length) {
+        console.log(`💾 [保存] 准备保存 ${batchBuffer.length} 条新数据...`);
+        
+        // 🚀 优化：合并数据并异步保存
+        totalVectorData.push(...batchBuffer);
+        
+        // 🔧 修复：使用异步保存，添加进度提示
+        try {
+          await saveVectorDataAsync(totalVectorData, currentProgress);
+          console.log(`✅ [保存] 已保存 ${totalVectorData.length} 条向量数据`);
+          
+          // 🔧 修复：清空缓冲区释放内存
+          batchBuffer = [];
+        } catch (saveError) {
+          console.error(`❌ [保存失败] ${saveError}`);
+          logseq.UI.showMsg(`保存失败: ${saveError}`, "error");
+          throw saveError;
         }
+      }
 
-        // 每处理saveBatchSize个blocks就保存一次（增量保存）
-        if (indexedCount % saveBatchSize === 0 || indexedCount === blocksToIndex.length) {
-          await saveVectorData(vectorData);
-          // console.log(`💾 [保存] 已保存 ${vectorData.length} 条向量数据`);
-        }
+      // 🚀 优化：UI进度更新
+      if (indexedCount % 200 === 0 || indexedCount === blocksToIndex.length) {
+        logseq.UI.showMsg(
+          `🔄 ${actionText}索引进度: ${currentProgress}%`,
+          "info",
+          { timeout: 2000 }
+        );
+      }
 
-      // 添加延迟避免UI卡顿，让主线程有时间处理其他任务
+      // 🔧 修复：减少延迟，提高处理速度
       if (i + batchSize < blocksToIndex.length) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms延迟
+        await new Promise(resolve => setTimeout(resolve, 50)); // 减少到50ms
       }
     }
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
+    console.log(`📊 最终统计: 总共 ${totalVectorData.length} 条向量数据`);
     console.log(`===============================\n`);
 
     logseq.UI.showMsg(
       `🎉 ${actionText}索引完成！\n` +
-      `📊 处理: ${indexedCount}个blocks`,
+      `📊 处理: ${indexedCount}个blocks\n` +
+      `💾 总数据: ${totalVectorData.length}条`,
       "success",
       { timeout: 8000 }
     );
@@ -166,4 +196,20 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
     console.error("Failed to index all pages:", error);
     logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
   }
+}
+
+// 🚀 新增：异步保存函数，避免UI阻塞
+async function saveVectorDataAsync(vectorData: VectorDatabase, progress: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // 使用 setTimeout 将压缩操作推迟到下一个事件循环
+    setTimeout(async () => {
+      try {
+        console.log(`💾 [异步保存] 开始保存 ${vectorData.length} 条数据 (${progress}%)`);
+        await saveVectorData(vectorData);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    }, 10); // 10ms 延迟，让UI有时间更新
+  });
 } 

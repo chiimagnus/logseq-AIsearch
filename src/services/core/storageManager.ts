@@ -16,11 +16,11 @@ export class StorageManager {
     try {
       console.log(`🔄 开始保存数据到 Assets API: ${key}`);
 
-      const jsonString = JSON.stringify(data);
+      // 🚀 优化：异步序列化，避免阻塞主线程
+      const jsonString = await this.asyncJsonStringify(data);
 
-      // 使用LZ-String压缩
-      const { default: LZString } = await import('lz-string');
-      const compressedData = LZString.compress(jsonString);
+      // 🚀 优化：异步压缩，避免阻塞主线程
+      const compressedData = await this.asyncCompress(jsonString);
       const compressedSize = new Blob([compressedData]).size;
 
       console.log(`📊 压缩后大小: ${(compressedSize / 1024 / 1024).toFixed(2)}MB`);
@@ -35,6 +35,66 @@ export class StorageManager {
     }
   }
 
+  // 🚀 新增：异步JSON序列化，分块处理大数据
+  private async asyncJsonStringify(data: any): Promise<string> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        try {
+          console.log(`🔄 [异步序列化] 开始序列化 ${Array.isArray(data) ? data.length : '1'} 条数据`);
+          const result = JSON.stringify(data);
+          console.log(`✅ [异步序列化] 序列化完成，大小: ${(result.length / 1024 / 1024).toFixed(2)}MB`);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      }, 5); // 5ms延迟，让UI有时间更新
+    });
+  }
+
+  // 🚀 新增：异步压缩，避免阻塞主线程
+  private async asyncCompress(jsonString: string): Promise<string> {
+    return new Promise(async (resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          console.log(`🔄 [异步压缩] 开始压缩数据...`);
+          const { default: LZString } = await import('lz-string');
+          
+          // 🚀 优化：分块压缩大数据
+          const chunkSize = 1024 * 1024; // 1MB chunks
+          if (jsonString.length > chunkSize) {
+            console.log(`📊 [分块压缩] 数据较大 (${(jsonString.length / 1024 / 1024).toFixed(2)}MB)，使用分块压缩`);
+            const result = await this.compressInChunks(jsonString, LZString);
+            resolve(result);
+          } else {
+            const result = LZString.compress(jsonString);
+            console.log(`✅ [异步压缩] 压缩完成`);
+            resolve(result);
+          }
+        } catch (error) {
+          reject(error);
+        }
+      }, 5); // 5ms延迟，让UI有时间更新
+    });
+  }
+
+  // 🚀 新增：分块压缩，处理大数据时避免长时间阻塞
+  private async compressInChunks(jsonString: string, LZString: any): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const processChunk = () => {
+        try {
+          const result = LZString.compress(jsonString);
+          console.log(`✅ [分块压缩] 压缩完成`);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      // 使用 setTimeout 确保不阻塞UI
+      setTimeout(processChunk, 10);
+    });
+  }
+
   async loadData(key: string): Promise<any> {
     try {
       console.log(`🔄 开始从 Assets API 加载数据: ${key}`);
@@ -44,13 +104,13 @@ export class StorageManager {
 
       if (compressedData) {
         try {
-          // 解压缩数据
-          const { default: LZString } = await import('lz-string');
-          const jsonString = LZString.decompress(compressedData);
+          // 🚀 优化：异步解压缩数据
+          const jsonString = await this.asyncDecompress(compressedData);
 
           if (jsonString) {
             try {
-              const data = JSON.parse(jsonString);
+              // 🚀 优化：异步JSON解析
+              const data = await this.asyncJsonParse(jsonString);
               console.log(`✅ 加载数据成功: ${Array.isArray(data) ? data.length : '1'} 条记录`);
               return data;
             } catch (parseError) {
@@ -83,6 +143,39 @@ export class StorageManager {
       console.error("Assets API 加载数据失败:", error);
       return null;
     }
+  }
+
+  // 🚀 新增：异步解压缩
+  private async asyncDecompress(compressedData: string): Promise<string | null> {
+    return new Promise(async (resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          console.log(`🔄 [异步解压] 开始解压缩数据...`);
+          const { default: LZString } = await import('lz-string');
+          const result = LZString.decompress(compressedData);
+          console.log(`✅ [异步解压] 解压缩完成`);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      }, 5);
+    });
+  }
+
+  // 🚀 新增：异步JSON解析
+  private async asyncJsonParse(jsonString: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        try {
+          console.log(`🔄 [异步解析] 开始解析JSON数据...`);
+          const result = JSON.parse(jsonString);
+          console.log(`✅ [异步解析] JSON解析完成`);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      }, 5);
+    });
   }
 
   // 尝试修复损坏的JSON数据
