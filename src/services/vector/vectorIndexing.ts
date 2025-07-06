@@ -93,45 +93,41 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
     let indexedCount = 0;
     const startTime = Date.now();
     const batchSize = 10; // 批处理大小
-    const saveBatchSize = 300; // 更频繁保存，减少数据丢失风险
-
-    // 内存管理：定期清理和强制垃圾回收
-    const memoryCleanupInterval = 2000; // 每2000个blocks清理一次内存
+    const saveBatchSize = 500; // 恢复原来的保存频率
     
     // 分批处理，添加延迟避免卡顿
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
-      try {
-        const batch = blocksToIndex.slice(i, i + batchSize);
+      const batch = blocksToIndex.slice(i, i + batchSize);
 
-        // 并行处理当前批次
-        const batchPromises = batch.map(async (block) => {
-          try {
-            // 使用预处理后的内容生成embedding
-            const processedContent = preprocessContent(block.content);
-            const vector = await generateEmbedding(processedContent);
-            const compressedVector = compressVector(vector);
+      // 并行处理当前批次
+      const batchPromises = batch.map(async (block) => {
+        try {
+          // 使用预处理后的内容生成embedding
+          const processedContent = preprocessContent(block.content);
+          const vector = await generateEmbedding(processedContent);
+          const compressedVector = compressVector(vector);
 
-            return {
-              blockUUID: block.uuid,
-              pageName: block.pageName,
-              blockContent: processedContent, // 存储预处理后的内容
-              vector: compressedVector, // 存储压缩后的向量
-              lastUpdated: startTime
-            };
-          } catch (error) {
-            console.warn(`⚠️ [失败] Block ${block.uuid.slice(0, 8)}... embedding生成失败:`, error instanceof Error ? error.message : error);
-            return null; // 标记为失败
-          }
-        });
+          return {
+            blockUUID: block.uuid,
+            pageName: block.pageName,
+            blockContent: processedContent, // 存储预处理后的内容
+            vector: compressedVector, // 存储压缩后的向量
+            lastUpdated: startTime
+          };
+        } catch (error) {
+          console.warn(`⚠️ [失败] Block ${block.uuid.slice(0, 8)}... embedding生成失败:`, error instanceof Error ? error.message : error);
+          return null; // 标记为失败
+        }
+      });
 
-        // 等待当前批次完成
-        const batchResults = await Promise.all(batchPromises);
+      // 等待当前批次完成
+      const batchResults = await Promise.all(batchPromises);
 
-        // 过滤掉失败的结果并添加到vectorData
-        const validResults = batchResults.filter((result): result is VectorData => result !== null);
-        vectorData.push(...validResults);
+      // 过滤掉失败的结果并添加到vectorData
+      const validResults = batchResults.filter((result): result is VectorData => result !== null);
+      vectorData.push(...validResults);
 
-        indexedCount += batch.length;
+      indexedCount += batch.length;
 
         // 显示详细进度
         const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
@@ -161,92 +157,24 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
 
         // 每处理saveBatchSize个blocks就保存一次（增量保存）
         if (indexedCount % saveBatchSize === 0 || indexedCount === blocksToIndex.length) {
-          console.log(`💾 [保存] 开始保存 ${vectorData.length} 条向量数据...`);
-
-          try {
-            await saveVectorData(vectorData);
-            console.log(`✅ [保存] 成功保存 ${vectorData.length} 条向量数据`);
-          } catch (saveError) {
-            console.error(`❌ [保存失败] 保存向量数据时出错:`, saveError);
-
-            // 保存失败时的处理策略
-            if (saveError instanceof Error && saveError.message.includes('quota')) {
-              logseq.UI.showMsg("❌ 存储空间不足，请清理Assets文件夹", "error", { timeout: 8000 });
-              throw new Error("存储空间不足");
-            } else {
-              logseq.UI.showMsg("⚠️ 数据保存失败，但索引继续进行", "warning", { timeout: 5000 });
-              // 继续处理，不中断索引过程
-            }
-          }
+          await saveVectorData(vectorData);
+          // console.log(`💾 [保存] 已保存 ${vectorData.length} 条向量数据`);
         }
 
-        // 内存清理：定期触发垃圾回收
-        if (indexedCount % memoryCleanupInterval === 0 && indexedCount > 0) {
-          console.log(`🧹 [内存清理] 已处理 ${indexedCount} 个blocks，触发内存清理`);
 
-          // 强制垃圾回收（如果可用）- 兼容浏览器和Node.js环境
-          try {
-            if (typeof window !== 'undefined' && (window as any).gc) {
-              // 浏览器环境
-              (window as any).gc();
-            } else if (typeof global !== 'undefined' && global.gc) {
-              // Node.js环境
-              global.gc();
-            }
-          } catch (gcError) {
-            // 垃圾回收不可用，忽略错误
-            console.log(`ℹ️ [内存清理] 垃圾回收不可用，跳过`);
-          }
 
-          // 添加短暂延迟让垃圾回收完成
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        // 添加延迟避免UI卡顿，让主线程有时间处理其他任务
-        if (i + batchSize < blocksToIndex.length) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms延迟
-        }
-
-      } catch (batchError) {
-        console.error(`❌ [批次失败] 处理批次 ${i}-${i + batchSize} 时出错:`, batchError);
-
-        // 批次失败时跳过当前批次，继续处理下一批次
-        indexedCount += batchSize;
-
-        logseq.UI.showMsg(
-          `⚠️ 跳过失败的批次，继续索引...`,
-          "warning",
-          { timeout: 3000 }
-        );
-
-        continue;
+      // 添加延迟避免UI卡顿，让主线程有时间处理其他任务
+      if (i + batchSize < blocksToIndex.length) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms延迟
       }
     }
 
-    // 最终保存确认
-    console.log(`💾 [最终保存] 确保所有数据已保存...`);
-    try {
-      await saveVectorData(vectorData);
-      console.log(`✅ [最终保存] 成功保存最终数据: ${vectorData.length} 条向量`);
-    } catch (finalSaveError) {
-      console.error(`❌ [最终保存失败]`, finalSaveError);
-      logseq.UI.showMsg("⚠️ 索引完成但最终保存失败，请手动重新保存", "warning", { timeout: 8000 });
-    }
-
-    const totalTime = Math.round((Date.now() - startTime) / 1000);
-
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
-    console.log(`📊 统计信息:`);
-    console.log(`   • 处理blocks: ${indexedCount}/${blocksToIndex.length}`);
-    console.log(`   • 成功向量: ${vectorData.length}`);
-    console.log(`   • 总耗时: ${totalTime}秒`);
-    console.log(`   • 平均速度: ${(indexedCount / totalTime).toFixed(2)} blocks/秒`);
     console.log(`===============================\n`);
 
     logseq.UI.showMsg(
       `🎉 ${actionText}索引完成！\n` +
-      `📊 处理: ${indexedCount}个blocks\n` +
-      `⏱️ 耗时: ${totalTime}秒`,
+      `📊 处理: ${indexedCount}个blocks`,
       "success",
       { timeout: 8000 }
     );
