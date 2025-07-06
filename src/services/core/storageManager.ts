@@ -250,6 +250,12 @@ export class StorageManager {
 
   async hasData(key: string): Promise<boolean> {
     try {
+      // 🚀 安全检查：确保key不为空
+      if (!key || key.trim() === '') {
+        console.warn("⚠️ hasData调用时key为空，返回false");
+        return false;
+      }
+
       const data = await this.storage.getItem(`${key}.lz`);
       return data !== null && data !== undefined;
     } catch (error) {
