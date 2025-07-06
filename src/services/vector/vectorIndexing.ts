@@ -129,23 +129,8 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
 
       indexedCount += batch.length;
 
-        // 显示详细进度
+        // 显示进度
         const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
-
-        // 更频繁的进度显示，特别是在接近完成时
-        if (indexedCount % 100 === 0 || indexedCount === blocksToIndex.length || progress >= 90) {
-          const timeElapsed = Date.now() - startTime;
-          const avgTimePerBlock = timeElapsed / indexedCount;
-          const remainingBlocks = blocksToIndex.length - indexedCount;
-          const estimatedTimeRemaining = Math.round((avgTimePerBlock * remainingBlocks) / 1000);
-
-          console.log(`📊 [进度] ${progress}% (${indexedCount}/${blocksToIndex.length}) - 预计剩余: ${estimatedTimeRemaining}秒`);
-
-          // 在90%以上时提供更详细的信息
-          if (progress >= 90) {
-            console.log(`🔍 [详细] 当前向量数据量: ${vectorData.length}, 批次: ${Math.floor(i / batchSize) + 1}/${Math.ceil(blocksToIndex.length / batchSize)}`);
-          }
-        }
 
         if (indexedCount % 1000 === 0 || indexedCount === blocksToIndex.length) {
           logseq.UI.showMsg(
@@ -160,8 +145,6 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
           await saveVectorData(vectorData);
           // console.log(`💾 [保存] 已保存 ${vectorData.length} 条向量数据`);
         }
-
-
 
       // 添加延迟避免UI卡顿，让主线程有时间处理其他任务
       if (i + batchSize < blocksToIndex.length) {
