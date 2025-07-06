@@ -12,7 +12,7 @@
 // 4. 在原始blocks旁边插入AI回应的引用
 // 该命令集成了 Logseq 的插件 API，用于与编辑器交互并向用户显示消息。
 
-import { aiSearch } from '../search/searchOrchestrator';
+import { aiSearch } from './searchOrchestrator';
 import { generateAIResponse } from '../ai/aiResponse';
 import { search as vectorSearch, getInitializationStatus } from '../vector/vectorService';
 import { SearchResult } from '../../types/search';
