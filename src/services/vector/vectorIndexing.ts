@@ -89,24 +89,25 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
       console.log("🗑️ 已清除旧的向量数据");
     }
 
-    // 🔧 修复：使用现有数据作为基础，避免重复加载
-    let totalVectorData: VectorDatabase = [...existingVectorData];
+    // 🔧 修复：分离已有数据和新数据的管理
+    let totalDataCount = existingVectorData.length; // 只记录总数，不保存在内存中
     let indexedCount = 0;
     const startTime = Date.now();
     const batchSize = 15; // 🚀 优化：增加批处理大小
-    const saveBatchSize = 300; // 🚀 优化：减少保存频率，减少压缩次数
+    const saveBatchSize = 500; // 🔧 修复：增加保存阈值，减少保存频率
     
-    // 🔧 修复：使用临时缓冲区，避免内存无限增长
+    // 🔧 修复：使用小缓冲区，定期增量保存
     let batchBuffer: VectorData[] = [];
     
     console.log(`🔄 开始处理 ${blocksToIndex.length} 个blocks，批处理大小: ${batchSize}`);
+    console.log(`📊 已有数据: ${existingVectorData.length} 条，待索引: ${blocksToIndex.length} 条`);
     
     // 分批处理，添加延迟避免卡顿
     for (let i = 0; i < blocksToIndex.length; i += batchSize) {
       const batch = blocksToIndex.slice(i, i + batchSize);
       const progress = Math.round((indexedCount / blocksToIndex.length) * 100);
       
-      console.log(`📊 [批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(blocksToIndex.length / batchSize)}] 处理中... (${progress}%)`);
+      // console.log(`📊 [批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(blocksToIndex.length / batchSize)}] 处理中... (${progress}%)`);
 
       // 并行处理当前批次
       const batchPromises = batch.map(async (block) => {
@@ -144,17 +145,17 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
         console.log(`📊 [进度] ${currentProgress}% (${indexedCount}/${blocksToIndex.length}) - 缓冲区: ${batchBuffer.length} 条`);
       }
 
-      // 🔧 修复：当缓冲区达到保存阈值时，异步保存并清空缓冲区
+      // 🔧 修复：当缓冲区达到保存阈值时，真正的增量保存
       if (batchBuffer.length >= saveBatchSize || indexedCount === blocksToIndex.length) {
-        console.log(`💾 [保存] 准备保存 ${batchBuffer.length} 条新数据...`);
+        console.log(`💾 [增量保存] 准备保存 ${batchBuffer.length} 条新数据...`);
         
-        // 🚀 优化：合并数据并异步保存
-        totalVectorData.push(...batchBuffer);
-        
-        // 🔧 修复：使用异步保存，添加进度提示
+        // 🔧 修复：真正的增量保存 - 加载现有数据，添加新数据，保存，然后释放内存
         try {
-          await saveVectorDataAsync(totalVectorData, currentProgress);
-          console.log(`✅ [保存] 已保存 ${totalVectorData.length} 条向量数据`);
+          await saveIncrementalData(batchBuffer, currentProgress);
+          
+          // 🔧 修复：更新总数但不保存在内存中
+          totalDataCount += batchBuffer.length;
+          console.log(`✅ [增量保存] 已保存 ${batchBuffer.length} 条新数据，总数据量: ${totalDataCount} 条`);
           
           // 🔧 修复：清空缓冲区释放内存
           batchBuffer = [];
@@ -181,13 +182,13 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
     }
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
-    console.log(`📊 最终统计: 总共 ${totalVectorData.length} 条向量数据`);
+    console.log(`📊 最终统计: 总共 ${totalDataCount} 条向量数据`);
     console.log(`===============================\n`);
 
     logseq.UI.showMsg(
       `🎉 ${actionText}索引完成！\n` +
       `📊 处理: ${indexedCount}个blocks\n` +
-      `💾 总数据: ${totalVectorData.length}条`,
+      `💾 总数据: ${totalDataCount}条`,
       "success",
       { timeout: 8000 }
     );
@@ -198,16 +199,29 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
   }
 }
 
-// 🚀 新增：异步保存函数，避免UI阻塞
-async function saveVectorDataAsync(vectorData: VectorDatabase, progress: number): Promise<void> {
+// 🚀 新增：真正的增量保存函数
+async function saveIncrementalData(newData: VectorData[], progress: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    // 使用 setTimeout 将压缩操作推迟到下一个事件循环
+    // 使用 setTimeout 将操作推迟到下一个事件循环
     setTimeout(async () => {
       try {
-        console.log(`💾 [异步保存] 开始保存 ${vectorData.length} 条数据 (${progress}%)`);
-        await saveVectorData(vectorData);
+        console.log(`💾 [增量保存] 开始加载现有数据...`);
+        
+        // 🔧 修复：临时加载现有数据
+        const existingData = await loadVectorData();
+        console.log(`📊 [增量保存] 现有数据: ${existingData.length} 条，新数据: ${newData.length} 条`);
+        
+        // 🔧 修复：合并数据
+        const mergedData = [...existingData, ...newData];
+        console.log(`💾 [增量保存] 开始保存合并数据 ${mergedData.length} 条 (${progress}%)`);
+        
+        // 🔧 修复：保存合并后的数据
+        await saveVectorData(mergedData);
+        
+        console.log(`✅ [增量保存] 保存完成`);
         resolve();
       } catch (error) {
+        console.error(`❌ [增量保存失败] ${error}`);
         reject(error);
       }
     }, 10); // 10ms 延迟，让UI有时间更新
