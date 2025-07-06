@@ -124,7 +124,7 @@ export async function testEmbeddingService(): Promise<void> {
 
   try {
     await generateEmbedding("测试连接");
-    logseq.UI.showMsg(`✅ ${serviceType === 'ollama' ? 'Ollama' : '云端'}embedding服务连接成功`, "success", { timeout: 3000 });
+    // logseq.UI.showMsg(`✅ ${serviceType === 'ollama' ? 'Ollama' : '云端'} embedding服务连接成功`, "success", { timeout: 3000 });
   } catch (error) {
     console.error("Embedding service test failed:", error);
     logseq.UI.showMsg(`❌ embedding服务连接失败: ${error}`, "error", { timeout: 8000 });
