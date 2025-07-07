@@ -14,7 +14,6 @@
 
 import { aiSearch } from './searchOrchestrator';
 import { generateAIResponse } from '../ai/aiResponse';
-import { search as vectorSearch, getInitializationStatus } from '../vector/vectorService';
 import { SearchResult } from '../../types/search';
 
 export async function aiSearchCommand() {
@@ -40,6 +39,7 @@ export async function aiSearchCommand() {
     let generateSummary: () => Promise<string | null>;
 
     // 检查向量搜索服务状态
+    const { search: vectorSearch, getInitializationStatus } = await import('../vector/vectorService');
     const status = getInitializationStatus();
     if (!status.isInitialized) {
       await logseq.UI.showMsg("向量搜索服务尚未初始化，请先建立索引 | Vector search not initialized, please build index first.", "error");

@@ -1,7 +1,6 @@
 // 搜索工具模块
 
 import { SearchResult } from '../types/search';
-import { search as vectorSearch } from '../services/vector/vectorService';
 
 /**
  * 向量搜索驱动的搜索函数
@@ -20,6 +19,7 @@ export async function timeAwareSearch(query: string): Promise<SearchResult[]> {
 
   try {
     // 调用向量搜索服务，使用默认限制
+    const { search: vectorSearch } = await import('../services/vector/vectorService');
     const vectorResults = await vectorSearch(query);
 
     if (!vectorResults || vectorResults.length === 0) {
@@ -30,7 +30,7 @@ export async function timeAwareSearch(query: string): Promise<SearchResult[]> {
     console.log(`✅ [向量搜索] 找到 ${vectorResults.length} 个结果`);
 
     // 将向量搜索结果转换为 SearchResult[] 格式
-    const searchResults: SearchResult[] = vectorResults.map(result => ({
+    const searchResults: SearchResult[] = vectorResults.map((result: any) => ({
       block: {
         uuid: result.blockUUID,
         content: result.blockContent,

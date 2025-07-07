@@ -3,7 +3,6 @@ import React from "react";
 import * as ReactDOM from "react-dom/client";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 import { aiSearchCommand, aiResponseCommand } from './services/core/commands';
-import { initializeVectorStore, indexAllPages } from './services/vector/vectorService';
 
 const settings: SettingSchemaDesc[] = [
   // ==================== 全局设置 ====================
@@ -174,6 +173,7 @@ async function main() {
   console.info("AI-Search Plugin Loaded");
 
   // 初始化向量数据库
+  const { initializeVectorStore } = await import('./services/vector/vectorService');
   await initializeVectorStore();
 
   // 注册设置
@@ -220,6 +220,7 @@ async function main() {
       mode: "non-editing"
     } as any,
   }, async () => {
+    const { indexAllPages } = await import('./services/vector/vectorService');
     await indexAllPages();
   });
 
@@ -238,6 +239,7 @@ async function main() {
 
   // 注册斜杠命令
   logseq.Editor.registerSlashCommand("[AI-Search] Re-build AI search index", async () => {
+    const { indexAllPages } = await import('./services/vector/vectorService');
     await indexAllPages();
   });
 
