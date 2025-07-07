@@ -258,14 +258,11 @@ async function main() {
       console.log("📊 向量存储统计:", stats);
 
       let message = `📊 向量存储统计\n` +
-        `• 已索引向量数: ${stats.count || 0}\n` +
-        `• 向量维度: ${stats.dim || 'Unknown'}\n` +
-        `• 存储后端: ${stats.backend || 'Unknown'}`;
+        `• 已索引向量数: ${stats.count || 0}`;
 
+      // 添加存储大小信息
       if (stats.storageStats) {
-        if (stats.storageStats.totalChunks) {
-          message += `\n• 数据块数: ${stats.storageStats.totalChunks}`;
-          message += `\n• 压缩率: ${stats.storageStats.compressionRatio}`;
+        if (stats.storageStats.compressedSizeMB) {
           message += `\n• 存储大小: ${stats.storageStats.compressedSizeMB}MB`;
         } else if (stats.storageStats.sizeMB) {
           message += `\n• 存储大小: ${stats.storageStats.sizeMB}MB`;
@@ -275,11 +272,8 @@ async function main() {
       // 添加数据状态信息
       if (stats.count === 0 && stats.storageStats && stats.storageStats.sizeMB && parseFloat(stats.storageStats.sizeMB) > 0) {
         message += `\n⚠️ 检测到数据文件存在但无法加载`;
-        message += `\n   可能是索引过程被中断导致数据损坏`;
         message += `\n   建议使用"Vector: Clear Data"清除后重新索引`;
       }
-
-      message += `\n• 详细信息请查看控制台`;
 
       await logseq.UI.showMsg(message, "success", { timeout: 10000 });
     } catch (error) {
