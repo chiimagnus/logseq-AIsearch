@@ -148,10 +148,16 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
             console.log(`💾 [分片追加] 保存 ${newVectorData.length} 条新数据，无需重写 ${existingVectorData.length} 条已存在数据`);
             await incrementalSaveVectorData(newVectorData, existingVectorData);
           } else {
-            // 全量重建索引：全量保存
-            console.log(`💾 [全量保存] 准备保存 ${existingVectorData.length + newVectorData.length} 条向量数据...`);
-            const allVectorData = [...existingVectorData, ...newVectorData];
-            await saveVectorData(allVectorData);
+            // 🚀 重建索引优化：进度保存时也使用增量策略，避免重复保存已有数据
+            if (existingVectorData.length === 0) {
+              // 首次保存：使用全量保存初始化存储结构
+              console.log(`💾 [首次保存] 初始化存储并保存 ${newVectorData.length} 条向量数据...`);
+              await saveVectorData(newVectorData);
+            } else {
+              // 进度保存：使用增量追加，只保存新数据
+              console.log(`💾 [增量追加] 保存 ${newVectorData.length} 条新数据，无需重写 ${existingVectorData.length} 条已存在数据`);
+              await incrementalSaveVectorData(newVectorData, existingVectorData);
+            }
           }
 
           console.log(`✅ [进度已保存] 总数据量: ${existingVectorData.length + newVectorData.length} 条`);
