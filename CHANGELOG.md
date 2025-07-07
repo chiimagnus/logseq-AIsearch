@@ -1,3 +1,16 @@
+# [2.1.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v2.0.0...v2.1.0) (2025-07-07)
+
+
+### Features
+
+* **core:** 优化向量数据处理和索引建立流程 ([0fbf646](https://github.com/chiimagnus/logseq-AIsearch/commit/0fbf646218c3176ce75bb563b0545f3bf97614c1))
+* **core:** 优化数据保存和索引性能 ([f5de270](https://github.com/chiimagnus/logseq-AIsearch/commit/f5de270a234dc503c359d2561c1b6221c5446d28))
+* **storage:** 优化向量数据存储和缓存机制 ([d3466cc](https://github.com/chiimagnus/logseq-AIsearch/commit/d3466ccabe54b199569911f1546cfc52bcbc30c3))
+* **storage:** 增加 JSON 文件支持并优化向量数据存储 ([26162d0](https://github.com/chiimagnus/logseq-AIsearch/commit/26162d0d25b1a95453bbf1343b066f25f7fb1000))
+* **storage:** 重构向量数据存储方案 ([dc1e7ca](https://github.com/chiimagnus/logseq-AIsearch/commit/dc1e7caa6b7840a15bbd5a056cbed277fb25d2eb))
+* **vector:** 实现内存缓存机制并优化向量搜索功能 ([8bbe6f2](https://github.com/chiimagnus/logseq-AIsearch/commit/8bbe6f209bfbd4db9738253485b575784d0d0acf))
+* **vector:** 重构向量数据存储为分片式架构 ([52474a9](https://github.com/chiimagnus/logseq-AIsearch/commit/52474a95d2606bb162a93d7f24934a2d65d060c1))
+
 # [1.10.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v1.9.3...v1.10.0) (2025-07-06)
 
 
