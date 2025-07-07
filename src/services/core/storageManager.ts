@@ -1,10 +1,101 @@
 // Enhanced localStorage 存储实现 - 替代有问题的 Assets API
 
+// 分片索引接口
+interface ShardIndex {
+  shardId: number;
+  uuids: string[];  // 该分片包含的所有block UUID
+  recordCount: number; // 记录数量
+  lastUpdated: number; // 最后更新时间
+}
+
 export class StorageManager {
   private readonly CHUNK_SIZE = 1000; // 每个分片的记录数
 
+  // 🚀 分片索引缓存
+  private shardIndices: Map<number, ShardIndex> = new Map();
+  private uuidToShardMap: Map<string, number> = new Map();
+  private indexLoaded: boolean = false;
+
   constructor() {
     console.log("🔧 初始化 localStorage 存储管理器");
+  }
+
+  // 🚀 加载分片索引
+  private async loadShardIndices(key: string): Promise<void> {
+    if (this.indexLoaded) return;
+
+    try {
+      const indexKey = `${key}_shard_index`;
+      const indexData = localStorage.getItem(indexKey);
+
+      if (indexData) {
+        const indices: ShardIndex[] = JSON.parse(indexData);
+
+        this.shardIndices.clear();
+        this.uuidToShardMap.clear();
+
+        for (const index of indices) {
+          this.shardIndices.set(index.shardId, index);
+
+          // 构建UUID到分片的映射
+          for (const uuid of index.uuids) {
+            this.uuidToShardMap.set(uuid, index.shardId);
+          }
+        }
+
+        console.log(`📊 分片索引加载完成: ${indices.length} 个分片，${this.uuidToShardMap.size} 个UUID映射`);
+      } else {
+        console.log("📭 未找到分片索引，将在首次保存时创建");
+      }
+
+      this.indexLoaded = true;
+    } catch (error) {
+      console.error("加载分片索引失败:", error);
+      this.indexLoaded = true; // 即使失败也标记为已加载，避免重复尝试
+    }
+  }
+
+  // 🚀 保存分片索引
+  private async saveShardIndices(key: string): Promise<void> {
+    try {
+      const indexKey = `${key}_shard_index`;
+      const indices = Array.from(this.shardIndices.values());
+      localStorage.setItem(indexKey, JSON.stringify(indices));
+      console.log(`💾 分片索引已保存: ${indices.length} 个分片`);
+    } catch (error) {
+      console.error("保存分片索引失败:", error);
+    }
+  }
+
+  // 🚀 更新分片索引
+  private updateShardIndex(shardId: number, uuids: string[]): void {
+    // 从旧的UUID映射中移除该分片的所有UUID
+    const oldIndex = this.shardIndices.get(shardId);
+    if (oldIndex) {
+      for (const uuid of oldIndex.uuids) {
+        this.uuidToShardMap.delete(uuid);
+      }
+    }
+
+    // 创建新的索引
+    const newIndex: ShardIndex = {
+      shardId,
+      uuids,
+      recordCount: uuids.length,
+      lastUpdated: Date.now()
+    };
+
+    this.shardIndices.set(shardId, newIndex);
+
+    // 更新UUID到分片的映射
+    for (const uuid of uuids) {
+      this.uuidToShardMap.set(uuid, shardId);
+    }
+  }
+
+  // 🚀 快速查找UUID所在的分片
+  private findShardByUUID(uuid: string): number | null {
+    return this.uuidToShardMap.get(uuid) ?? null;
   }
 
   async saveData(key: string, data: any): Promise<void> {
@@ -32,7 +123,11 @@ export class StorageManager {
 
       localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
 
-      // 保存每个分片
+      // 🚀 重建分片索引
+      this.shardIndices.clear();
+      this.uuidToShardMap.clear();
+
+      // 保存每个分片并建立索引
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         const chunkKey = `${key}_chunk_${i}`;
@@ -41,8 +136,15 @@ export class StorageManager {
         const compressedChunk = await this.asyncCompress(JSON.stringify(chunk));
         localStorage.setItem(chunkKey, compressedChunk);
 
+        // 🚀 建立分片索引
+        const chunkUUIDs = chunk.map((item: any) => item.u || item.blockUUID || item.id);
+        this.updateShardIndex(i, chunkUUIDs);
+
         console.log(`✅ 分片 ${i + 1}/${chunks.length} 保存完成 (${chunk.length} 条记录)`);
       }
+
+      // 🚀 保存分片索引
+      await this.saveShardIndices(key);
 
       console.log(`✅ localStorage 全量保存完成: ${data.length} 条记录，${chunks.length} 个分片`);
     } catch (error) {
@@ -60,6 +162,9 @@ export class StorageManager {
         console.log("没有新数据需要追加");
         return;
       }
+
+      // 🚀 加载分片索引
+      await this.loadShardIndices(key);
 
       // 获取当前元数据
       const metadataStr = localStorage.getItem(`${key}_metadata`);
@@ -100,7 +205,7 @@ export class StorageManager {
       const combinedData = [...lastChunkData, ...newData];
       const newChunks = this.splitIntoChunks(combinedData, this.CHUNK_SIZE);
 
-      // 保存更新后的分片
+      // 保存更新后的分片并更新索引
       let chunksToSave = 0;
       for (let i = 0; i < newChunks.length; i++) {
         const chunk = newChunks[i];
@@ -112,6 +217,10 @@ export class StorageManager {
         localStorage.setItem(chunkKey, compressedChunk);
         chunksToSave++;
 
+        // 🚀 更新分片索引
+        const chunkUUIDs = chunk.map((item: any) => item.u || item.blockUUID || item.id);
+        this.updateShardIndex(chunkIndex, chunkUUIDs);
+
         console.log(`✅ 分片 ${chunkIndex} 保存完成 (${chunk.length} 条记录)`);
       }
 
@@ -121,6 +230,9 @@ export class StorageManager {
       metadata.timestamp = Date.now();
 
       localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+
+      // 🚀 保存分片索引
+      await this.saveShardIndices(key);
 
       console.log(`✅ 增量追加完成: 新增 ${newData.length} 条记录，保存了 ${chunksToSave} 个分片，总计 ${metadata.totalRecords} 条记录`);
 
@@ -226,15 +338,18 @@ export class StorageManager {
       const metadataStr = localStorage.getItem(`${key}_metadata`);
       if (metadataStr) {
         const metadata = JSON.parse(metadataStr);
-        
+
         // 清除所有分片
         for (let i = 0; i < metadata.totalChunks; i++) {
           localStorage.removeItem(`${key}_chunk_${i}`);
         }
-        
+
         // 清除元数据
         localStorage.removeItem(`${key}_metadata`);
-        
+
+        // 🚀 清除分片索引
+        localStorage.removeItem(`${key}_shard_index`);
+
         console.log(`🗑️ 已清除 localStorage 数据: ${key} (${metadata.totalChunks} 个分片)`);
       } else {
         // 尝试清除可能存在的分片（防止孤立数据）
@@ -244,11 +359,17 @@ export class StorageManager {
           i++;
         }
         localStorage.removeItem(`${key}_metadata`);
-        
+        localStorage.removeItem(`${key}_shard_index`); // 🚀 也清除分片索引
+
         if (i > 0) {
           console.log(`🗑️ 已清除 localStorage 孤立数据: ${key} (${i} 个分片)`);
         }
       }
+
+      // 🚀 清除内存中的索引
+      this.shardIndices.clear();
+      this.uuidToShardMap.clear();
+      this.indexLoaded = false;
     } catch (error) {
       console.error("localStorage 清除数据失败:", error);
       // 清除失败不抛出错误，因为可能数据本来就不存在
@@ -357,10 +478,13 @@ export class StorageManager {
     return totalSize;
   }
 
-  // 🚀 新增：从分片中删除指定的记录
+  // 🚀 新增：从分片中删除指定的记录（使用分片索引优化）
   async deleteRecordsFromShards(key: string, recordIds: string[], idField: string = 'u'): Promise<number> {
     try {
       console.log(`🗑️ 开始从分片中删除 ${recordIds.length} 条记录`);
+
+      // 加载分片索引
+      await this.loadShardIndices(key);
 
       const metadataStr = localStorage.getItem(`${key}_metadata`);
       if (!metadataStr) {
@@ -369,23 +493,35 @@ export class StorageManager {
       }
 
       const metadata = JSON.parse(metadataStr);
-      const recordIdSet = new Set(recordIds);
       let totalDeletedCount = 0;
 
-      // 遍历所有分片
-      for (let i = 0; i < metadata.totalChunks; i++) {
-        const chunkKey = `${key}_chunk_${i}`;
+      // 🚀 使用分片索引快速定位目标分片
+      const shardsToProcess = new Set<number>();
+      const recordIdSet = new Set(recordIds);
+
+      for (const recordId of recordIds) {
+        const shardId = this.findShardByUUID(recordId);
+        if (shardId !== null) {
+          shardsToProcess.add(shardId);
+        }
+      }
+
+      console.log(`📊 索引优化: 只需处理 ${shardsToProcess.size}/${metadata.totalChunks} 个分片`);
+
+      // 只处理包含目标记录的分片
+      for (const shardId of shardsToProcess) {
+        const chunkKey = `${key}_chunk_${shardId}`;
         const compressedChunk = localStorage.getItem(chunkKey);
 
         if (!compressedChunk) {
-          console.warn(`⚠️ 分片 ${i} 不存在，跳过`);
+          console.warn(`⚠️ 分片 ${shardId} 不存在，跳过`);
           continue;
         }
 
         // 解压分片数据
         const jsonString = await this.asyncDecompress(compressedChunk);
         if (!jsonString) {
-          console.warn(`⚠️ 分片 ${i} 解压失败，跳过`);
+          console.warn(`⚠️ 分片 ${shardId} 解压失败，跳过`);
           continue;
         }
 
@@ -401,15 +537,21 @@ export class StorageManager {
           const newCompressedChunk = await this.asyncCompress(JSON.stringify(filteredData));
           localStorage.setItem(chunkKey, newCompressedChunk);
           totalDeletedCount += deletedCount;
-          console.log(`✅ 分片 ${i}: 删除了 ${deletedCount} 条记录，剩余 ${filteredData.length} 条`);
+
+          // 🚀 更新分片索引
+          const remainingUUIDs = filteredData.map((item: any) => item[idField]);
+          this.updateShardIndex(shardId, remainingUUIDs);
+
+          console.log(`✅ 分片 ${shardId}: 删除了 ${deletedCount} 条记录，剩余 ${filteredData.length} 条`);
         }
       }
 
-      // 更新元数据
+      // 更新元数据和分片索引
       if (totalDeletedCount > 0) {
         metadata.totalRecords -= totalDeletedCount;
         metadata.timestamp = Date.now();
         localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+        await this.saveShardIndices(key);
         console.log(`📊 元数据已更新: 总记录数 ${metadata.totalRecords} (-${totalDeletedCount})`);
       }
 
@@ -422,10 +564,13 @@ export class StorageManager {
     }
   }
 
-  // 🚀 新增：更新分片中的指定记录
+  // 🚀 新增：更新分片中的指定记录（使用分片索引优化）
   async updateRecordsInShards(key: string, updates: Array<{id: string, data: any}>, idField: string = 'u'): Promise<number> {
     try {
       console.log(`🔄 开始更新分片中的 ${updates.length} 条记录`);
+
+      // 加载分片索引
+      await this.loadShardIndices(key);
 
       const metadataStr = localStorage.getItem(`${key}_metadata`);
       if (!metadataStr) {
@@ -437,9 +582,21 @@ export class StorageManager {
       const updateMap = new Map(updates.map(u => [u.id, u.data]));
       let totalUpdatedCount = 0;
 
-      // 遍历所有分片
-      for (let i = 0; i < metadata.totalChunks; i++) {
-        const chunkKey = `${key}_chunk_${i}`;
+      // 🚀 使用分片索引快速定位目标分片
+      const shardsToProcess = new Set<number>();
+
+      for (const update of updates) {
+        const shardId = this.findShardByUUID(update.id);
+        if (shardId !== null) {
+          shardsToProcess.add(shardId);
+        }
+      }
+
+      console.log(`📊 索引优化: 只需处理 ${shardsToProcess.size}/${metadata.totalChunks} 个分片`);
+
+      // 只处理包含目标记录的分片
+      for (const shardId of shardsToProcess) {
+        const chunkKey = `${key}_chunk_${shardId}`;
         const compressedChunk = localStorage.getItem(chunkKey);
 
         if (!compressedChunk) continue;
@@ -465,14 +622,20 @@ export class StorageManager {
           const newCompressedChunk = await this.asyncCompress(JSON.stringify(chunkData));
           localStorage.setItem(chunkKey, newCompressedChunk);
           totalUpdatedCount += chunkUpdatedCount;
-          console.log(`✅ 分片 ${i}: 更新了 ${chunkUpdatedCount} 条记录`);
+
+          // 🚀 更新分片索引（UUID不变，但需要更新时间戳）
+          const currentUUIDs = chunkData.map((item: any) => item[idField]);
+          this.updateShardIndex(shardId, currentUUIDs);
+
+          console.log(`✅ 分片 ${shardId}: 更新了 ${chunkUpdatedCount} 条记录`);
         }
       }
 
-      // 更新元数据时间戳
+      // 更新元数据时间戳和分片索引
       if (totalUpdatedCount > 0) {
         metadata.timestamp = Date.now();
         localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+        await this.saveShardIndices(key);
       }
 
       console.log(`✅ 更新操作完成: 共更新 ${totalUpdatedCount} 条记录`);
