@@ -1,8 +1,8 @@
 // 时间解析/扩展工具
 
-import { generateResponse } from '../services/apiService';
-import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from './timeTools';
-import { getKeywordExtractionPrompt } from '../prompts/keywordExtraction';
+import { generateResponse } from '../../services/ai/apiService';
+import { parseTimeQuery, generateTimeBasedKeywords, type TimeToolsResult } from '../time/timeTools';
+import { getKeywordExtractionPrompt } from '../../prompts/keywordExtraction';
 
 export interface ExtractedKeywordsResult {
   keywords: string[];

@@ -2,7 +2,7 @@
 // 处理用户选中内容的AI回应生成和保存逻辑
 
 import { generateResponse } from './apiService';
-import { generateAIResponsePrompt, AI_RESPONSE_STYLES } from '../prompts/aiResponse';
+import { generateAIResponsePrompt, AI_RESPONSE_STYLES } from '../../prompts/aiResponse';
 
 /**
  * 获取用户选中的blocks内容

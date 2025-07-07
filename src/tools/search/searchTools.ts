@@ -1,7 +1,7 @@
 // 搜索工具模块
 
-import { SearchResult } from '../types/search';
-import { search as vectorSearch } from '../services/vectorService';
+import { SearchResult } from '../../types/search';
+import { search as vectorSearch } from '../../services/vector/vectorService';
 
 /**
  * 向量搜索驱动的搜索函数
