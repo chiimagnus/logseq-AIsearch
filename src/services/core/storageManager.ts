@@ -186,9 +186,10 @@ export class StorageManager {
 
       // 获取最后一个分片的数据
       let lastChunkData: any[] = [];
-      let lastChunkIndex = metadata.totalChunks - 1;
+      let startChunkIndex = 0;
 
       if (metadata.totalChunks > 0) {
+        const lastChunkIndex = metadata.totalChunks - 1;
         const lastChunkKey = `${key}_chunk_${lastChunkIndex}`;
         const compressedLastChunk = localStorage.getItem(lastChunkKey);
 
@@ -199,6 +200,7 @@ export class StorageManager {
             console.log(`📦 加载最后分片 ${lastChunkIndex}: ${lastChunkData.length} 条记录`);
           }
         }
+        startChunkIndex = lastChunkIndex;
       }
 
       // 将新数据追加到最后一个分片
@@ -209,7 +211,7 @@ export class StorageManager {
       let chunksToSave = 0;
       for (let i = 0; i < newChunks.length; i++) {
         const chunk = newChunks[i];
-        const chunkIndex = lastChunkIndex + i;
+        const chunkIndex = startChunkIndex + i;
         const chunkKey = `${key}_chunk_${chunkIndex}`;
 
         // 压缩并保存分片
@@ -225,7 +227,7 @@ export class StorageManager {
       }
 
       // 更新元数据
-      metadata.totalChunks = lastChunkIndex + newChunks.length;
+      metadata.totalChunks = startChunkIndex + newChunks.length;
       metadata.totalRecords += newData.length;
       metadata.timestamp = Date.now();
 
