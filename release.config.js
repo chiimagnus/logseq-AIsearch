@@ -1,11 +1,5 @@
 module.exports = {
-  branches: [
-    // master 分支默认发布 pre-release 版本
-    {
-      name: "master",
-      prerelease: "beta"
-    }
-  ],
+  branches: ["master"],
   plugins: [
     [
       "@semantic-release/commit-analyzer",
