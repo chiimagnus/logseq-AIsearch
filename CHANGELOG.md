@@ -1,3 +1,26 @@
+# [2.2.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v2.1.0...v2.2.0) (2025-07-07)
+
+
+### Bug Fixes
+
+* **storage:** 修复分片数据加载和保存的逻辑 ([b5f4e19](https://github.com/chiimagnus/logseq-AIsearch/commit/b5f4e19b4367384fee16fc3ffed7b137519c5d0e))
+
+
+### Features
+
+* **core:** 实现分片索引优化 ([a349324](https://github.com/chiimagnus/logseq-AIsearch/commit/a3493248b476ae4d5e446033fcc749261f93f596))
+* **vector:** 优化向量索引重建逻辑 ([90e0e74](https://github.com/chiimagnus/logseq-AIsearch/commit/90e0e749657fe6194b2f9e7e6be26c2c3d7b1e93))
+* **vector:** 实现向量数据的精确删除和更新 ([67f0101](https://github.com/chiimagnus/logseq-AIsearch/commit/67f0101c426dff371fcffbe21251f1405d7577a1))
+* **vector:** 实现增量索引和智能保存策略 ([6764372](https://github.com/chiimagnus/logseq-AIsearch/commit/67643728a90f35a27ed3e32453d40467b911e98a))
+* **vector:** 实现智能增量索引，优化索引效率 ([dd18163](https://github.com/chiimagnus/logseq-AIsearch/commit/dd18163ae69e9cea3f9d2027d28d8a7fbf378ec3))
+* **vector:** 实现真正的增量索引功能 ([3d7e652](https://github.com/chiimagnus/logseq-AIsearch/commit/3d7e65286ccfff39f5764dfac152601f1fb48186))
+* **vector:** 实现静默增量索引并优化搜索功能 ([ec85619](https://github.com/chiimagnus/logseq-AIsearch/commit/ec856193bb1dffaa8d2c0b3f48aa2af24fd78b9d))
+
+
+### Performance Improvements
+
+* **代码分割:** 实现代码按需加载以优化性能 ([f5dc900](https://github.com/chiimagnus/logseq-AIsearch/commit/f5dc900afdbaba7f848ead33f11ed33873970e52))
+
 # [2.1.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v2.0.0...v2.1.0) (2025-07-07)
 
 
