@@ -1,6 +1,6 @@
 // 向量数据存储服务
 
-import { VectorData, VectorDatabase, CompactVectorData, VectorStoreStats, VectorDataIntegrity } from '../../types/vector';
+import { VectorData, VectorDatabase, CompactVectorData, VectorStoreStats } from '../../types/vector';
 import { StorageManager } from '../core/storageManager';
 import { getVectorDimension } from './embeddingService';
 
@@ -185,32 +185,7 @@ export async function clearVectorData(): Promise<void> {
   }
 }
 
-// 检查向量数据完整性
-export async function checkVectorDataIntegrity(): Promise<VectorDataIntegrity> {
-  if (!storageManager) {
-    return {
-      hasFile: false,
-      canLoad: false,
-      dataCount: 0,
-      fileSize: '0KB',
-      isValid: false,
-      issues: ['存储管理器未初始化']
-    };
-  }
 
-  try {
-    return await storageManager.getDataIntegrity(VECTOR_STORAGE_KEY);
-  } catch (error) {
-    return {
-      hasFile: false,
-      canLoad: false,
-      dataCount: 0,
-      fileSize: '0KB',
-      isValid: false,
-      issues: [`完整性检查失败: ${error}`]
-    };
-  }
-}
 
 // 检查存储管理器是否已初始化
 export function isStorageInitialized(): boolean {

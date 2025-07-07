@@ -74,7 +74,6 @@ export { search } from './vectorSearch';
 export {
   getVectorStoreStats,
   clearVectorData,
-  checkVectorDataIntegrity,
   incrementalSaveVectorData,
   deleteVectorDataFromShards,
   updateVectorDataInShards

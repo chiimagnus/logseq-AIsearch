@@ -249,7 +249,7 @@ async function main() {
   });
 
   // 注册调试命令
-  const { getVectorStoreStats, clearVectorData, checkVectorDataIntegrity } = await import('./services/vector/vectorService');
+  const { getVectorStoreStats, clearVectorData } = await import('./services/vector/vectorService');
 
   // 向量数据管理命令
   logseq.Editor.registerSlashCommand("[AI-Search] Vector: Show Stats", async () => {
@@ -293,30 +293,7 @@ async function main() {
     }
   });
 
-  logseq.Editor.registerSlashCommand("[AI-Search] Vector: Check Integrity", async () => {
-    try {
-      const integrity = await checkVectorDataIntegrity();
-      console.log("🔍 向量数据完整性检查:", integrity);
 
-      let message = `🔍 向量数据完整性检查\n` +
-        `• 文件存在: ${integrity.hasFile ? '✅' : '❌'}\n` +
-        `• 可以加载: ${integrity.canLoad ? '✅' : '❌'}\n` +
-        `• 数据条数: ${integrity.dataCount}\n` +
-        `• 文件大小: ${integrity.fileSize}\n` +
-        `• 整体状态: ${integrity.isValid ? '✅ 正常' : '❌ 异常'}`;
-
-      if (integrity.issues.length > 0) {
-        message += `\n\n⚠️ 发现问题:\n${integrity.issues.map(issue => `• ${issue}`).join('\n')}`;
-      }
-
-      message += `\n\n详细信息请查看控制台`;
-
-      await logseq.UI.showMsg(message, integrity.isValid ? "success" : "warning", { timeout: 15000 });
-    } catch (error) {
-      await logseq.UI.showMsg("❌ 完整性检查失败", "error");
-      console.error("完整性检查失败:", error);
-    }
-  });
 
 
 
