@@ -69,7 +69,7 @@ export function isVectorServiceReady(): boolean {
 }
 
 // 重新导出其他模块的功能
-export { indexAllPages, continueIndexing } from './vectorIndexing';
+export { indexAllPages, continueIndexing, silentIncrementalIndexing } from './vectorIndexing';
 export { search } from './vectorSearch';
 export { 
   getVectorStoreStats, 

@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, hasVectorData, saveVectorData, clearVectorData } from './vectorStorage';
+import { loadVectorData, saveVectorData, clearVectorData } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -17,15 +17,22 @@ export async function indexAllPages(): Promise<void> {
 
 // 继续索引（增量索引）
 export async function continueIndexing(): Promise<void> {
-  await indexPages(true);
+  await indexPages(true, false);
+}
+
+// 静默增量索引（用于自动增量索引）
+export async function silentIncrementalIndexing(): Promise<void> {
+  await indexPages(true, true);
 }
 
 // 核心索引函数
-async function indexPages(isContinue: boolean = false): Promise<void> {
+async function indexPages(isContinue: boolean = false, silent: boolean = false): Promise<void> {
   try {
     const actionText = isContinue ? "继续建立" : "重新建立";
-    logseq.UI.showMsg(`开始${actionText}向量索引...`, "success");
-    console.log(`\n🚀 ===== ${actionText}向量索引 =====`);
+    if (!silent) {
+      logseq.UI.showMsg(`开始${actionText}向量索引...`, "success");
+    }
+    console.log(`\n🚀 ===== ${actionText}向量索引${silent ? ' (静默模式)' : ''} =====`);
 
     const allBlocks = await getAllBlocksWithPage();
     if (!allBlocks || allBlocks.length === 0) {
@@ -49,7 +56,9 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
       console.log(`   • 待索引: ${blocksToIndex.length}`);
 
       if (blocksToIndex.length === 0) {
-        logseq.UI.showMsg("所有内容都已索引完成！", "success");
+        if (!silent) {
+          logseq.UI.showMsg("所有内容都已索引完成！", "success");
+        }
         console.log("✅ 所有blocks都已索引，无需继续");
         return;
       }
@@ -119,7 +128,7 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
         }
       }
 
-      if (indexedCount % 200 === 0 || indexedCount === blocksToIndex.length) {
+      if (!silent && (indexedCount % 200 === 0 || indexedCount === blocksToIndex.length)) {
         logseq.UI.showMsg(`🔄 ${actionText}索引进度: ${currentProgress}%`, "info", { timeout: 2000 });
       }
 
@@ -134,13 +143,15 @@ async function indexPages(isContinue: boolean = false): Promise<void> {
     console.log(`📊 最终统计: 总共 ${totalDataCount} 条向量数据`);
     console.log(`===============================\n`);
 
-    logseq.UI.showMsg(
-      `🎉 ${actionText}索引完成！\n` +
-      `📊 处理: ${indexedCount}个blocks\n` +
-      `💾 总数据: ${totalDataCount}条`,
-      "success",
-      { timeout: 8000 }
-    );
+    if (!silent) {
+      logseq.UI.showMsg(
+        `🎉 ${actionText}索引完成！\n` +
+        `📊 处理: ${indexedCount}个blocks\n` +
+        `💾 总数据: ${totalDataCount}条`,
+        "success",
+        { timeout: 8000 }
+      );
+    }
 
   } catch (error) {
     console.error("索引失败:", error);
