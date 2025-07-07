@@ -75,7 +75,6 @@ export {
   getVectorStoreStats,
   clearVectorData,
   checkVectorDataIntegrity,
-  incrementalSaveVectorData,
-  flushCacheToDisk
+  incrementalSaveVectorData
 } from './vectorStorage';
 

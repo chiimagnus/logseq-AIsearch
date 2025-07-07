@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData, flushCacheToDisk } from './vectorStorage';
+import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -132,12 +132,12 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
       // 定期保存进度，避免数据丢失
       if (newVectorData.length >= saveInterval || indexedCount === blocksToIndex.length) {
         try {
-          if (isContinue && newVectorData.length < 100) {
-            // 🚀 增量索引且新数据较少时，使用增量保存
-            console.log(`💾 [增量保存] 保存 ${newVectorData.length} 条新数据，跳过 ${existingVectorData.length} 条已存在数据`);
+          if (isContinue) {
+            // 🚀 增量索引：使用分片追加保存，只保存新数据
+            console.log(`💾 [分片追加] 保存 ${newVectorData.length} 条新数据，无需重写 ${existingVectorData.length} 条已存在数据`);
             await incrementalSaveVectorData(newVectorData, existingVectorData);
           } else {
-            // 全量保存
+            // 全量重建索引：全量保存
             console.log(`💾 [全量保存] 准备保存 ${existingVectorData.length + newVectorData.length} 条向量数据...`);
             const allVectorData = [...existingVectorData, ...newVectorData];
             await saveVectorData(allVectorData);
@@ -166,10 +166,9 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
 
     const totalDataCount = existingVectorData.length;
 
-    // 🚀 确保所有数据都保存到磁盘
+    // 🚀 增量索引已经实时保存到磁盘，无需额外操作
     if (isContinue) {
-      console.log(`💾 确保增量索引数据已保存到磁盘...`);
-      await flushCacheToDisk();
+      console.log(`✅ 增量索引数据已实时保存到磁盘`);
     }
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);

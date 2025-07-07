@@ -25,32 +25,22 @@ function clearAllCache(): void {
   console.log("🗑️ 所有缓存已清除");
 }
 
-// 🚀 保存向量数据（智能模式：检测是否需要全量保存）
+// 🚀 全量保存向量数据（用于重建索引）
 export async function saveVectorData(vectorData: VectorDatabase): Promise<void> {
   if (!storageManager) throw new Error("存储管理器未初始化");
   if (vectorData.length === 0) return;
 
   try {
-    // 检查是否可以使用增量保存
-    const canUseIncrementalSave = await shouldUseIncrementalSave(vectorData);
+    console.log(`💾 开始全量保存 ${vectorData.length} 条向量数据`);
 
-    if (canUseIncrementalSave) {
-      console.log(`💾 使用增量保存模式，更新缓存数据`);
-      // 直接更新缓存，避免重复保存
-      vectorDataCache = vectorData;
-      console.log("📦 数据已更新到内存缓存（增量模式）");
-    } else {
-      console.log(`💾 开始全量保存 ${vectorData.length} 条向量数据`);
+    const compactData = optimizeVectorData(vectorData);
+    await storageManager.saveData(VECTOR_STORAGE_KEY, compactData);
 
-      const compactData = optimizeVectorData(vectorData);
-      await storageManager.saveData(VECTOR_STORAGE_KEY, compactData);
+    console.log(`✅ 向量数据保存完成: ${vectorData.length} 条记录`);
 
-      console.log(`✅ 向量数据保存完成: ${vectorData.length} 条记录`);
-
-      // 🚀 保存后更新缓存
-      vectorDataCache = vectorData;
-      console.log("📦 数据已更新到内存缓存");
-    }
+    // 🚀 保存后更新缓存
+    vectorDataCache = vectorData;
+    console.log("📦 数据已更新到内存缓存");
 
   } catch (error) {
     console.error("保存向量数据失败:", error);
@@ -58,7 +48,7 @@ export async function saveVectorData(vectorData: VectorDatabase): Promise<void> 
   }
 }
 
-// 🚀 新增：增量保存向量数据（智能保存策略）
+// 🚀 真正的增量保存：只追加新数据到最新分片
 export async function incrementalSaveVectorData(
   newData: VectorData[],
   existingData: VectorDatabase
@@ -67,24 +57,14 @@ export async function incrementalSaveVectorData(
   if (newData.length === 0) return;
 
   try {
-    console.log(`💾 智能增量保存：新增 ${newData.length} 条数据，已存在 ${existingData.length} 条数据`);
+    console.log(`💾 真正增量保存：追加 ${newData.length} 条新数据（已有 ${existingData.length} 条数据）`);
 
-    // 合并数据
+    // 🚀 使用分片追加策略：只保存新数据
+    const compactNewData = optimizeVectorData(newData);
+    await storageManager.appendData(VECTOR_STORAGE_KEY, compactNewData);
+
+    // 🚀 更新缓存
     const allVectorData = [...existingData, ...newData];
-
-    // 🚀 智能保存策略：只在必要时进行磁盘保存
-    const shouldSaveToDisk = shouldPerformDiskSave(newData.length, allVectorData.length);
-
-    if (shouldSaveToDisk) {
-      console.log(`💾 执行磁盘保存：${shouldSaveToDisk.reason}`);
-      const compactData = optimizeVectorData(allVectorData);
-      await storageManager.saveData(VECTOR_STORAGE_KEY, compactData);
-      console.log(`✅ 磁盘保存完成: 总数据 ${allVectorData.length} 条`);
-    } else {
-      console.log(`📦 仅更新缓存：新增数据较少，延迟磁盘保存以提升性能`);
-    }
-
-    // 🚀 始终更新缓存
     vectorDataCache = allVectorData;
     console.log("📦 数据已更新到内存缓存");
 
@@ -94,21 +74,7 @@ export async function incrementalSaveVectorData(
   }
 }
 
-// 🚀 强制保存缓存数据到磁盘（用于确保数据持久化）
-export async function flushCacheToDisk(): Promise<void> {
-  if (!storageManager) throw new Error("存储管理器未初始化");
-  if (!vectorDataCache || vectorDataCache.length === 0) return;
 
-  try {
-    console.log(`💾 强制保存缓存数据到磁盘: ${vectorDataCache.length} 条记录`);
-    const compactData = optimizeVectorData(vectorDataCache);
-    await storageManager.saveData(VECTOR_STORAGE_KEY, compactData);
-    console.log(`✅ 缓存数据已保存到磁盘`);
-  } catch (error) {
-    console.error("强制保存缓存数据失败:", error);
-    throw error;
-  }
-}
 
 // 向量数据优化函数
 function optimizeVectorData(data: VectorData[]): CompactVectorData[] {
@@ -268,46 +234,4 @@ export async function hasVectorData(): Promise<boolean> {
   }
 }
 
-// 🚀 检查是否应该使用增量保存模式
-async function shouldUseIncrementalSave(vectorData: VectorDatabase): Promise<boolean> {
-  // 如果没有缓存数据，说明是首次保存或缓存已清空，需要全量保存
-  if (!vectorDataCache) {
-    return false;
-  }
 
-  // 如果数据量相同且缓存存在，可能只是内存中的数据更新，可以使用增量模式
-  if (vectorData.length === vectorDataCache.length) {
-    return true;
-  }
-
-  // 如果新数据量比缓存数据量大，但差异不大（小于100条），可以使用增量模式
-  const difference = Math.abs(vectorData.length - vectorDataCache.length);
-  if (difference < 100) {
-    return true;
-  }
-
-  // 其他情况使用全量保存
-  return false;
-}
-
-// 🚀 判断是否需要执行磁盘保存
-function shouldPerformDiskSave(newDataCount: number, totalDataCount: number): { shouldSave: boolean; reason: string } | false {
-  // 新增数据超过50条时，进行磁盘保存
-  if (newDataCount >= 50) {
-    return { shouldSave: true, reason: `新增数据达到${newDataCount}条，超过阈值50条` };
-  }
-
-  // 新增数据比例超过5%时，进行磁盘保存
-  const newDataRatio = newDataCount / totalDataCount;
-  if (newDataRatio > 0.05) {
-    return { shouldSave: true, reason: `新增数据比例${(newDataRatio * 100).toFixed(1)}%，超过5%阈值` };
-  }
-
-  // 总数据量较小时（小于1000条），进行磁盘保存
-  if (totalDataCount < 1000) {
-    return { shouldSave: true, reason: `总数据量${totalDataCount}条，小于1000条阈值` };
-  }
-
-  // 其他情况延迟保存
-  return false;
-}

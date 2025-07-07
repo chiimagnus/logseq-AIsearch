@@ -2,7 +2,6 @@
 
 export class StorageManager {
   private readonly CHUNK_SIZE = 1000; // 每个分片的记录数
-  private readonly MAX_CHUNK_SIZE_MB = 5; // 每个分片最大大小（MB）
 
   constructor() {
     console.log("🔧 初始化 localStorage 存储管理器");
@@ -10,8 +9,8 @@ export class StorageManager {
 
   async saveData(key: string, data: any): Promise<void> {
     try {
-      console.log(`🔄 开始保存数据到 localStorage: ${key}`);
-      
+      console.log(`🔄 开始全量保存数据到 localStorage: ${key}`);
+
       if (!Array.isArray(data)) {
         throw new Error("数据必须是数组格式");
       }
@@ -37,18 +36,97 @@ export class StorageManager {
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         const chunkKey = `${key}_chunk_${i}`;
-        
+
         // 异步压缩分片
         const compressedChunk = await this.asyncCompress(JSON.stringify(chunk));
         localStorage.setItem(chunkKey, compressedChunk);
-        
+
         console.log(`✅ 分片 ${i + 1}/${chunks.length} 保存完成 (${chunk.length} 条记录)`);
       }
 
-      console.log(`✅ localStorage 保存完成: ${data.length} 条记录，${chunks.length} 个分片`);
+      console.log(`✅ localStorage 全量保存完成: ${data.length} 条记录，${chunks.length} 个分片`);
     } catch (error) {
       console.error("localStorage 保存数据失败:", error);
       throw new Error(`localStorage 保存失败: ${error}`);
+    }
+  }
+
+  // 🚀 新增：增量追加数据（只更新最新分片或创建新分片）
+  async appendData(key: string, newData: any[]): Promise<void> {
+    try {
+      console.log(`🔄 开始增量追加数据到 localStorage: ${key} (${newData.length} 条新记录)`);
+
+      if (!Array.isArray(newData) || newData.length === 0) {
+        console.log("没有新数据需要追加");
+        return;
+      }
+
+      // 获取当前元数据
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      let metadata;
+
+      if (metadataStr) {
+        metadata = JSON.parse(metadataStr);
+        console.log(`📊 当前状态: ${metadata.totalRecords} 条记录，${metadata.totalChunks} 个分片`);
+      } else {
+        // 如果没有元数据，创建新的存储
+        metadata = {
+          totalChunks: 0,
+          totalRecords: 0,
+          timestamp: Date.now(),
+          version: 1
+        };
+        console.log("📊 创建新的存储结构");
+      }
+
+      // 获取最后一个分片的数据
+      let lastChunkData: any[] = [];
+      let lastChunkIndex = metadata.totalChunks - 1;
+
+      if (metadata.totalChunks > 0) {
+        const lastChunkKey = `${key}_chunk_${lastChunkIndex}`;
+        const compressedLastChunk = localStorage.getItem(lastChunkKey);
+
+        if (compressedLastChunk) {
+          const jsonString = await this.asyncDecompress(compressedLastChunk);
+          if (jsonString) {
+            lastChunkData = JSON.parse(jsonString);
+            console.log(`📦 加载最后分片 ${lastChunkIndex}: ${lastChunkData.length} 条记录`);
+          }
+        }
+      }
+
+      // 将新数据追加到最后一个分片
+      const combinedData = [...lastChunkData, ...newData];
+      const newChunks = this.splitIntoChunks(combinedData, this.CHUNK_SIZE);
+
+      // 保存更新后的分片
+      let chunksToSave = 0;
+      for (let i = 0; i < newChunks.length; i++) {
+        const chunk = newChunks[i];
+        const chunkIndex = lastChunkIndex + i;
+        const chunkKey = `${key}_chunk_${chunkIndex}`;
+
+        // 压缩并保存分片
+        const compressedChunk = await this.asyncCompress(JSON.stringify(chunk));
+        localStorage.setItem(chunkKey, compressedChunk);
+        chunksToSave++;
+
+        console.log(`✅ 分片 ${chunkIndex} 保存完成 (${chunk.length} 条记录)`);
+      }
+
+      // 更新元数据
+      metadata.totalChunks = lastChunkIndex + newChunks.length;
+      metadata.totalRecords += newData.length;
+      metadata.timestamp = Date.now();
+
+      localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+
+      console.log(`✅ 增量追加完成: 新增 ${newData.length} 条记录，保存了 ${chunksToSave} 个分片，总计 ${metadata.totalRecords} 条记录`);
+
+    } catch (error) {
+      console.error("localStorage 增量追加数据失败:", error);
+      throw new Error(`localStorage 增量追加失败: ${error}`);
     }
   }
 
