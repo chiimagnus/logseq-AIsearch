@@ -11,7 +11,7 @@
 * **vector:** 实现内存缓存机制并优化向量搜索功能 ([8bbe6f2](https://github.com/chiimagnus/logseq-AIsearch/commit/8bbe6f209bfbd4db9738253485b575784d0d0acf))
 * **vector:** 重构向量数据存储为分片式架构 ([52474a9](https://github.com/chiimagnus/logseq-AIsearch/commit/52474a95d2606bb162a93d7f24934a2d65d060c1))
 
-# [1.10.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v1.9.3...v1.10.0) (2025-07-06)
+# [2.0.0](https://github.com/chiimagnus/logseq-AIsearch/compare/v1.9.3...v2.0.0) (2025-07-06)
 
 
 ### Features
