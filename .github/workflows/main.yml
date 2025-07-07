@@ -2,11 +2,11 @@
 
 name: Create Release and Package Plugin
 
-# 当一个以 'v' 开头的标签被推送到仓库时触发
+# 只在 master 分支推送时触发，发布 pre-release 版本
 on:
   push:
     branches:
-      - 'master'
+      - 'master'  # 发布 pre-release 版本
 
 jobs:
   build-and-release:
