@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, saveVectorData, clearVectorData } from './vectorStorage';
+import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData, flushCacheToDisk } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -131,14 +131,22 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
 
       // 定期保存进度，避免数据丢失
       if (newVectorData.length >= saveInterval || indexedCount === blocksToIndex.length) {
-        console.log(`💾 [保存进度] 准备保存 ${existingVectorData.length + newVectorData.length} 条向量数据...`);
         try {
-          const allVectorData = [...existingVectorData, ...newVectorData];
-          await saveVectorData(allVectorData);
-          console.log(`✅ [进度已保存] 总数据量: ${allVectorData.length} 条`);
-          
+          if (isContinue && newVectorData.length < 100) {
+            // 🚀 增量索引且新数据较少时，使用增量保存
+            console.log(`💾 [增量保存] 保存 ${newVectorData.length} 条新数据，跳过 ${existingVectorData.length} 条已存在数据`);
+            await incrementalSaveVectorData(newVectorData, existingVectorData);
+          } else {
+            // 全量保存
+            console.log(`💾 [全量保存] 准备保存 ${existingVectorData.length + newVectorData.length} 条向量数据...`);
+            const allVectorData = [...existingVectorData, ...newVectorData];
+            await saveVectorData(allVectorData);
+          }
+
+          console.log(`✅ [进度已保存] 总数据量: ${existingVectorData.length + newVectorData.length} 条`);
+
           // 更新现有数据并清空新数据缓冲区
-          existingVectorData = allVectorData;
+          existingVectorData = [...existingVectorData, ...newVectorData];
           newVectorData = [];
         } catch (saveError) {
           console.error(`❌ [保存失败] ${saveError}`);
@@ -157,6 +165,12 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
     }
 
     const totalDataCount = existingVectorData.length;
+
+    // 🚀 确保所有数据都保存到磁盘
+    if (isContinue) {
+      console.log(`💾 确保增量索引数据已保存到磁盘...`);
+      await flushCacheToDisk();
+    }
 
     console.log(`\n🎉 ===== ${actionText}索引完成 =====`);
     console.log(`📊 最终统计: 总共 ${totalDataCount} 条向量数据`);

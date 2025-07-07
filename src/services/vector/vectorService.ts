@@ -71,9 +71,11 @@ export function isVectorServiceReady(): boolean {
 // 重新导出其他模块的功能
 export { indexAllPages, continueIndexing, silentIncrementalIndexing, analyzeBlockChanges } from './vectorIndexing';
 export { search } from './vectorSearch';
-export { 
-  getVectorStoreStats, 
-  clearVectorData, 
-  checkVectorDataIntegrity 
+export {
+  getVectorStoreStats,
+  clearVectorData,
+  checkVectorDataIntegrity,
+  incrementalSaveVectorData,
+  flushCacheToDisk
 } from './vectorStorage';
 
