@@ -356,4 +356,131 @@ export class StorageManager {
     }
     return totalSize;
   }
+
+  // 🚀 新增：从分片中删除指定的记录
+  async deleteRecordsFromShards(key: string, recordIds: string[], idField: string = 'u'): Promise<number> {
+    try {
+      console.log(`🗑️ 开始从分片中删除 ${recordIds.length} 条记录`);
+
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (!metadataStr) {
+        console.log("未找到元数据，无法执行删除操作");
+        return 0;
+      }
+
+      const metadata = JSON.parse(metadataStr);
+      const recordIdSet = new Set(recordIds);
+      let totalDeletedCount = 0;
+
+      // 遍历所有分片
+      for (let i = 0; i < metadata.totalChunks; i++) {
+        const chunkKey = `${key}_chunk_${i}`;
+        const compressedChunk = localStorage.getItem(chunkKey);
+
+        if (!compressedChunk) {
+          console.warn(`⚠️ 分片 ${i} 不存在，跳过`);
+          continue;
+        }
+
+        // 解压分片数据
+        const jsonString = await this.asyncDecompress(compressedChunk);
+        if (!jsonString) {
+          console.warn(`⚠️ 分片 ${i} 解压失败，跳过`);
+          continue;
+        }
+
+        const chunkData = JSON.parse(jsonString);
+        const originalLength = chunkData.length;
+
+        // 过滤掉要删除的记录
+        const filteredData = chunkData.filter((item: any) => !recordIdSet.has(item[idField]));
+        const deletedCount = originalLength - filteredData.length;
+
+        // 只有当分片有变化时才重新保存
+        if (deletedCount > 0) {
+          const newCompressedChunk = await this.asyncCompress(JSON.stringify(filteredData));
+          localStorage.setItem(chunkKey, newCompressedChunk);
+          totalDeletedCount += deletedCount;
+          console.log(`✅ 分片 ${i}: 删除了 ${deletedCount} 条记录，剩余 ${filteredData.length} 条`);
+        }
+      }
+
+      // 更新元数据
+      if (totalDeletedCount > 0) {
+        metadata.totalRecords -= totalDeletedCount;
+        metadata.timestamp = Date.now();
+        localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+        console.log(`📊 元数据已更新: 总记录数 ${metadata.totalRecords} (-${totalDeletedCount})`);
+      }
+
+      console.log(`✅ 删除操作完成: 共删除 ${totalDeletedCount} 条记录`);
+      return totalDeletedCount;
+
+    } catch (error) {
+      console.error("从分片删除记录失败:", error);
+      throw new Error(`分片删除失败: ${error}`);
+    }
+  }
+
+  // 🚀 新增：更新分片中的指定记录
+  async updateRecordsInShards(key: string, updates: Array<{id: string, data: any}>, idField: string = 'u'): Promise<number> {
+    try {
+      console.log(`🔄 开始更新分片中的 ${updates.length} 条记录`);
+
+      const metadataStr = localStorage.getItem(`${key}_metadata`);
+      if (!metadataStr) {
+        console.log("未找到元数据，无法执行更新操作");
+        return 0;
+      }
+
+      const metadata = JSON.parse(metadataStr);
+      const updateMap = new Map(updates.map(u => [u.id, u.data]));
+      let totalUpdatedCount = 0;
+
+      // 遍历所有分片
+      for (let i = 0; i < metadata.totalChunks; i++) {
+        const chunkKey = `${key}_chunk_${i}`;
+        const compressedChunk = localStorage.getItem(chunkKey);
+
+        if (!compressedChunk) continue;
+
+        // 解压分片数据
+        const jsonString = await this.asyncDecompress(compressedChunk);
+        if (!jsonString) continue;
+
+        const chunkData = JSON.parse(jsonString);
+        let chunkUpdatedCount = 0;
+
+        // 更新匹配的记录
+        for (let j = 0; j < chunkData.length; j++) {
+          const recordId = chunkData[j][idField];
+          if (updateMap.has(recordId)) {
+            chunkData[j] = updateMap.get(recordId);
+            chunkUpdatedCount++;
+          }
+        }
+
+        // 只有当分片有变化时才重新保存
+        if (chunkUpdatedCount > 0) {
+          const newCompressedChunk = await this.asyncCompress(JSON.stringify(chunkData));
+          localStorage.setItem(chunkKey, newCompressedChunk);
+          totalUpdatedCount += chunkUpdatedCount;
+          console.log(`✅ 分片 ${i}: 更新了 ${chunkUpdatedCount} 条记录`);
+        }
+      }
+
+      // 更新元数据时间戳
+      if (totalUpdatedCount > 0) {
+        metadata.timestamp = Date.now();
+        localStorage.setItem(`${key}_metadata`, JSON.stringify(metadata));
+      }
+
+      console.log(`✅ 更新操作完成: 共更新 ${totalUpdatedCount} 条记录`);
+      return totalUpdatedCount;
+
+    } catch (error) {
+      console.error("更新分片记录失败:", error);
+      throw new Error(`分片更新失败: ${error}`);
+    }
+  }
 }

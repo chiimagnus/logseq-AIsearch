@@ -234,4 +234,64 @@ export async function hasVectorData(): Promise<boolean> {
   }
 }
 
+// 🚀 新增：从分片中删除指定的向量数据
+export async function deleteVectorDataFromShards(blockUUIDs: string[]): Promise<number> {
+  if (!storageManager) throw new Error("存储管理器未初始化");
+  if (blockUUIDs.length === 0) return 0;
+
+  try {
+    console.log(`🗑️ 开始从分片中删除 ${blockUUIDs.length} 个blocks的向量数据`);
+
+    const deletedCount = await storageManager.deleteRecordsFromShards(VECTOR_STORAGE_KEY, blockUUIDs, 'u');
+
+    // 🚀 更新缓存：从缓存中移除已删除的数据
+    if (vectorDataCache && deletedCount > 0) {
+      const deletedUUIDs = new Set(blockUUIDs);
+      vectorDataCache = vectorDataCache.filter(item => !deletedUUIDs.has(item.blockUUID));
+      console.log(`📦 缓存已更新: 移除了 ${deletedCount} 条记录，剩余 ${vectorDataCache.length} 条`);
+    }
+
+    return deletedCount;
+  } catch (error) {
+    console.error("从分片删除向量数据失败:", error);
+    throw error;
+  }
+}
+
+// 🚀 新增：更新分片中的向量数据
+export async function updateVectorDataInShards(updates: Array<{blockUUID: string, data: VectorData}>): Promise<number> {
+  if (!storageManager) throw new Error("存储管理器未初始化");
+  if (updates.length === 0) return 0;
+
+  try {
+    console.log(`🔄 开始更新分片中的 ${updates.length} 个blocks的向量数据`);
+
+    // 转换为存储格式
+    const compactUpdates = updates.map(update => ({
+      id: update.blockUUID,
+      data: optimizeVectorData([update.data])[0]
+    }));
+
+    const updatedCount = await storageManager.updateRecordsInShards(VECTOR_STORAGE_KEY, compactUpdates, 'u');
+
+    // 🚀 更新缓存
+    if (vectorDataCache && updatedCount > 0) {
+      const updateMap = new Map(updates.map(u => [u.blockUUID, u.data]));
+
+      for (let i = 0; i < vectorDataCache.length; i++) {
+        const blockUUID = vectorDataCache[i].blockUUID;
+        if (updateMap.has(blockUUID)) {
+          vectorDataCache[i] = updateMap.get(blockUUID)!;
+        }
+      }
+      console.log(`📦 缓存已更新: 更新了 ${updatedCount} 条记录`);
+    }
+
+    return updatedCount;
+  } catch (error) {
+    console.error("更新分片向量数据失败:", error);
+    throw error;
+  }
+}
+
 

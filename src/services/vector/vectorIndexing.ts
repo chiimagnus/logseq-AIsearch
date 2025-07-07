@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData } from './vectorStorage';
+import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData, deleteVectorDataFromShards, updateVectorDataInShards } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -50,22 +50,39 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
       // 🚀 智能增量索引：检测新增、修改、删除的blocks
       const { newBlocks, modifiedBlocks, deletedBlocks, validVectorData } = await analyzeBlockChanges(allBlocks, existingVectorData);
 
-      // 更新现有向量数据，移除已删除的blocks
-      existingVectorData = validVectorData;
+      // 🚀 精确处理删除和修改操作
+      if (deletedBlocks.length > 0) {
+        console.log(`🗑️ 从分片中精确删除 ${deletedBlocks.length} 个blocks的向量数据`);
+        const deletedUUIDs = deletedBlocks.map(block => block.blockUUID);
+        await deleteVectorDataFromShards(deletedUUIDs);
+      }
+
+      if (modifiedBlocks.length > 0) {
+        console.log(`🔄 从分片中删除 ${modifiedBlocks.length} 个已修改blocks的旧向量数据`);
+        const modifiedUUIDs = modifiedBlocks.map(block => block.uuid);
+        await deleteVectorDataFromShards(modifiedUUIDs);
+      }
+
+      // 更新现有向量数据（已经通过分片操作更新）
+      existingVectorData = validVectorData.filter(item => {
+        const deletedUUIDs = new Set(deletedBlocks.map(b => b.blockUUID));
+        const modifiedUUIDs = new Set(modifiedBlocks.map(b => b.uuid));
+        return !deletedUUIDs.has(item.blockUUID) && !modifiedUUIDs.has(item.blockUUID);
+      });
 
       // 需要索引的blocks = 新增的 + 修改的
       blocksToIndex = [...newBlocks, ...modifiedBlocks];
 
-      console.log(`📊 智能增量索引统计:`);
+      console.log(`📊 精确增量索引统计:`);
       console.log(`   • 总blocks: ${allBlocks.length}`);
-      console.log(`   • 已索引: ${validVectorData.length}`);
+      console.log(`   • 有效已索引: ${existingVectorData.length}`);
       console.log(`   • 新增blocks: ${newBlocks.length}`);
       console.log(`   • 修改blocks: ${modifiedBlocks.length}`);
       console.log(`   • 删除blocks: ${deletedBlocks.length}`);
       console.log(`   • 待索引: ${blocksToIndex.length}`);
 
       if (deletedBlocks.length > 0 && !silent) {
-        console.log(`🗑️ 清理了 ${deletedBlocks.length} 个已删除blocks的向量数据`);
+        console.log(`✅ 已从分片中精确删除 ${deletedBlocks.length} 个blocks的向量数据`);
       }
 
       if (blocksToIndex.length === 0) {
@@ -73,12 +90,6 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
           logseq.UI.showMsg("所有内容都已索引完成！", "success");
         }
         console.log("✅ 所有blocks都已索引，无需继续");
-
-        // 如果有删除的blocks，需要保存更新后的数据
-        if (deletedBlocks.length > 0) {
-          await saveVectorData(existingVectorData);
-          console.log(`💾 已保存清理后的向量数据`);
-        }
         return;
       }
     } else {
