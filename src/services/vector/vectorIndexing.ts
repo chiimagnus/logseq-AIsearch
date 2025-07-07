@@ -3,7 +3,7 @@
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
 import { loadVectorData, hasVectorData, saveVectorData, clearVectorData } from './vectorStorage';
-import { getAllBlocksWithPage, preprocessContent } from '../../tools/content/contentProcessor';
+import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
 function compressVector(vector: number[]): number[] {
