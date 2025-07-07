@@ -3,7 +3,7 @@ module.exports = {
     // master 分支默认发布 pre-release 版本
     {
       name: "master",
-      prerelease: true
+      prerelease: "beta"
     }
   ],
   plugins: [
