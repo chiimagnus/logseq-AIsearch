@@ -25,25 +25,49 @@ alwaysApply: false
 
 ### 2. 数据结构设计
 
-**向量数据结构：**
-- blockUUID: 唯一标识符
-- pageName: 页面名称
-- blockContent: 块内容
-- vector: 向量数组（number[]）
-- lastUpdated: 时间戳
+**核心数据结构：**
+```typescript
+interface VectorData {
+  blockUUID: string;      // Logseq block的唯一标识
+  pageName: string;       // 所属页面名称
+  blockContent: string;   // 预处理后的block内容
+  vector: number[];       // embedding向量
+  lastUpdated: number;    // 最后更新时间戳
+}
+```
 
-**文件存储策略：**
-- 文件名：`ai-search-vectors.json`
-- 位置：`assets/ai-search-vectors.json`
-- 格式：标准JSON，便于阅读和调试
-- 自动降级：Assets API失败时使用localStorage分块存储
+**存储优化结构：**
+```typescript
+interface CompactVectorData {
+  u: string;      // blockUUID (缩短字段名)
+  p: string;      // pageName
+  c: string;      // blockContent
+  v: number[];    // vector (压缩精度到4位小数)
+  t: number;      // lastUpdated timestamp
+}
+```
 
-### 3. 错误处理和兼容性管理
+### 3. 动态增量索引机制
 
-**Assets API兼容性：**
-- 动态检测可用的API方法名（writeFile/write/save等）
-- 完整的错误捕获和降级机制
-- 详细的调试日志和状态反馈
+**核心原理：**
+- 在用户触发搜索时，自动检测笔记内容变化
+- 只对新增或修改的blocks进行索引，避免全量重建
+- 保持向量数据与用户笔记内容的实时同步
+- 用户无感知的后台自动更新
+
+**实现策略：**
+1. **变化检测**：比较当前所有blocks与已索引的blockUUIDs
+2. **增量索引**：只处理新增的blocks，跳过已存在的
+3. **智能触发**：在搜索时自动执行，用户无感知
+4. **性能优化**：使用内存缓存，避免重复加载数据
+
+**最佳实践：**
+- 首次使用需要手动建立完整索引
+- 后续搜索会自动维护索引同步
+- 大量新增内容时可手动触发"继续索引"
+- 定期检查索引完整性
+
+### 4. 错误处理和兼容性管理
 
 **localStorage容量管理：**
 - QuotaExceededError智能捕获
@@ -51,17 +75,19 @@ alwaysApply: false
 - 元数据管理，追踪数据完整性
 - 清晰的错误提示和解决建议
 
-### 4. 性能优化策略
+### 5. 性能优化策略
 
-**文件存储优化：**
-- 增量保存：支持数据部分更新
-- 进度显示：每1000条显示一次进度
+**增量索引优化：**
+- 智能变化检测：只处理新增blocks，避免重复计算
+- 内存缓存机制：搜索时优先使用缓存数据
 - 批处理：使用Promise.all()并行处理embedding生成
+- 进度显示：每200条显示一次进度
 
-**内存管理：**
-- 按需加载：仅在需要时读取全部数据
-- 及时释放：搜索完成后释放不必要的内存引用
-- 分块处理：避免一次性加载过大数据集
+**存储优化：**
+- 分块压缩存储：突破localStorage容量限制
+- 向量精度压缩：保留4位小数，减少存储空间
+- 元数据管理：追踪数据完整性和版本信息
+- 自动清理：定期清理无效数据
 
 ### 5. 用户控制和配置
 
