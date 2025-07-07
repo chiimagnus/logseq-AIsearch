@@ -9,18 +9,42 @@
 An AI-based intelligent search plugin for Logseq that can perform global document searches based on the current block content and provide AI-powered summary features.
 
 ## ✨ Main Features
-- 🔍 Intelligent search based on the current block content
-- 📝 AI-powered summary of search results
-- 🔗 Link to original notes
-- 🔧 Support for custom LLM API
+
+### 🔍 AI Intelligent Search
+- Intelligent search based on the current block content
+- AI-powered summary of search results
+- Link to original notes
+- Support for custom LLM API
+
+### 🤖 AI Multi-Style Response
+- Warm Response: Provides understanding, support, and encouragement
+- Straight to the Point: Directly identifies core issues or insights
+- Thought-Provoking: Poses deep questions to guide further thinking
+- Inspiration Spark: Re-examines problems from different perspectives to inspire creativity and new possibilities
+- Cosmic Perspective: Thinks from a grander temporal and spatial dimension
 
 ## 🚀 Quick Start
 
-### Usage
+### AI Search Usage
 - Command: Enter `/AI-Search`
 - Shortcut: `alt+mod+a`
   - Mac: `⌥ + ⌘ + A` (Alt + Command + A)
   - Windows: `Alt + Ctrl + A`
+
+### AI Response Usage
+1. **Configure Response Style**: Select your preferred AI response style in the plugin settings.
+
+2. **Use AI Response**:
+   - Select one or more blocks
+   - Trigger AI response using one of the following methods:
+     - Command: Enter `/AI-Response`
+     - Shortcut: `alt+mod+r`
+       - Mac: `⌥ + ⌘ + R` (Alt + Command + R)
+       - Windows: `Alt + Ctrl + R`
+
+3. **View Results**:
+   - AI will generate responses based on your configured style, saved to the "AIResponse" page
+   - Reference links to AI responses will be automatically inserted next to the original blocks
 
 ## 📸 Feature Showcase
 - [demo.mp4](https://github.com/chiimagnus/logseq-AIsearch/blob/master/public/demo.mp4)

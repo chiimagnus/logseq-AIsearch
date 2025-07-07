@@ -47,12 +47,4 @@ export interface VectorSearchResult {
   score: number;
 }
 
-// 向量数据完整性报告
-export interface VectorDataIntegrity {
-  isValid: boolean;
-  hasFile: boolean;
-  canLoad: boolean;
-  dataCount: number;
-  fileSize: string;
-  issues: string[];
-} 
+ 
