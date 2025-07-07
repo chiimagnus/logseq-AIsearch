@@ -92,16 +92,18 @@ async function performIncrementalIndexingIfNeeded(): Promise<void> {
       return;
     }
 
-    // 检测新增的blocks
-    const existingUUIDs = new Set(existingVectorData.map(item => item.blockUUID));
-    const newBlocks = allBlocks.filter(block => !existingUUIDs.has(block.uuid));
+    // 🚀 智能检测blocks变化（新增、修改、删除）
+    const { analyzeBlockChanges } = await import('./vectorIndexing');
+    const { newBlocks, modifiedBlocks, deletedBlocks } = await analyzeBlockChanges(allBlocks, existingVectorData);
 
-    if (newBlocks.length === 0) {
-      console.log("✅ 所有内容都已索引，无需增量更新");
+    const totalChanges = newBlocks.length + modifiedBlocks.length + deletedBlocks.length;
+
+    if (totalChanges === 0) {
+      console.log("✅ 所有内容都已索引且无变化，无需增量更新");
       return;
     }
 
-    console.log(`🔄 检测到 ${newBlocks.length} 个新增blocks，开始静默增量索引...`);
+    console.log(`🔄 检测到变化: 新增${newBlocks.length}个, 修改${modifiedBlocks.length}个, 删除${deletedBlocks.length}个，开始静默增量索引...`);
 
     // 静默执行增量索引，不显示进度消息
     const { silentIncrementalIndexing } = await import('./vectorIndexing');

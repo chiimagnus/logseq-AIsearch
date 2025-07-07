@@ -46,20 +46,39 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
 
     if (isContinue) {
       existingVectorData = await loadVectorData();
-      
-      const existingUUIDs = new Set(existingVectorData.map(item => item.blockUUID));
-      blocksToIndex = allBlocks.filter(block => !existingUUIDs.has(block.uuid));
 
-      console.log(`📊 继续索引统计:`);
+      // 🚀 智能增量索引：检测新增、修改、删除的blocks
+      const { newBlocks, modifiedBlocks, deletedBlocks, validVectorData } = await analyzeBlockChanges(allBlocks, existingVectorData);
+
+      // 更新现有向量数据，移除已删除的blocks
+      existingVectorData = validVectorData;
+
+      // 需要索引的blocks = 新增的 + 修改的
+      blocksToIndex = [...newBlocks, ...modifiedBlocks];
+
+      console.log(`📊 智能增量索引统计:`);
       console.log(`   • 总blocks: ${allBlocks.length}`);
-      console.log(`   • 已索引: ${existingVectorData.length}`);
+      console.log(`   • 已索引: ${validVectorData.length}`);
+      console.log(`   • 新增blocks: ${newBlocks.length}`);
+      console.log(`   • 修改blocks: ${modifiedBlocks.length}`);
+      console.log(`   • 删除blocks: ${deletedBlocks.length}`);
       console.log(`   • 待索引: ${blocksToIndex.length}`);
+
+      if (deletedBlocks.length > 0 && !silent) {
+        console.log(`🗑️ 清理了 ${deletedBlocks.length} 个已删除blocks的向量数据`);
+      }
 
       if (blocksToIndex.length === 0) {
         if (!silent) {
           logseq.UI.showMsg("所有内容都已索引完成！", "success");
         }
         console.log("✅ 所有blocks都已索引，无需继续");
+
+        // 如果有删除的blocks，需要保存更新后的数据
+        if (deletedBlocks.length > 0) {
+          await saveVectorData(existingVectorData);
+          console.log(`💾 已保存清理后的向量数据`);
+        }
         return;
       }
     } else {
@@ -144,17 +163,81 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
     console.log(`===============================\n`);
 
     if (!silent) {
-      logseq.UI.showMsg(
-        `🎉 ${actionText}索引完成！\n` +
-        `📊 处理: ${indexedCount}个blocks\n` +
-        `💾 总数据: ${totalDataCount}条`,
-        "success",
-        { timeout: 8000 }
-      );
+      const message = isContinue ?
+        `🎉 智能增量索引完成！\n📊 处理: ${indexedCount}个blocks\n💾 总数据: ${totalDataCount}条` :
+        `🎉 ${actionText}索引完成！\n📊 处理: ${indexedCount}个blocks\n💾 总数据: ${totalDataCount}条`;
+
+      logseq.UI.showMsg(message, "success", { timeout: 8000 });
     }
 
   } catch (error) {
     console.error("索引失败:", error);
     logseq.UI.showMsg("索引建立失败，请检查控制台日志。", "error");
   }
-} 
+}
+
+// 🚀 智能分析blocks变化：检测新增、修改、删除的blocks
+export async function analyzeBlockChanges(
+  currentBlocks: BlockWithPage[],
+  existingVectorData: VectorDatabase
+): Promise<{
+  newBlocks: BlockWithPage[];
+  modifiedBlocks: BlockWithPage[];
+  deletedBlocks: VectorData[];
+  validVectorData: VectorDatabase;
+}> {
+  // 创建当前blocks的映射表
+  const currentBlocksMap = new Map<string, BlockWithPage>();
+  currentBlocks.forEach(block => {
+    currentBlocksMap.set(block.uuid, block);
+  });
+
+  // 创建已索引数据的映射表
+  const existingDataMap = new Map<string, VectorData>();
+  existingVectorData.forEach(data => {
+    existingDataMap.set(data.blockUUID, data);
+  });
+
+  const newBlocks: BlockWithPage[] = [];
+  const modifiedBlocks: BlockWithPage[] = [];
+  const deletedBlocks: VectorData[] = [];
+  const validVectorData: VectorDatabase = [];
+
+  // 检测新增和修改的blocks
+  for (const block of currentBlocks) {
+    const existingData = existingDataMap.get(block.uuid);
+
+    if (!existingData) {
+      // 新增的block
+      newBlocks.push(block);
+    } else {
+      // 检查内容是否发生变化
+      const currentProcessedContent = preprocessContent(block.content);
+      const existingProcessedContent = existingData.blockContent;
+
+      if (currentProcessedContent !== existingProcessedContent) {
+        // 内容已修改的block
+        modifiedBlocks.push(block);
+        console.log(`🔄 检测到内容修改: ${block.uuid.slice(0, 8)}...`);
+      } else {
+        // 内容未变化，保留现有数据
+        validVectorData.push(existingData);
+      }
+    }
+  }
+
+  // 检测删除的blocks
+  for (const data of existingVectorData) {
+    if (!currentBlocksMap.has(data.blockUUID)) {
+      deletedBlocks.push(data);
+      console.log(`🗑️ 检测到已删除block: ${data.blockUUID.slice(0, 8)}...`);
+    }
+  }
+
+  return {
+    newBlocks,
+    modifiedBlocks,
+    deletedBlocks,
+    validVectorData
+  };
+}
