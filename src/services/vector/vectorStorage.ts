@@ -8,9 +8,29 @@ import { getVectorDimension } from './embeddingService';
 const VECTOR_STORAGE_KEY = 'vector-data';
 let storageManager: StorageManager;
 
-// 🚀 内存缓存机制
+// 🚀 简单的内存缓存
 let vectorDataCache: VectorDatabase | null = null;
-let cacheVersion = 0;
+
+// 简单的数据优化函数
+function optimizeVectorData(data: VectorData[]): CompactVectorData[] {
+  return data.map(item => ({
+    u: item.blockUUID,
+    p: item.pageName,
+    c: item.blockContent,
+    v: item.vector.map(v => Math.round(v * 10000) / 10000), // 压缩精度
+    t: item.lastUpdated
+  }));
+}
+
+function restoreVectorData(compactData: CompactVectorData[]): VectorData[] {
+  return compactData.map(item => ({
+    blockUUID: item.u,
+    pageName: item.p,
+    blockContent: item.c,
+    vector: item.v,
+    lastUpdated: item.t
+  }));
+}
 
 // 初始化存储管理器
 export function initializeStorage(): void {
@@ -21,8 +41,6 @@ export function initializeStorage(): void {
 // 🚀 清除所有缓存
 function clearAllCache(): void {
   vectorDataCache = null;
-  cacheVersion++;
-  console.log("🗑️ 所有缓存已清除");
 }
 
 // 🚀 全量保存向量数据（用于重建索引）
@@ -40,7 +58,6 @@ export async function saveVectorData(vectorData: VectorDatabase): Promise<void> 
 
     // 🚀 保存后更新缓存
     vectorDataCache = vectorData;
-    console.log("📦 数据已更新到内存缓存");
 
   } catch (error) {
     console.error("保存向量数据失败:", error);
@@ -64,9 +81,7 @@ export async function incrementalSaveVectorData(
     await storageManager.appendData(VECTOR_STORAGE_KEY, compactNewData);
 
     // 🚀 更新缓存
-    const allVectorData = [...existingData, ...newData];
-    vectorDataCache = allVectorData;
-    console.log("📦 数据已更新到内存缓存");
+    vectorDataCache = [...existingData, ...newData];
 
   } catch (error) {
     console.error("增量保存向量数据失败:", error);
@@ -76,26 +91,7 @@ export async function incrementalSaveVectorData(
 
 
 
-// 向量数据优化函数
-function optimizeVectorData(data: VectorData[]): CompactVectorData[] {
-  return data.map(item => ({
-    u: item.blockUUID,
-    p: item.pageName,
-    c: item.blockContent,
-    v: item.vector.map(v => Math.round(v * 10000) / 10000),
-    t: item.lastUpdated
-  }));
-}
 
-function restoreVectorData(compactData: CompactVectorData[]): VectorData[] {
-  return compactData.map(item => ({
-    blockUUID: item.u,
-    pageName: item.p,
-    blockContent: item.c,
-    vector: item.v,
-    lastUpdated: item.t
-  }));
-}
 
 // 🚀 优化：使用缓存的数据加载
 export async function loadVectorData(forceReload: boolean = false): Promise<VectorDatabase> {
@@ -114,21 +110,20 @@ export async function loadVectorData(forceReload: boolean = false): Promise<Vect
     console.log(`🔄 从 localStorage 加载向量数据...`);
 
     const compactData = await storageManager.loadData(VECTOR_STORAGE_KEY);
-    
+
     if (!compactData || !Array.isArray(compactData)) {
       console.log("未找到向量数据或数据格式错误");
       vectorDataCache = [];
       return [];
     }
-    
+
     const vectorData = restoreVectorData(compactData);
-    
+
     console.log(`✅ 成功加载向量数据，总共 ${vectorData.length} 条记录`);
-    
+
     // 🚀 缓存数据
     vectorDataCache = vectorData;
-    console.log(`📦 数据已缓存到内存，版本: ${cacheVersion}`);
-    
+
     return vectorData;
 
   } catch (error) {
@@ -245,10 +240,9 @@ export async function deleteVectorDataFromShards(blockUUIDs: string[]): Promise<
     const deletedCount = await storageManager.deleteRecordsFromShards(VECTOR_STORAGE_KEY, blockUUIDs, 'u');
 
     // 🚀 更新缓存：从缓存中移除已删除的数据
-    if (vectorDataCache && deletedCount > 0) {
+    if (deletedCount > 0 && vectorDataCache) {
       const deletedUUIDs = new Set(blockUUIDs);
       vectorDataCache = vectorDataCache.filter(item => !deletedUUIDs.has(item.blockUUID));
-      console.log(`📦 缓存已更新: 移除了 ${deletedCount} 条记录，剩余 ${vectorDataCache.length} 条`);
     }
 
     return deletedCount;
@@ -275,21 +269,57 @@ export async function updateVectorDataInShards(updates: Array<{blockUUID: string
     const updatedCount = await storageManager.updateRecordsInShards(VECTOR_STORAGE_KEY, compactUpdates, 'u');
 
     // 🚀 更新缓存
-    if (vectorDataCache && updatedCount > 0) {
+    if (updatedCount > 0 && vectorDataCache) {
       const updateMap = new Map(updates.map(u => [u.blockUUID, u.data]));
-
       for (let i = 0; i < vectorDataCache.length; i++) {
         const blockUUID = vectorDataCache[i].blockUUID;
         if (updateMap.has(blockUUID)) {
           vectorDataCache[i] = updateMap.get(blockUUID)!;
         }
       }
-      console.log(`📦 缓存已更新: 更新了 ${updatedCount} 条记录`);
     }
 
     return updatedCount;
   } catch (error) {
     console.error("更新分片向量数据失败:", error);
+    throw error;
+  }
+}
+
+// 🚀 新增：智能保存策略 - 抽象索引保存逻辑
+export async function smartSaveVectorData(
+  newData: VectorData[],
+  existingData: VectorDatabase,
+  isIncremental: boolean
+): Promise<VectorDatabase> {
+  if (newData.length === 0) {
+    return existingData;
+  }
+
+  try {
+    if (isIncremental) {
+      // 增量索引：使用分片追加保存，只保存新数据
+      console.log(`💾 [分片追加] 保存 ${newData.length} 条新数据，无需重写 ${existingData.length} 条已存在数据`);
+      await incrementalSaveVectorData(newData, existingData);
+    } else {
+      // 重建索引优化：进度保存时也使用增量策略，避免重复保存已有数据
+      if (existingData.length === 0) {
+        // 首次保存：使用全量保存初始化存储结构
+        console.log(`💾 [首次保存] 初始化存储并保存 ${newData.length} 条向量数据...`);
+        await saveVectorData(newData);
+      } else {
+        // 进度保存：使用增量追加，只保存新数据
+        console.log(`💾 [增量追加] 保存 ${newData.length} 条新数据，无需重写 ${existingData.length} 条已存在数据`);
+        await incrementalSaveVectorData(newData, existingData);
+      }
+    }
+
+    console.log(`✅ [进度已保存] 总数据量: ${existingData.length + newData.length} 条`);
+
+    // 返回合并后的数据
+    return [...existingData, ...newData];
+  } catch (error) {
+    console.error(`❌ [保存失败] ${error}`);
     throw error;
   }
 }

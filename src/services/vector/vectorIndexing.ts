@@ -2,7 +2,7 @@
 
 import { VectorData, VectorDatabase, BlockWithPage } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
-import { loadVectorData, saveVectorData, clearVectorData, incrementalSaveVectorData, deleteVectorDataFromShards, updateVectorDataInShards } from './vectorStorage';
+import { loadVectorData, clearVectorData, deleteVectorDataFromShards, smartSaveVectorData } from './vectorStorage';
 import { getAllBlocksWithPage, preprocessContent } from '../../tools/contentProcessor';
 
 // 向量精度压缩（减少小数位数）
@@ -143,28 +143,9 @@ async function indexPages(isContinue: boolean = false, silent: boolean = false):
       // 定期保存进度，避免数据丢失
       if (newVectorData.length >= saveInterval || indexedCount === blocksToIndex.length) {
         try {
-          if (isContinue) {
-            // 🚀 增量索引：使用分片追加保存，只保存新数据
-            console.log(`💾 [分片追加] 保存 ${newVectorData.length} 条新数据，无需重写 ${existingVectorData.length} 条已存在数据`);
-            await incrementalSaveVectorData(newVectorData, existingVectorData);
-          } else {
-            // 🚀 重建索引优化：进度保存时也使用增量策略，避免重复保存已有数据
-            if (existingVectorData.length === 0) {
-              // 首次保存：使用全量保存初始化存储结构
-              console.log(`💾 [首次保存] 初始化存储并保存 ${newVectorData.length} 条向量数据...`);
-              await saveVectorData(newVectorData);
-            } else {
-              // 进度保存：使用增量追加，只保存新数据
-              console.log(`💾 [增量追加] 保存 ${newVectorData.length} 条新数据，无需重写 ${existingVectorData.length} 条已存在数据`);
-              await incrementalSaveVectorData(newVectorData, existingVectorData);
-            }
-          }
-
-          console.log(`✅ [进度已保存] 总数据量: ${existingVectorData.length + newVectorData.length} 条`);
-
-          // 更新现有数据并清空新数据缓冲区
-          existingVectorData = [...existingVectorData, ...newVectorData];
-          newVectorData = [];
+          // 🚀 使用智能保存策略，简化保存逻辑
+          existingVectorData = await smartSaveVectorData(newVectorData, existingVectorData, isContinue);
+          newVectorData = []; // 清空新数据缓冲区
         } catch (saveError) {
           console.error(`❌ [保存失败] ${saveError}`);
           logseq.UI.showMsg(`索引保存失败: ${saveError}`, "error");

@@ -4,6 +4,7 @@ import { VectorSearchResult } from '../../types/vector';
 import { generateEmbedding } from './embeddingService';
 import { getCachedVectorData, loadVectorData } from './vectorStorage';
 import { getAllBlocksWithPage } from '../../tools/contentProcessor';
+import { analyzeBlockChanges, silentIncrementalIndexing } from './vectorIndexing';
 
 // 余弦相似度计算
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
@@ -93,7 +94,6 @@ async function performIncrementalIndexingIfNeeded(): Promise<void> {
     }
 
     // 🚀 智能检测blocks变化（新增、修改、删除）
-    const { analyzeBlockChanges } = await import('./vectorIndexing');
     const { newBlocks, modifiedBlocks, deletedBlocks } = await analyzeBlockChanges(allBlocks, existingVectorData);
 
     const totalChanges = newBlocks.length + modifiedBlocks.length + deletedBlocks.length;
@@ -106,7 +106,6 @@ async function performIncrementalIndexingIfNeeded(): Promise<void> {
     console.log(`🔄 检测到变化: 新增${newBlocks.length}个, 修改${modifiedBlocks.length}个, 删除${deletedBlocks.length}个，开始静默增量索引...`);
 
     // 静默执行增量索引，不显示进度消息
-    const { silentIncrementalIndexing } = await import('./vectorIndexing');
     await silentIncrementalIndexing();
 
     console.log(`✅ 增量索引完成，新增 ${newBlocks.length} 个向量`);
