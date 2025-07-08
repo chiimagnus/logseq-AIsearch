@@ -3,3 +3,4 @@ dev_doc.md
 public/
 node_modules/
 ./augment/
+changelog.md
