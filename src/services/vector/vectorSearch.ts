@@ -62,7 +62,7 @@ export async function search(queryText: string, limit: number = 50): Promise<Vec
       blockContent: item.blockContent,
       score: cosineSimilarity(queryVector, item.vector)
     }))
-    .filter(item => item.score > 0.3)  // 过滤掉相似度太低的结果
+    .filter(item => item.score > 0.5)  // 过滤掉相似度太低的结果
     .sort((a, b) => b.score - a.score)  // 按相似度降序排列
     .slice(0, limit);  // 取前 limit 个结果
 
